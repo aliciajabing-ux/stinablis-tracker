@@ -1,0 +1,9 @@
+id,name,material_type,colour,unit,quantity_on_hand,reorder_level,is_active
+M001,PLA Basic,PLA,White,g,830,1000,yes
+M002,PLA Basic,PLA,Black,g,1450,1000,yes
+M003,PETG,PETG,Clear,g,240,500,yes
+M004,ABS,ABS,Grey,g,0,500,yes
+M005,TPU 95A,TPU,Black,g,380,300,yes
+M006,Standard Resin,Resin,Grey,ml,500,1000,yes
+M007,M3 Hex Nuts,Hardware,Steel,pcs,85,50,yes
+M008,Isopropyl Alcohol 99%,Cleaning,Clear,ml,900,1000,yes

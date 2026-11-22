@@ -1,0 +1,12 @@
+id,supplier_id,material_id,pack_size,pack_unit,price_per_pack_myr,minimum_order_packs,shipping_cost_myr,lead_time_days,is_active
+O001,S001,M001,1000,g,72.00,1,0.00,1,yes
+O002,S003,M001,1000,g,58.00,5,18.00,7,yes
+O003,S001,M002,1000,g,72.00,1,0.00,1,yes
+O004,S002,M002,1000,g,69.00,1,0.00,2,yes
+O005,S002,M003,1000,g,85.00,1,0.00,2,yes
+O006,S003,M003,1000,g,66.00,1,18.00,7,yes
+O007,S003,M004,1000,g,75.00,1,18.00,7,yes
+O008,S003,M005,1000,g,99.00,1,18.00,7,yes
+O009,S004,M006,1000,ml,165.00,1,25.00,6,yes
+O010,S005,M007,100,pcs,8.50,1,0.00,1,yes
+O011,S005,M008,1000,ml,28.00,1,0.00,1,yes

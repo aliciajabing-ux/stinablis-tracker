@@ -1,0 +1,3 @@
+id,username,role,is_active
+U001,sample_admin,ADMIN,yes
+U002,sample_employee,EMPLOYEE,yes

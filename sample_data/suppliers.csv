@@ -1,0 +1,6 @@
+id,name,supplier_type,address,phone,email,website,notes,is_active
+S001,SAMPLE Kuching Filament Shop A,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-001,sales@example.com,,Fake supplier for testing,yes
+S002,SAMPLE Borneo Print Supplies B,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-002,orders@example.com,,Fake supplier for testing,yes
+S003,SAMPLE OnlineFil Store C,ONLINE,"Kuala Lumpur (placeholder address)",+60-3-0000-0003,shop@example.com,https://example.com/shop-c,Fake supplier for testing,yes
+S004,SAMPLE Resin and More Online D,ONLINE,"Selangor (placeholder address)",+60-3-0000-0004,resin@example.com,https://example.com/shop-d,Fake supplier for testing,yes
+S005,SAMPLE Hardware Hub E,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-005,hub@example.com,,Fake supplier for testing,yes
