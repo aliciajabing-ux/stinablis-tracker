@@ -1,0 +1,8 @@
+{# WHAT THIS FILE DOES: Temporary home page shown after login. Agent E replaces it with the real dashboard.
+   WHO CAN USE IT: Both. #}
+{% extends "base.html" %}
+{% block title %}Home - Stinablis Tracker{% endblock %}
+{% block content %}
+  <h1>Welcome, {{ current_user['username'] }}</h1>
+  <p>You are logged in. The stock screens will appear here soon.</p>
+{% endblock %}

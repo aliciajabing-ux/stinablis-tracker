@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- WHAT THIS FILE DOES: The shared page frame (title bar, menu links and Log out button) that other pages fill in.
+     WHO CAN USE IT: Both (every page after login). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Stinablis Tracker{% endblock %}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f4f7; margin: 0; }
+    .topbar { background: #1a5fb4; color: #fff; padding: 12px 16px; display: flex;
+              justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .topbar form { margin: 0; }
+    .topbar button { padding: 10px 16px; font-size: 1rem; border: 0; border-radius: 6px; cursor: pointer; }
+    .menu { background: #164d96; display: flex; flex-wrap: wrap; padding: 0 6px; }
+    .menu a { color: #fff; text-decoration: none; padding: 10px 14px; font-size: 1rem; }
+    .menu a:hover, .menu a:focus { background: #1a5fb4; }
+    .content { max-width: 960px; margin: 16px auto; padding: 0 16px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>Stinablis Tracker</strong>
+    {% if current_user %}
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <span>{{ current_user['username'] }} ({{ current_user['role']|lower }})</span>
+      <button type="submit">Log out</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if current_user %}
+  <nav class="menu" aria-label="Main menu">
+    <a href="{{ url_for('home') }}">Home</a>
+    <a href="{{ url_for('materials.list_materials') }}">Materials</a>
+    <a href="{{ url_for('suppliers.supplier_list') }}">Suppliers</a>
+  </nav>
+  {% endif %}
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
