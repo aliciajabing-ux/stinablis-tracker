@@ -1,4 +1,4 @@
-# Test Summary (one section per agent)
+﻿# Test Summary (one section per agent)
 
 **How to run all automatic tests:** `.venv\bin\python.exe -m pytest tests`
 Tests use a temporary database, never the real `data/tracker.db`.
@@ -6,9 +6,9 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Agent | Area | Automatic tests | Manual test | Status |
 |---|---|---|---|---|
 | A | Database | not recorded yet | not recorded yet | Pending |
-| B | Login and roles | 22 pass | 4 of 4 pass | Done |
+| B | Login and roles | 23 pass | 8 of 8 pass | Done |
 | C | Materials and stock | 28 pass | 3 of 3 pass | Done |
-| D | Suppliers and suggestion | 29 pass | not done yet | Done (manual test to do) |
+| D | Suppliers and suggestion | 29 pass | 3 of 3 pass | Done |
 | E | Statistics and dashboard | not started | not started | Pending |
 | F | Full review of all roles | not started | not started | Pending |
 
@@ -39,6 +39,10 @@ Tests use a temporary database, never the real `data/tracker.db`.
 2. Employee login works. Pass
 3. 5 wrong passwords lock the account. Pass
 4. Correct password is refused while locked. Pass
+5. Menu bar (Home, Materials, Suppliers) shows after login, not on the login page. Pass
+6. Each menu link opens its page. Pass
+7. Menu wraps on a narrow window with no sideways scrolling. Pass
+8. Log out still works with the menu present. Pass
 
 **Not covered yet:** CSRF protection on forms, an Admin screen to unlock accounts.
 
@@ -95,9 +99,9 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Letters, minus, zero, nan, inf, decimals in whole-number fields, over-long text, empty name, wrong type refused in plain words | Section 8, 14 | Pass |
 
 **Manual test (done by the team in the browser, 2026-11-23):**
-1. Admin: add a supplier, add an offer for PLA White, then open Find supplier for a LOW material. Not done yet
-2. Employee: Suppliers and Find supplier pages show names, lead time, arrival date and contacts, but no money. Not done yet
-3. Open the Suppliers page on a phone-sized window. Not done yet
+1. Admin: add a supplier, add an offer for PLA White, then open Find supplier for a LOW material. Pass (2026-11-23, including the "needed within N days" box)
+2. Employee: Suppliers and Find supplier pages show names, lead time, arrival date and contacts, but no money. Pass (2026-11-23, also: letters in price refused, switch-off hidden from Employee, Employee blocked from /suppliers/new)
+3. Open the Suppliers page on a phone-sized window. Pass (2026-11-23, real phone: /suppliers, /suppliers/S001, /suggest/M001)
 
 **Not covered yet:** CSRF tokens on forms.
 

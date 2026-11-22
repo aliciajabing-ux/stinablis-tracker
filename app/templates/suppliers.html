@@ -1,0 +1,21 @@
+{# WHAT THIS FILE DOES: The Suppliers list page.
+   WHO CAN USE IT: Both (only Admin sees the Add button and switched-off suppliers). #}
+{% extends "base.html" %}
+{% block title %}Suppliers - Stinablis Tracker{% endblock %}
+{% block content %}
+{% include "supplier_style.html" %}
+<h1>Suppliers</h1>
+<p>Shops and websites we buy from. Click a name to see contact details and what they sell.</p>
+{% if current_user['role'] == 'ADMIN' %}<p><a class="button" href="{{ url_for('suppliers.supplier_new') }}">Add supplier</a></p>{% endif %}
+<div class="scroll"><table>
+  <tr><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th></tr>
+  {% for s in suppliers %}
+  <tr>
+    <td><a href="{{ url_for('suppliers.supplier_detail', supplier_id=s['id']) }}">{{ s['name'] }}</a></td>
+    <td>{{ s['supplier_type'] }}</td><td>{{ s['phone'] or '' }}</td><td>{{ s['email'] or '' }}</td>
+    <td>{{ 'Active' if s['is_active'] == 1 else 'Switched off' }}</td>
+  </tr>
+  {% else %}<tr><td colspan="5">No suppliers yet.</td></tr>
+  {% endfor %}
+</table></div>
+{% endblock %}

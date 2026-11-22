@@ -1,0 +1,39 @@
+{# WHAT THIS FILE DOES: "Find supplier" page: the best suppliers for one LOW or OUT material, best first.
+   WHO CAN USE IT: Both (money columns appear only when show_prices is true). #}
+{% extends "base.html" %}
+{% block title %}Find supplier - Stinablis Tracker{% endblock %}
+{% block content %}
+{% include "supplier_style.html" %}
+<h1>Find supplier: {{ material['name'] }} {{ material['colour'] or '' }}</h1>
+<p>Best choice is at the top. Costs and dates are only estimates.</p>
+<div class="box">
+  <p>Now: <strong>{{ material['quantity_on_hand']|round(1) }} {{ material['unit'] }}</strong> left.
+     Order at: {{ material['reorder_level']|round(1) }} {{ material['unit'] }}. Status: <strong>{{ material['status'] }}</strong></p>
+  <form method="get">
+    <label>Needed within how many days? (leave empty for any)
+      <input name="days" inputmode="numeric" maxlength="3" value="{{ days_allowed if days_allowed is not none else '' }}"></label>
+    <p><button class="button" type="submit">Update list</button></p>
+  </form>
+</div>
+{% if material['status'] == 'OK' %}
+  <p>This material is OK, so there is nothing to order right now.</p>
+{% elif not suggestions %}
+  <p>No supplier can deliver this material{% if days_allowed is not none %} within {{ days_allowed }} days{% endif %}. Try a longer time, or ask the Admin to add a supplier.</p>
+{% else %}
+<div class="scroll"><table>
+  <tr><th>Supplier</th><th>Type</th><th>Packs to order</th><th>Lead time</th><th>Estimated arrival</th>
+    {% if show_prices %}<th>Estimated cost</th>{% endif %}<th>Contact</th></tr>
+  {% for s in suggestions %}
+  <tr>
+    <td>{% if loop.first %}<strong>Best: </strong>{% endif %}{{ s['supplier_name'] }}</td>
+    <td>{{ s['supplier_type'] }}</td>
+    <td>{{ s['packs_to_order'] }} x {{ s['pack_size']|round(2) }} {{ s['pack_unit'] }}</td>
+    <td>{{ s['lead_time_days'] }} days</td>
+    <td>{{ s['arrival_date'].strftime('%d %b %Y') }} (estimate)</td>
+    {% if show_prices %}<td>MYR {{ '%.2f' % s['estimated_cost_myr'] }} (estimate)</td>{% endif %}
+    <td>{{ s['phone'] or '' }}<br>{{ s['email'] or '' }}<br>{{ s['website'] or '' }}</td>
+  </tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+{% endblock %}

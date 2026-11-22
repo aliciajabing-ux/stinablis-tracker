@@ -1,0 +1,25 @@
+{# WHAT THIS FILE DOES: The form to add or change "this supplier sells this material" (price, pack size, lead time).
+   WHO CAN USE IT: Admin only. #}
+{% extends "base.html" %}
+{% block title %}Offer form - Stinablis Tracker{% endblock %}
+{% block content %}
+{% include "supplier_style.html" %}
+<h1>{{ supplier['name'] }}: material they sell</h1>
+<p>Prices are per pack (for example one 1000 g spool), in MYR.</p>
+{% if message %}<p class="error">{{ message }}</p>{% endif %}
+<form method="post" class="box">
+  <label>Material <select name="material_id">
+    {% for m in materials %}<option value="{{ m['id'] }}" {{ 'selected' if offer and offer['material_id'] == m['id'] }}>{{ m['name'] }} {{ m['colour'] or '' }} ({{ m['unit'] }})</option>{% endfor %}
+  </select></label>
+  <label>Pack size (for example 1000) <input name="pack_size" required value="{{ offer['pack_size'] if offer else '' }}"></label>
+  <label>Pack unit <select name="pack_unit">
+    {% for u in ['g', 'ml', 'pcs'] %}<option value="{{ u }}" {{ 'selected' if offer and offer['pack_unit'] == u }}>{{ u }}</option>{% endfor %}
+  </select></label>
+  <label>Price per pack (MYR) <input name="price_per_pack_myr" required value="{{ offer['price_per_pack_myr'] if offer else '' }}"></label>
+  <label>Minimum order (packs) <input name="minimum_order_packs" required value="{{ offer['minimum_order_packs'] if offer else '1' }}"></label>
+  <label>Shipping cost (MYR) <input name="shipping_cost_myr" required value="{{ offer['shipping_cost_myr'] if offer else '0' }}"></label>
+  <label>Lead time (days from ordering to arriving) <input name="lead_time_days" required value="{{ offer['lead_time_days'] if offer else '' }}"></label>
+  <p><button class="button" type="submit">Save</button>
+     <a href="{{ url_for('suppliers.supplier_detail', supplier_id=supplier['id']) }}">Cancel</a></p>
+</form>
+{% endblock %}
