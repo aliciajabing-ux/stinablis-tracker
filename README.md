@@ -532,3 +532,70 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
 2026-11-19 | Team (planning) | Open-source research done (Section 3).
   Draft PRD and this guide written. | Confirm open questions (Section 16),
   confirm tech stack (Section 9), then start Agent A. | None yet.
+
+2026-11-23 | Agent B (login & roles) | Wrote app/auth.py (login, logout, scrambled
+  passwords, 5-wrong = 15-minute lock, activity-log lines for login/lock/logout),
+  app/permissions.py (is_admin, can_see_prices, login_required, admin_required...),
+  app/templates/login.html, and tests/test_auth_permissions.py (20 checks, all pass).
+  | Agent F: please re-run and extend the tests. Agent C/D/E: use only the
+  functions in permissions.py, never "if role == ..." (Rule C7). | REQUESTS
+  (Rule R3, files I do not own): (1) app/__init__.py does not exist yet. It must
+  set SECRET_KEY from an environment variable (never in code), set
+  SESSION_COOKIE_HTTPONLY/SAMESITE="Lax", and register auth.auth_blueprint.
+  (2) Sample users have NO password yet: run "python app/auth.py set-password
+  sample_admin" (and sample_employee) once. (3) Home page "/" must exist as a
+  @login_required page; login sends people there. (4) Need a base template with a
+  Log out button: a form with method="post" to url_for('auth.logout'). (5) Needs
+  decision: add a CSRF token to forms? Not built; SameSite=Lax cookie is the only
+  protection for now. (6) Admin user-management screen (F8) has no owner in
+  Section 11; it can use auth.set_password.
+
+2026-11-23 | Agent B (login & roles) | Wrote app/__init__.py (create_app: secret key
+  from STINABLIS_SECRET_KEY, safe cookie settings, "/" home page), app/templates/
+  base.html (Log out button) and home.html (placeholder). 22 automatic tests pass.
+  Founder-side manual test passed: admin login, employee login, 5 wrong passwords
+  lock the account, correct password refused while locked. Sample passwords set
+  (not stored in Git). | Agent F: review and extend tests. Then Agents C and D can
+  start; register your screens at the marked line in app/__init__.py, and use only
+  permissions.py for role checks. Agent E replaces home.html. | Still open: CSRF
+  tokens on forms (not built); no Admin screen yet to unlock/reset accounts (F8);
+  add .venv/ to .gitignore (no .gitignore exists yet).
+
+2026-11-23 | Agent C (materials & stock) | Wrote app/alerts.py (OK/LOW/OUT rule,
+  needs-attention list, counts), app/routes_materials.py (list with search and
+  filter, add/edit/remove for Admin, Record used/received for everyone, every stock
+  change writes stock_movements + activity_log, Malaysia-time history) and 3
+  templates (materials_list/form/record.html). Registered the blueprint at the
+  marked line in app/__init__.py. 28 new tests, whole suite 50 pass (TESTS.md).
+  Employee page checked for prices: none. Remove only switches a material off (C9).
+  | Agent E: use alerts.count_materials_by_status(db) and
+  alerts.get_materials_needing_attention(db) for the Home boxes and list; link
+  "Find supplier" to Agent D's page. Agent F: review and do the manual tests.
+  | NOTES/REQUESTS: (1) No CSRF tokens on forms (same open item as Agent B).
+  (2) Stock can only change by Used/Received; the starting quantity of a new
+  material is saved as an ADJUSTED row. There is no screen yet to correct a wrong
+  count (ADJUSTED stores no +/- direction); needs a decision (R4). (3) Unit cannot
+  be changed after a material is created (it would make old history wrong).
+  (4) Reorder level is entered per material; the Section 7 "quantity needed"
+  formula is Agent D's. (5) Founder question still open: units/reorder levels.
+
+2026-11-23 | Agent D (suppliers & suggestion) | Wrote app/suggest.py (quantity needed,
+  packs rounded up with minimum order, cost, arrival date in Malaysia time, ranking,
+  money removed for Employees), app/routes_suppliers.py (supplier list and details for
+  everyone; add/change/switch-off supplier and offer for Admin; "Find supplier" page at
+  /suggest/<material id>) and 6 templates (suppliers, supplier_detail, supplier_form,
+  offer_form, suggest, supplier_style). Registered the blueprint at the marked line in
+  app/__init__.py. 29 new tests, whole suite 79 pass (TESTS.md). Employee pages checked
+  for prices in the page source: none. Nothing is ever deleted, only switched off (C9);
+  every change writes the activity log (C8). | Agent E: link each Needs-attention row
+  to url_for('suppliers.suggest_supplier', material_id=...) and the Home menu to
+  url_for('suppliers.supplier_list'). Agent F: review and do the manual tests.
+  | QUESTIONS (R4, I did not guess beyond what is below): (1) F6 rule 1 "deliver in
+  time" has no deadline defined. I built an optional "needed within N days" box; empty
+  means every supplier counts. Founder to confirm. (2) Quantity formula (reorder x 2
+  minus stock) is as written in Section 7 and still [CONFIRM]. (3) An offer is only
+  suggested if its pack unit matches the material's unit (g, ml, pcs). (4) Employees see
+  supplier phone, email and website (proposal in Section 4, still to confirm).
+  (5) Offers use price per PACK (schema), so Section 6's "price_per_unit" is per pack.
+  (6) No CSRF tokens on forms (same open item as B and C). (7) .venv/ and __pycache__
+  still not in .gitignore.

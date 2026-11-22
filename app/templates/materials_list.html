@@ -1,0 +1,67 @@
+{# WHAT THIS FILE DOES: The Materials table with search box, OK / LOW / OUT filter and action buttons.
+   WHO CAN USE IT: Both. Add / Edit / Remove buttons show for Admin only (the server checks this too). #}
+{% extends "base.html" %}
+{% block title %}Materials - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  .filters a, .btn { display: inline-block; padding: 10px 14px; margin: 2px; border-radius: 6px; background: #fff;
+                     border: 1px solid #1a5fb4; color: #1a5fb4; text-decoration: none; font-size: 1rem; cursor: pointer; }
+  .filters a.on, .btn.main { background: #1a5fb4; color: #fff; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; }
+  th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+  .tag { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+  .tag-OK { background: #d8f3dc; color: #1b4332; }
+  .tag-LOW { background: #ffe5b4; color: #7a4100; }
+  .tag-OUT { background: #f5c2c2; color: #7a0000; }
+  .message { background: #e7f1ff; padding: 10px; border-radius: 6px; margin-bottom: 10px; }
+  form.inline { display: inline; margin: 0; }
+  input[type=text] { padding: 10px; font-size: 1rem; }
+</style>
+<h1>Materials</h1>
+<p>All the materials we keep. Use "Record used" when you take some from the shelf and "Record received" when new stock arrives.</p>
+
+{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
+
+<form method="get" action="{{ url_for('materials.list_materials') }}">
+  <input type="text" name="q" value="{{ search_text }}" placeholder="Search name, type or colour" maxlength="100">
+  {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+  <button class="btn main" type="submit">Search</button>
+  {% if can_manage %}<a class="btn main" href="{{ url_for('materials.add_material') }}">Add material</a>{% endif %}
+</form>
+
+<p class="filters">
+  <a href="{{ url_for('materials.list_materials', q=search_text) }}" class="{{ 'on' if not status_filter }}">Show all</a>
+  <a href="{{ url_for('materials.list_materials', q=search_text, status='LOW') }}" class="{{ 'on' if status_filter == 'LOW' }}">Show only LOW</a>
+  <a href="{{ url_for('materials.list_materials', q=search_text, status='OUT') }}" class="{{ 'on' if status_filter == 'OUT' }}">Show only OUT</a>
+  <a href="{{ url_for('materials.list_materials', q=search_text, status='OK') }}" class="{{ 'on' if status_filter == 'OK' }}">Show only OK</a>
+</p>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
+  {% for material in materials %}
+  <tr>
+    <td>{{ material.name }}</td>
+    <td>{{ material.material_type or '' }}</td>
+    <td>{{ material.colour or '' }}</td>
+    <td>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit }}</td>
+    <td><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
+    <td>
+      <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>
+      <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='received') }}">Record received</a>
+      {% if can_manage %}
+      <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
+      <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
+            onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
+        <button class="btn" type="submit">Remove</button>
+      </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No materials found. Try a different search or filter.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

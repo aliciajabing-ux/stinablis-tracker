@@ -1,0 +1,250 @@
+# WHAT THIS FILE DOES: Automatic checks for the Materials screens, stock recording and the OK / LOW / OUT rule.
+# WHO CAN USE IT: Developers. Run from the project folder with: python -m pytest tests
+#
+# These checks build a temporary database (never data/tracker.db).
+
+import os
+import sqlite3
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app import auth, create_app                       # noqa: E402
+from app.alerts import (count_materials_by_status, get_materials_needing_attention,   # noqa: E402
+                        get_status)
+
+SCHEMA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "schema.sql")
+PASSWORD = "test-password-123"
+
+
+# Builds a temporary database with an admin, an employee, three materials and one supplier price.
+@pytest.fixture
+def database_file(tmp_path):
+    path = str(tmp_path / "test.db")
+    connection = sqlite3.connect(path)
+    connection.row_factory = sqlite3.Row
+    with open(SCHEMA_FILE, encoding="utf-8") as schema:
+        connection.executescript(schema.read())
+    connection.execute("INSERT INTO users (id, username, role) VALUES ('U1', 'boss', 'ADMIN')")
+    connection.execute("INSERT INTO users (id, username, role) VALUES ('U2', 'worker', 'EMPLOYEE')")
+    connection.executemany(
+        "INSERT INTO materials (id, name, material_type, colour, unit, quantity_on_hand, reorder_level) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [("M1", "PLA Basic", "PLA", "White", "g", 800, 500), ("M2", "PETG", "PETG", "Clear", "g", 240, 500),
+         ("M3", "ABS", "ABS", "Grey", "g", 0, 500)])
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type) VALUES ('S1', 'Shop', 'LOCAL')")
+    connection.execute("INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, "
+                       "price_per_pack_myr, lead_time_days) VALUES ('O1', 'S1', 'M1', 1000, 'g', 72.55, 1)")
+    auth.set_password(connection, "boss", PASSWORD)
+    auth.set_password(connection, "worker", PASSWORD)
+    connection.close()
+    return path
+
+
+# Builds the real website (create_app) pointed at the temporary database.
+@pytest.fixture
+def website(database_file):
+    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+
+
+# Returns a test browser that is already logged in as the given user.
+def logged_in(website, username):
+    browser = website.test_client()
+    browser.post("/login", data={"username": username, "password": PASSWORD})
+    return browser
+
+
+@pytest.fixture
+def admin(website):
+    return logged_in(website, "boss")
+
+
+@pytest.fixture
+def employee(website):
+    return logged_in(website, "worker")
+
+
+# Reads one value from the temporary database.
+def ask_database(database_file, sql, parameters=()):
+    connection = sqlite3.connect(database_file)
+    row = connection.execute(sql, parameters).fetchone()
+    connection.close()
+    return row[0] if row else None
+
+
+# ---------- The OK / LOW / OUT rule (guide Sections 5 F5 and 7) ----------
+
+def test_status_rule_boundaries():
+    assert get_status(800, 500) == "OK"
+    assert get_status(501, 500) == "OK"
+    assert get_status(500, 500) == "LOW"       # "at or below" the reorder level is LOW
+    assert get_status(430, 500) == "LOW"       # the guide's example
+    assert get_status(0, 500) == "OUT"
+    assert get_status(0, 0) == "OUT"
+
+
+def test_needing_attention_and_counts(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.row_factory = sqlite3.Row
+    names = [m["name"] for m in get_materials_needing_attention(connection)]
+    assert names == ["ABS", "PETG"]            # OUT first, then LOW
+    assert count_materials_by_status(connection) == {"TOTAL": 3, "OK": 1, "LOW": 1, "OUT": 1}
+    connection.close()
+
+
+# ---------- Testing checklist, Section 15 ----------
+
+def test_checklist_add_then_use_until_low_then_out(admin, database_file):
+    reply = admin.post("/materials/new", data={"name": "Resin", "material_type": "Resin", "colour": "Grey",
+                                               "unit": "g", "starting_quantity": "800", "reorder_level": "500"})
+    assert reply.status_code == 302
+    material_id = ask_database(database_file, "SELECT id FROM materials WHERE name = 'Resin'")
+    assert "OK" in admin.get("/materials/?q=Resin").get_data(as_text=True)
+
+    admin.post(f"/materials/{material_id}/record/used", data={"quantity": "400"})
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = ?", (material_id,)) == 400
+    assert "LOW" in admin.get("/materials/?q=Resin").get_data(as_text=True)
+
+    admin.post(f"/materials/{material_id}/record/used", data={"quantity": "400"})
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = ?", (material_id,)) == 0
+    assert "OUT" in admin.get("/materials/?q=Resin").get_data(as_text=True)
+
+
+def test_starting_stock_is_written_to_history(admin, database_file):
+    admin.post("/materials/new", data={"name": "Resin", "unit": "ml", "starting_quantity": "800", "reorder_level": "500"})
+    assert ask_database(database_file, "SELECT movement_type FROM stock_movements WHERE quantity = 800") == "ADJUSTED"
+
+
+# ---------- Recording stock (guide rules C8, Section 6) ----------
+
+def test_used_and_received_change_quantity_and_write_history(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "200", "note": "Job 12"})
+    employee.post("/materials/M1/record/received", data={"quantity": "1000"})
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 1600
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements WHERE material_id = 'M1'") == 2
+    assert ask_database(database_file, "SELECT note FROM stock_movements WHERE movement_type = 'USED'") == "Job 12"
+    assert ask_database(database_file, "SELECT user_id FROM stock_movements WHERE movement_type = 'USED'") == "U2"
+    assert ask_database(database_file, "SELECT COUNT(*) FROM activity_log WHERE action LIKE 'STOCK_%'") == 2
+
+
+def test_cannot_use_more_than_is_in_stock(employee, database_file):
+    reply = employee.post("/materials/M2/record/used", data={"quantity": "241"})
+    assert reply.status_code == 400
+    assert "only 240" in reply.get_data(as_text=True)
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M2'") == 240
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements") == 0
+
+
+@pytest.mark.parametrize("bad_quantity", ["abc", "", "-5", "0", "1e5", "nan", "inf", "12.345", "99999999", "1_0"])
+def test_bad_quantities_are_refused_in_plain_words(employee, database_file, bad_quantity):
+    reply = employee.post("/materials/M1/record/received", data={"quantity": bad_quantity})
+    assert reply.status_code == 400
+    assert "as a number, for example 200" in reply.get_data(as_text=True)
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 800
+
+
+def test_note_that_is_too_long_is_refused(employee, database_file):
+    reply = employee.post("/materials/M1/record/used", data={"quantity": "10", "note": "x" * 201})
+    assert reply.status_code == 400
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 800
+
+
+def test_decimal_quantities_do_not_drift(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "0.1"})
+    employee.post("/materials/M1/record/used", data={"quantity": "0.2"})
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 799.7
+
+
+def test_history_shows_malaysia_time(employee, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at) "
+                       "VALUES ('S9', 'M1', 'USED', 5, 'U2', '2026-11-23 16:00:00')")
+    connection.commit()
+    connection.close()
+    page = employee.get("/materials/M1/record/used").get_data(as_text=True)
+    assert "24 Nov 2026 00:00" in page         # UTC 16:00 is midnight in Malaysia (UTC+8)
+
+
+# ---------- Roles (guide Section 4) ----------
+
+def test_not_logged_in_is_sent_to_login(website):
+    browser = website.test_client()
+    for address in ["/materials/", "/materials/new", "/materials/M1/edit", "/materials/M1/record/used"]:
+        reply = browser.get(address)
+        assert reply.status_code == 302 and "/login" in reply.headers["Location"]
+    assert browser.post("/materials/M1/remove").status_code == 302
+
+
+def test_employee_cannot_add_edit_or_remove(employee, database_file):
+    assert employee.get("/materials/new").status_code == 403
+    assert employee.post("/materials/new", data={"name": "Hack", "unit": "g", "reorder_level": "1"}).status_code == 403
+    assert employee.get("/materials/M1/edit").status_code == 403
+    assert employee.post("/materials/M1/edit", data={"name": "Renamed", "reorder_level": "1"}).status_code == 403
+    assert employee.post("/materials/M1/remove").status_code == 403
+    assert ask_database(database_file, "SELECT COUNT(*) FROM materials") == 3
+    assert ask_database(database_file, "SELECT name FROM materials WHERE id = 'M1'") == "PLA Basic"
+    assert ask_database(database_file, "SELECT is_active FROM materials WHERE id = 'M1'") == 1
+
+
+def test_employee_page_has_no_admin_buttons_and_no_prices(employee):
+    page = employee.get("/materials/").get_data(as_text=True)
+    assert "Record used" in page and "Record received" in page
+    assert "Add material" not in page and ">Edit<" not in page and ">Remove<" not in page
+    for secret in ["72.55", "price", "MYR", "shipping"]:
+        assert secret.lower() not in page.lower()
+
+
+def test_admin_sees_admin_buttons(admin):
+    page = admin.get("/materials/").get_data(as_text=True)
+    assert "Add material" in page and ">Edit<" in page and ">Remove<" in page
+
+
+# ---------- Admin: add, edit, remove ----------
+
+def test_add_material_with_bad_input_is_refused(admin, database_file):
+    bad_forms = [{"name": "", "unit": "g", "reorder_level": "5"},
+                 {"name": "A", "unit": "kg", "reorder_level": "5"},
+                 {"name": "A", "unit": "g", "reorder_level": "five"},
+                 {"name": "A", "unit": "g", "reorder_level": "5", "starting_quantity": "-1"},
+                 {"name": "x" * 101, "unit": "g", "reorder_level": "5"}]
+    for form in bad_forms:
+        assert admin.post("/materials/new", data=form).status_code == 400
+    assert ask_database(database_file, "SELECT COUNT(*) FROM materials") == 3
+
+
+def test_edit_changes_details_logs_it_and_ignores_quantity(admin, database_file):
+    admin.post("/materials/M1/edit", data={"name": "PLA Plus", "material_type": "PLA", "colour": "White",
+                                           "reorder_level": "600", "quantity_on_hand": "99999", "unit": "ml"})
+    assert ask_database(database_file, "SELECT name FROM materials WHERE id = 'M1'") == "PLA Plus"
+    assert ask_database(database_file, "SELECT reorder_level FROM materials WHERE id = 'M1'") == 600
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 800
+    assert ask_database(database_file, "SELECT unit FROM materials WHERE id = 'M1'") == "g"
+    details = ask_database(database_file, "SELECT details FROM activity_log WHERE action = 'MATERIAL_CHANGED'")
+    assert "reorder_level from 500.0 to 600.0" in details
+
+
+def test_remove_keeps_the_row_and_history(admin, database_file):
+    admin.post("/materials/M1/record/used", data={"quantity": "10"})
+    admin.post("/materials/M1/remove")
+    assert ask_database(database_file, "SELECT is_active FROM materials WHERE id = 'M1'") == 0
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements WHERE material_id = 'M1'") == 1
+    assert "<td>PLA Basic</td>" not in admin.get("/materials/").get_data(as_text=True)
+    assert admin.post("/materials/M1/record/used", data={"quantity": "10"}).status_code == 404
+    assert ask_database(database_file, "SELECT COUNT(*) FROM activity_log WHERE action = 'MATERIAL_REMOVED'") == 1
+
+
+# ---------- Search and filter (F3) ----------
+
+def test_search_and_status_filter(employee):
+    page = employee.get("/materials/?q=petg").get_data(as_text=True)
+    assert "PETG" in page and "PLA Basic" not in page
+    page = employee.get("/materials/?status=LOW").get_data(as_text=True)
+    assert "PETG" in page and "PLA Basic" not in page and "ABS" not in page
+    page = employee.get("/materials/?status=OUT").get_data(as_text=True)
+    assert "ABS" in page and "PETG" not in page
+
+
+def test_search_treats_percent_as_plain_letter(employee):
+    assert "No materials found" in employee.get("/materials/?q=%25").get_data(as_text=True)
