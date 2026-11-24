@@ -998,3 +998,38 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
   Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
   in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
+
+2026-11-24 | Agent F (testing & review) | Wrote tests/test_review_agent_f.py (about 200 checks). Whole suite:
+  298 passed, 12 expected-failures (xfail = a test that describes a known bug; it turns into an
+  error when the bug is fixed, so then remove the xfail mark). COVERED: employee gets exactly 403 on
+  every supplier/offer add, edit, switch-off address (GET and POST, valid data, other methods) and
+  changes nothing; visitor is sent to login; every address as Admin / Employee / visitor; account
+  lock on the 5th wrong password and unlock after 15 minutes; password_hash is never a plain
+  password; Admin and Employee actions write activity_log (and refused actions write none); number
+  fields reject letters and silly values, text fields reject very long input; CSV export and
+  spending data Admin only; every Section 15 item (800 g -> use 400 -> LOW -> use 400 -> OUT,
+  cheaper+faster supplier first, arrival = today + lead time, Malaysia time UTC+8); every rule of
+  Sections 4 and 7; Rules C2, C5, C6, C9. | NEXT: owners fix the bugs below, then remove the xfail marks.
+  | PROBLEMS (not fixed by me, Rule R3):
+  F-1 (CONFIRMED) No CSRF tokens on any form. Owner: Agent B (+ all form pages).
+  F-2 (CONFIRMED) No Admin screen to add users, reset passwords, disable or unlock accounts (F8);
+      the only way is "python app/auth.py set-password". Owner: team decision (F8 has no owner).
+  F-3 No Admin screen shows the activity log (F9). Owner: team decision.
+  F-4 No one-click database backup for Admin (Section 14). Owner: team decision.
+  F-5 Spending chart and low-stock-events chart are switched off in routes_stats.py
+      (SPENDING_METHOD_CONFIRMED, LOW_EVENTS_METHOD_CONFIRMED = False), waiting for the founder.
+      Owner: Agent E. So the "Admin sees spending chart" check cannot be tested yet.
+  F-6 requirements.txt, GLOSSARY.md and app/models.py (Section 10) do not exist. Owner: Agent G / A.
+      Agent A's files DO exist (app/schema.sql, app/setup_database.py, sample_data/) and Agent C's
+      files DO exist (routes_materials.py, alerts.py, templates), but neither agent wrote a log entry.
+  F-7 BUG: in routes_materials.py read_number() deletes every comma, so typing "1,5,5" records 155 g,
+      and it accepts non-English digits. Reject commas that are not thousands separators. Owner: Agent C.
+  F-8 Rule C3: the two inner "checked_view" functions in permissions.py (lines ~60 and ~70) have no
+      comment line. Owner: Agent B.
+  F-9 BUG: sample_data/*.csv dates look like 2026-11-18T06:30:00Z, but the app reads
+      "YYYY-MM-DD HH:MM:SS". With the sample data, /stats/data/usage crashes (server error).
+      Owner: Agent A (change the sample dates or the import).
+  F-10 (CONFIRMED) Sample users have no password until "python app/auth.py set-password sample_admin"
+      and "... sample_employee" are run; until then nobody can log in (tested: safe, no guessable password).
+  STILL UNTESTED: the real browser screens on a phone, CSV content with the spending chart (switched
+  off, see F-5), email alerts (not built), and a real two-person race on the same stock record.
