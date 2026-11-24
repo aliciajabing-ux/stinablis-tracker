@@ -29,6 +29,12 @@ def can_see_prices(user):
     return is_admin(user) or is_employee(user)
 
 
+# Returns True if the user may type the supplier and total paid on "Record received" (Admin only,
+# Agent A's design "Option B"). Employees can still record received stock, just without the money.
+def can_record_purchase_cost(user):
+    return is_admin(user)
+
+
 # Returns True if the user may add, change or remove materials (Admin only).
 def can_manage_materials(user):
     return is_admin(user)

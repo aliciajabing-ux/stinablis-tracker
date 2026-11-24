@@ -13,7 +13,7 @@ from flask import Flask
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import auth                                    # noqa: E402
+from app import auth, csrf                              # noqa: E402
 from app.permissions import (admin_required, can_see_prices,   # noqa: E402
                              login_required)
 
@@ -45,7 +45,8 @@ def database_file(tmp_path):
 @pytest.fixture
 def client(database_file):
     app = Flask(__name__)
-    app.config.update(DATABASE=database_file, SECRET_KEY="test-only-key", TESTING=True)
+    app.config.update(DATABASE=database_file, SECRET_KEY="test-only-key", TESTING=True, CSRF_ENABLED=False)
+    csrf.start_csrf_protection(app)
     app.register_blueprint(auth.auth_blueprint)
 
     @app.route("/")
@@ -240,7 +241,7 @@ def test_login_and_lock_are_written_to_activity_log(client, database_file):
 # Checks the real application (create_app): home needs login, and a missing secret key stops startup.
 def test_real_app_home_and_logout(database_file):
     from app import create_app
-    website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     real_client = website.test_client()
     assert real_client.get("/").status_code == 302
     log_in(real_client, "worker", EMPLOYEE_PASSWORD)
@@ -258,7 +259,7 @@ def test_real_app_refuses_to_start_without_secret_key(monkeypatch):
 # Checks the menu links (Home, Materials, Suppliers) show when logged in, and not on the login page.
 def test_menu_links_show_only_when_logged_in(database_file):
     from app import create_app
-    website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     menu_client = website.test_client()
     login_page = menu_client.get("/login").data
     for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
@@ -268,3 +269,62 @@ def test_menu_links_show_only_when_logged_in(database_file):
     for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
         assert link_text in home_page
     assert b'href="/materials/"' in home_page or b'href="/materials"' in home_page
+
+
+# ---- CSRF (forged form) protection ----
+
+# Builds the real website with CSRF protection switched ON (as it is in real use).
+def make_protected_client(database_file):
+    from app import create_app
+    website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    return website.test_client()
+
+
+# Reads the hidden CSRF code out of a page.
+def read_token(client, address):
+    import re
+    page = client.get(address).data.decode()
+    return re.search(r'name="csrf_token" value="([0-9a-f]+)"', page).group(1)
+
+
+# A login form sent without the hidden code is refused.
+def test_login_without_csrf_token_is_refused(database_file):
+    protected = make_protected_client(database_file)
+    response = protected.post("/login", data={"username": "boss", "password": ADMIN_PASSWORD})
+    assert response.status_code == 400
+
+
+# A login form with a wrong code is refused.
+def test_login_with_wrong_csrf_token_is_refused(database_file):
+    protected = make_protected_client(database_file)
+    protected.get("/login")
+    response = protected.post("/login", data={"username": "boss", "password": ADMIN_PASSWORD, "csrf_token": "bad"})
+    assert response.status_code == 400
+
+
+# Login and logout work when the right code is sent; logout without it is refused and keeps the user in.
+def test_login_and_logout_with_csrf_token(database_file):
+    protected = make_protected_client(database_file)
+    token = read_token(protected, "/login")
+    login = protected.post("/login", data={"username": "boss", "password": ADMIN_PASSWORD, "csrf_token": token})
+    assert login.status_code == 302
+    assert protected.post("/logout").status_code == 400
+    assert protected.get("/").status_code == 200
+    new_token = read_token(protected, "/")
+    assert protected.post("/logout", data={"csrf_token": new_token}).status_code == 302
+    assert protected.get("/").status_code == 302
+
+
+# A code from one browser does not work in another browser.
+def test_csrf_token_from_another_session_is_refused(database_file):
+    first = make_protected_client(database_file)
+    second = make_protected_client(database_file)
+    stolen_token = read_token(first, "/login")
+    second.get("/login")
+    response = second.post("/login", data={"username": "boss", "password": ADMIN_PASSWORD, "csrf_token": stolen_token})
+    assert response.status_code == 400
+
+
+# Pages that only read (GET) never need the code.
+def test_get_requests_need_no_csrf_token(database_file):
+    assert make_protected_client(database_file).get("/login").status_code == 200

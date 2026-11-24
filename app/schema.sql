@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS supplier_offers (
     material_id             TEXT NOT NULL REFERENCES materials(id),
     pack_size               REAL NOT NULL CHECK (pack_size > 0),
     pack_unit               TEXT NOT NULL CHECK (pack_unit IN ('g', 'ml', 'pcs')),
-    price_per_pack_myr      REAL NOT NULL CHECK (price_per_pack_myr >= 0),   -- Admin only on screen
+    price_per_pack_myr      REAL NOT NULL CHECK (price_per_pack_myr >= 0),   -- Admin and Employee can see; only Admin can change
     minimum_order_packs     INTEGER NOT NULL DEFAULT 1 CHECK (minimum_order_packs >= 1),
-    shipping_cost_myr       REAL NOT NULL DEFAULT 0 CHECK (shipping_cost_myr >= 0),  -- Admin only on screen
+    shipping_cost_myr       REAL NOT NULL DEFAULT 0 CHECK (shipping_cost_myr >= 0),  -- Admin and Employee can see; only Admin can change
     lead_time_days          INTEGER NOT NULL CHECK (lead_time_days >= 0),
     is_active               INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 );
@@ -72,18 +72,22 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     note            TEXT,
     user_id         TEXT NOT NULL REFERENCES users(id),
     created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
-    supplier_id     TEXT REFERENCES suppliers(id),                      -- RECEIVED only: who it was bought from
-    total_cost_myr  REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0)  -- RECEIVED only: what was paid
+    -- The next two columns are only for RECEIVED rows an Admin recorded (they feed the "money spent" box).
+    -- They stay empty for USED and ADJUSTED rows, and for RECEIVED rows an Employee recorded.
+    supplier_id     TEXT REFERENCES suppliers(id),
+    total_cost_myr  REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0)
 );
 
--- One row each time a material falls from OK to LOW or OUT (written when someone records stock used).
+-- One row each time a material drops from OK to LOW or OUT. Rows are added, never edited or deleted.
+-- The row points to the USED movement that caused the drop.
 CREATE TABLE IF NOT EXISTS low_stock_events (
-    id                  TEXT PRIMARY KEY,
-    material_id         TEXT NOT NULL REFERENCES materials(id),
-    status_after        TEXT NOT NULL CHECK (status_after IN ('LOW', 'OUT')),
-    quantity_after      REAL NOT NULL,
-    reorder_level       REAL NOT NULL,          -- the level at that moment, so later edits do not change history
-    created_at          TEXT DEFAULT CURRENT_TIMESTAMP
+    id                      TEXT PRIMARY KEY,
+    material_id             TEXT NOT NULL REFERENCES materials(id),
+    status                  TEXT NOT NULL CHECK (status IN ('LOW', 'OUT')),
+    quantity_at_event       REAL NOT NULL,
+    reorder_level_at_event  REAL NOT NULL,
+    movement_id             TEXT NOT NULL REFERENCES stock_movements(id),
+    created_at              TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Who changed what, and when. Admins can read it. Nobody can edit it.

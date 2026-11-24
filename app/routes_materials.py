@@ -10,7 +10,8 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
-from app.permissions import admin_required, can_manage_materials, can_record_stock, login_required
+from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
+                             login_required)
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
 
@@ -105,34 +106,39 @@ def record_stock_change(database, material, movement_type, quantity, note, user,
     if changed == 0:
         database.rollback()
         return False
-    add_movement_rows(database, material, movement_type, quantity, note, user, supplier, total_cost)
+    movement_id = add_movement_rows(database, material, movement_type, quantity, note, user, supplier, total_cost)
     if movement_type == "USED":
-        write_low_stock_event_if_needed(database, material)
+        write_low_stock_event_if_needed(database, material, movement_id, user)
     database.commit()
     return True
 
 
-# Writes a low_stock_events row if this material has just fallen from OK to LOW or OUT (no commit here).
-def write_low_stock_event_if_needed(database, material):
+# Writes a low_stock_events row and an activity-log line if this material has just fallen from OK to LOW or OUT
+# (no commit here). The row points to the USED movement that caused the drop.
+def write_low_stock_event_if_needed(database, material, movement_id, user):
     after = database.execute("SELECT quantity_on_hand FROM materials WHERE id = ?", (material["id"],)).fetchone()[0]
     status_before = get_status(material["quantity_on_hand"], material["reorder_level"])
     status_after = get_status(after, material["reorder_level"])
     if status_before != STATUS_OK or status_after == STATUS_OK:
         return
     database.execute(
-        "INSERT INTO low_stock_events (id, material_id, status_after, quantity_after, reorder_level, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        ("E" + uuid.uuid4().hex[:12], material["id"], status_after, after, material["reorder_level"],
+        "INSERT INTO low_stock_events (id, material_id, status, quantity_at_event, reorder_level_at_event, "
+        "movement_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("E" + uuid.uuid4().hex[:12], material["id"], status_after, after, material["reorder_level"], movement_id,
          utc_now().strftime(TIME_FORMAT)))
+    write_material_log(database, user["id"], "LOW_STOCK_EVENT", material["id"],
+                       f"{material['name']} is now {status_after} ({after:g} {material['unit']}, "
+                       f"reorder level {material['reorder_level']:g}).")
 
 
-# Adds the stock_movements row and the activity_log row for one stock change (no commit here).
+# Adds the stock_movements row and the activity_log row for one stock change (no commit here). Returns the movement id.
 def add_movement_rows(database, material, movement_type, quantity, note, user, supplier=None, total_cost=None):
     now_text = utc_now().strftime(TIME_FORMAT)
+    movement_id = "S" + uuid.uuid4().hex[:12]
     database.execute(
         "INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at, "
         "supplier_id, total_cost_myr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("S" + uuid.uuid4().hex[:12], material["id"], movement_type, quantity, note, user["id"], now_text,
+        (movement_id, material["id"], movement_type, quantity, note, user["id"], now_text,
          supplier["id"] if supplier else None, total_cost))
     new_quantity = database.execute(
         "SELECT quantity_on_hand FROM materials WHERE id = ?", (material["id"],)).fetchone()[0]
@@ -140,6 +146,7 @@ def add_movement_rows(database, material, movement_type, quantity, note, user, s
     if supplier is not None and total_cost is not None:
         details += f" Paid MYR {total_cost:.2f} to {supplier['name']}."
     write_material_log(database, user["id"], "STOCK_" + movement_type, material["id"], details)
+    return movement_id
 
 
 # Returns the search words as a safe database pattern (so % and _ typed by a person are plain letters).
@@ -259,7 +266,10 @@ def record_stock(material_id, kind):
     note = read_text(request.form.get("note"), MAX_NOTE_LENGTH)
     problems = check_record_input(material, kind, quantity, note)
     supplier, total_cost = None, None
-    if kind == "received":
+    if kind == "received" and not can_record_purchase_cost(user):
+        if request.form.get("supplier_id") or request.form.get("total_cost"):
+            abort(403)          # only the Admin may type money; never trust the page alone
+    elif kind == "received":
         supplier, total_cost, purchase_problems = read_purchase_form(get_db(), request.form)
         problems += purchase_problems
     if not problems and not record_stock_change(get_db(), material, KIND_TO_MOVEMENT[kind], quantity, note, user,
@@ -310,6 +320,7 @@ def read_purchase_form(database, form):
 
 # Shows the record form with the material's status and its last 10 history lines (in Malaysia time).
 def show_record_form(material, kind, problems, typed_quantity, typed_form):
+    can_enter_money = kind == "received" and can_record_purchase_cost(get_current_user())
     history = get_db().execute(
         "SELECT m.movement_type, m.quantity, m.note, m.created_at, u.username FROM stock_movements m "
         "JOIN users u ON u.id = m.user_id WHERE m.material_id = ? ORDER BY m.created_at DESC, m.rowid DESC LIMIT 10",
@@ -318,4 +329,4 @@ def show_record_form(material, kind, problems, typed_quantity, typed_form):
                       "when": to_malaysia_time(row["created_at"]), "who": row["username"]} for row in history]
     return render_template("materials_record.html", material=add_status(material), kind=kind, problems=problems,
                            typed_quantity=typed_quantity, history=history_lines, typed=typed_form,
-                           suppliers=get_active_suppliers(get_db()) if kind == "received" else [])
+                           can_enter_money=can_enter_money, suppliers=get_active_suppliers(get_db()) if can_enter_money else [])

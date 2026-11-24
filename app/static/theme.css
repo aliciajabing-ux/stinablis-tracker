@@ -1,0 +1,88 @@
+/* WHAT THIS FILE DOES: The colours and look of every page (dark theme with hot-orange accents, matching the Stinablis brand).
+   WHO CAN USE IT: Both (loaded by base.html and login.html).
+   Agent H owns this file. To change a colour, change it in ONE place: the :root list below.
+   Palette (from the team's colour card): smoky black, eerie black, eerie light, night, moss, hot orange, orange wheel. */
+
+:root {
+  --smoky-black: #100C0B;
+  --night: #171614;        /* page background */
+  --eerie-black: #1C1B17;  /* cards, tables */
+  --eerie-light: #282723;  /* raised parts, borders, inputs */
+  --moss: #99A57D;         /* soft text, OK status */
+  --hot-orange: #EB4604;   /* main buttons, links, OUT */
+  --orange-wheel: #F77E0D; /* hover, LOW */
+  --text: #ECE9DF;         /* main text (light, readable on dark) */
+  --line: #3a3933;
+}
+
+/* ---- Page frame ---- */
+body { font-family: Arial, sans-serif; background: var(--night) !important; color: var(--text); margin: 0; }
+a { color: var(--orange-wheel); }
+h1, h2, h3 { color: var(--text); }
+.content { max-width: 960px; margin: 16px auto; padding: 0 16px; }
+
+.topbar { background: var(--smoky-black); color: var(--text); padding: 12px 16px; display: flex;
+          justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+          border-bottom: 3px solid var(--hot-orange); }
+.topbar strong { letter-spacing: .5px; }
+.topbar form { margin: 0; display: flex; align-items: center; gap: 10px; }
+.topbar span { color: var(--moss); }
+.topbar button { padding: 10px 16px; font-size: 1rem; border: 1px solid var(--hot-orange); border-radius: 6px;
+                 cursor: pointer; background: transparent; color: var(--text); }
+.topbar button:hover { background: var(--hot-orange); color: var(--smoky-black); }
+.menu { background: var(--eerie-black); display: flex; flex-wrap: wrap; padding: 0 6px; border-bottom: 1px solid var(--line); }
+.menu a { color: var(--text); text-decoration: none; padding: 10px 14px; font-size: 1rem; border-bottom: 3px solid transparent; }
+.menu a:hover, .menu a:focus { background: var(--eerie-light); border-bottom-color: var(--hot-orange); }
+
+/* Visible keyboard focus everywhere (Section 8: easy for everyone). */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--orange-wheel); outline-offset: 2px; }
+
+/* ---- Cards and tables (the page styles say white; the theme wins here) ---- */
+body .tile, body .panel, body .attention, body .box, body .user, body table {
+  background: var(--eerie-black) !important; color: var(--text); border: 1px solid var(--line); }
+body .tile { border-left: 8px solid var(--moss); }
+body .tile.low { border-left-color: var(--orange-wheel) !important; }
+body .tile.out { border-left-color: var(--hot-orange) !important; }
+body table { border-collapse: collapse; }
+body th { background: var(--eerie-light); color: var(--moss); }
+body th, body td { border-bottom: 1px solid var(--line) !important; }
+body .attention li { border-bottom-color: var(--line) !important; }
+body .low .word { color: var(--orange-wheel) !important; }
+body .out .word { color: var(--hot-orange) !important; }
+body .help, body .muted { color: var(--moss) !important; }
+
+/* ---- Buttons ---- */
+body .button, body .btn.main, body .filters a.on, body .btn:not(.plain), body button.button {
+  background: var(--hot-orange) !important; color: var(--smoky-black) !important; border: 1px solid var(--hot-orange) !important;
+  font-weight: bold; }
+body .button:hover, body .btn:hover, body .filters a.on:hover { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; }
+body .filters a, body .btn.plain {
+  background: transparent !important; color: var(--text) !important; border: 1px solid var(--moss) !important; }
+body .filters a:hover, body .btn.plain:hover { border-color: var(--orange-wheel) !important; color: var(--orange-wheel) !important; }
+body .filters a.on { color: var(--smoky-black) !important; }
+
+/* ---- Forms ---- */
+body label { color: var(--text); }
+body input, body select, body textarea {
+  background: var(--eerie-light); color: var(--text); border: 1px solid var(--moss); border-radius: 6px; }
+body input::placeholder { color: #8b8a80; }
+
+/* ---- Status words (always written, never colour alone) ---- */
+body .tag { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+body .tag-OK  { background: var(--moss) !important; color: var(--smoky-black) !important; }
+body .tag-LOW { background: var(--orange-wheel) !important; color: var(--smoky-black) !important; }
+body .tag-OUT { background: var(--smoky-black) !important; color: var(--hot-orange) !important; border: 2px solid var(--hot-orange); }
+body .on { color: var(--moss) !important; }
+body .off { color: var(--hot-orange) !important; }
+
+/* ---- Messages ---- */
+body .message { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--moss); padding: 10px; border-radius: 6px; }
+body .error { background: var(--smoky-black) !important; color: var(--orange-wheel) !important; border-left: 5px solid var(--hot-orange); padding: 10px; border-radius: 6px; }
+body .waiting { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--orange-wheel); }
+
+/* ---- Login page ---- */
+body .box h1 { margin-top: 0; }
+body .box button, body .content button[type=submit] {
+  background: var(--hot-orange) !important; color: var(--smoky-black) !important; font-weight: bold; }
+body .box button:hover, body .content button[type=submit]:hover { background: var(--orange-wheel) !important; }

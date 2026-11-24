@@ -53,7 +53,7 @@ def database_file(tmp_path):
 # Builds the real website on the temporary database.
 @pytest.fixture
 def website(database_file):
-    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
 
 
 # Returns a browser that is logged in as the Admin.
