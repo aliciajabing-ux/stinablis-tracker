@@ -31,10 +31,12 @@ Facts:
   warnings; a suggested supplier with an estimated cost and arrival date; simple statistics;
   different rights for different users.
 - **Why our app fits Stinablis better than filament-only tools (like Spoolman) or heavy print-farm
-  ERPs (like FilaOps):** Stinablis does industrial engineering, prototyping and assembly in Kuching,
-  so staff also need to track small hardware pieces (`pcs`), such as screws, springs, magnets,
-  fidget clickers and keychain rings, alongside filaments, resins and other supplies. We keep all of
-  it in one simple web app, with supplier cost and delivery-time comparisons.
+  ERPs (like FilaOps):** Stinablis does industrial engineering and rapid prototyping in Kuching.
+  Because our system supports pieces (`pcs`) alongside `g` and `ml`, it can also track small
+  hardware items such as screws, springs, magnets, fidget clickers and keychain rings, next to
+  filaments, resins and other supplies, in one simple web app with supplier cost and delivery-time
+  comparisons. This is subject to confirmation with the founder (which materials they really use is
+  still an open question, guide Section 16).
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -214,9 +216,10 @@ should see supplier phone numbers and emails.
 
 Facts:
 - **Why we built our own instead of using them:** Spoolman tracks filament spools only, and
-  FilaOps is a heavy ERP for print farms. Stinablis also needs to track small hardware pieces
-  (`pcs`) such as screws, springs, magnets, fidget clickers and keychain rings, next to filaments,
-  resins and other supplies, in one simple web app with supplier cost and delivery-time comparisons.
+  FilaOps is a heavy ERP for print farms. Because our system supports pieces (`pcs`) alongside `g`
+  and `ml`, it can also track small hardware items such as screws, springs, magnets, fidget clickers
+  and keychain rings, next to filaments, resins and other supplies, in one simple web app with
+  supplier cost and delivery-time comparisons (subject to confirmation with the founder).
 - **Result of our code search (2026-11-24):** no file in `app/`, `tests/` or `sample_data/` mentions
   any of these projects or contains a pasted-code credit. That means no code was copied. Everyone
   must still confirm this honestly before presenting.
