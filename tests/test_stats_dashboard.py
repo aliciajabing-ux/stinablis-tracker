@@ -269,6 +269,31 @@ def test_low_stock_chart_reads_saved_events_for_both_roles(admin, employee, data
         assert "Not set up yet" not in browser.get("/stats/").get_data(as_text=True)
 
 
+# The same five dates as sample_data/stock_movements.csv (18 to 22 November 2026, UTC) must land in November.
+def test_sample_style_usage_lands_in_november_by_month_and_by_week(database_file):
+    add_movement(database_file, "A", "M1", "USED", 170, "2026-11-18 06:30:00")
+    add_movement(database_file, "B", "M3", "USED", 500, "2026-11-20 08:15:00")
+    add_movement(database_file, "C", "M2", "USED", 260, "2026-11-21 04:45:00")
+    add_movement(database_file, "D", "M1", "USED", 500, "2026-11-22 09:00:00")
+    database = open_database(database_file)
+    month = routes_stats.get_usage_by_period(database, "month", now=NOW)
+    assert month["labels"] == ["Jun 2026", "Jul 2026", "Aug 2026", "Sep 2026", "Oct 2026", "Nov 2026"]
+    assert all(dataset["data"][:5] == [0, 0, 0, 0, 0] for dataset in month["datasets"])     # nothing in Jun to Oct
+    assert sorted(dataset["data"][5] for dataset in month["datasets"]) == [260, 500, 670]   # all in Nov 2026
+    week = routes_stats.get_usage_by_period(database, "week", now=NOW)
+    assert week["labels"][-2:] == ["Week of 16 Nov", "Week of 23 Nov"]
+    assert sum(dataset["data"][-2] for dataset in week["datasets"]) == 1430                 # all in "Week of 16 Nov"
+    assert sum(dataset["data"][-1] for dataset in week["datasets"]) == 0
+
+
+def test_usage_month_edges_use_malaysia_time_not_utc(database_file):
+    add_movement(database_file, "A", "M1", "USED", 10, "2026-10-31 15:59:59")    # 31 Oct 23:59 in Malaysia: October
+    add_movement(database_file, "B", "M1", "USED", 20, "2026-10-31 16:00:00")    # 1 Nov 00:00 in Malaysia: November
+    month = routes_stats.get_usage_by_period(open_database(database_file), "month", now=NOW)
+    data = month["datasets"][0]["data"]
+    assert data[-2] == 10 and data[-1] == 20
+
+
 def test_money_text_format():
     assert routes_stats.format_money(72) == "MYR 72.00"
     assert routes_stats.format_money(1234.5) == "MYR 1,234.50"

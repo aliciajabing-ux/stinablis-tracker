@@ -1,75 +1,118 @@
 /* WHAT THIS FILE DOES: The colours and look of every page (dark theme with hot-orange accents, matching the Stinablis brand).
+   The shape language follows the team's design reference: one header row, rounded outlined cards with a solid
+   offset shadow, light and dark cards side by side, section titles in highlighted tags, mono-font buttons.
    WHO CAN USE IT: Both (loaded by base.html and login.html).
    Agent H owns this file. To change a colour, change it in ONE place: the :root list below.
-   Palette (from the team's colour card): smoky black, eerie black, eerie light, night, moss, hot orange, orange wheel. */
+   Palette (from the team's colour card): smoky black, eerie black, eerie light, night, moss, hot orange, orange wheel.
+   Only these colours are used; the look changed, the palette did not. */
 
 :root {
   --smoky-black: #100C0B;
   --night: #171614;        /* page background */
-  --eerie-black: #1C1B17;  /* cards, tables */
+  --eerie-black: #1C1B17;  /* the page sheet */
   --eerie-light: #282723;  /* raised parts, borders, inputs */
   --moss: #99A57D;         /* soft text, OK status */
   --hot-orange: #EB4604;   /* main buttons, links, OUT */
-  --orange-wheel: #F77E0D; /* hover, LOW */
-  --text: #ECE9DF;         /* main text (light, readable on dark) */
+  --orange-wheel: #F77E0D; /* hover, LOW, highlighted titles */
+  --text: #ECE9DF;         /* main text (light, readable on dark); also the "light card" colour */
   --line: #3a3933;
+  --font-body: "Space Grotesk", "Segoe UI", Arial, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 18px;
+  --card-shadow: 0 5px 0 var(--smoky-black);
 }
 
 /* ---- Page frame ---- */
-body { font-family: Arial, sans-serif; background: var(--night) !important; color: var(--text); margin: 0; }
+body { font-family: var(--font-body); background: var(--night) !important; color: var(--text); margin: 0; line-height: 1.45; }
 a { color: var(--orange-wheel); }
-h1, h2, h3 { color: var(--text); }
-.content { max-width: 960px; margin: 16px auto; padding: 0 16px; }
+h1, h2, h3 { color: var(--text); font-family: var(--font-body); }
+h1 { font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.1; letter-spacing: -0.5px; margin: 0 0 12px; }
+h3 { margin: 16px 0 8px; }
+/* Section titles sit in a highlighted tag, like "Services" and "Case study" in the reference. */
+body h2 { display: inline-block; background: var(--orange-wheel); color: var(--smoky-black); padding: 2px 12px;
+          border-radius: 6px; font-size: 1.25rem; margin: 8px 0 10px; }
+/* The page sheet: a big rounded card the whole screen sits on. */
+.content { max-width: 1000px; margin: 20px auto; padding: 28px; background: var(--eerie-black);
+           border: 2px solid var(--line); border-radius: 28px; box-sizing: border-box; }
 
-.topbar { background: var(--smoky-black); color: var(--text); padding: 12px 16px; display: flex;
-          justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
-          border-bottom: 3px solid var(--hot-orange); }
-.topbar strong { letter-spacing: .5px; }
+/* ---- Header: logo, menu links and Log out in one row ---- */
+.topbar { background: var(--smoky-black); color: var(--text); padding: 12px 20px; display: flex; flex-wrap: wrap;
+          align-items: center; gap: 10px 20px; border-bottom: 2px solid var(--hot-orange); }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
+         font-weight: bold; font-size: 1.1rem; letter-spacing: .3px; }
+.brand svg { width: 26px; height: 26px; fill: var(--hot-orange); }
+.menu { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; font-family: var(--font-mono); font-size: .9rem; }
+.menu a { color: var(--text); text-decoration: none; padding: 10px 14px; border-radius: 10px; min-height: 20px; }
+.menu a:hover, .menu a:focus { background: var(--eerie-light); }
+.menu a.active { background: var(--orange-wheel); color: var(--smoky-black); font-weight: bold; }
 .topbar form { margin: 0; display: flex; align-items: center; gap: 10px; }
-.topbar span { color: var(--moss); }
-.topbar button { padding: 10px 16px; font-size: 1rem; border: 1px solid var(--hot-orange); border-radius: 6px;
-                 cursor: pointer; background: transparent; color: var(--text); }
-.topbar button:hover { background: var(--hot-orange); color: var(--smoky-black); }
-.menu { background: var(--eerie-black); display: flex; flex-wrap: wrap; padding: 0 6px; border-bottom: 1px solid var(--line); }
-.menu a { color: var(--text); text-decoration: none; padding: 10px 14px; font-size: 1rem; border-bottom: 3px solid transparent; }
-.menu a:hover, .menu a:focus { background: var(--eerie-light); border-bottom-color: var(--hot-orange); }
+.topbar span { color: var(--moss); font-family: var(--font-mono); font-size: .85rem; }
+.topbar button { padding: 10px 18px; font-size: .9rem; font-family: var(--font-mono); border: 2px solid var(--text);
+                 border-radius: 10px; cursor: pointer; background: transparent; color: var(--text); }
+.topbar button:hover { background: var(--text); color: var(--smoky-black); }
 
 /* Visible keyboard focus everywhere (Section 8: easy for everyone). */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 3px solid var(--orange-wheel); outline-offset: 2px; }
 
 /* ---- Cards and tables (the page styles say white; the theme wins here) ---- */
-body .tile, body .panel, body .attention, body .box, body .user, body table {
-  background: var(--eerie-black) !important; color: var(--text); border: 1px solid var(--line); }
-body .tile { border-left: 8px solid var(--moss); }
-body .tile.low { border-left-color: var(--orange-wheel) !important; }
-body .tile.out { border-left-color: var(--hot-orange) !important; }
-body table { border-collapse: collapse; }
-body th { background: var(--eerie-light); color: var(--moss); }
-body th, body td { border-bottom: 1px solid var(--line) !important; }
+body .panel, body .attention, body .box, body .user {
+  background: var(--smoky-black) !important; color: var(--text); border: 2px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--card-shadow); }
+body .attention { background: var(--eerie-light) !important; }
 body .attention li { border-bottom-color: var(--line) !important; }
-body .low .word { color: var(--orange-wheel) !important; }
-body .out .word { color: var(--hot-orange) !important; }
+body .attention li:last-child { border-bottom: 0 !important; }
 body .help, body .muted { color: var(--moss) !important; }
 
+/* Home number boxes: light and dark cards side by side (the checkerboard in the reference). */
+body .tile { background: var(--smoky-black) !important; color: var(--text); border: 2px solid var(--line);
+             border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 20px; }
+body .tile:nth-child(1), body .tile:nth-child(4) { background: var(--text) !important; color: var(--smoky-black);
+             border-color: var(--smoky-black); }
+body .tile .number { font-family: var(--font-body); font-weight: 700; }
+/* The status word on a box is a highlighted tag, so it stays readable on light and dark cards. */
+body .tile .word { padding: 1px 10px; border-radius: 6px; color: var(--smoky-black) !important; }
+body .tile.low .word { background: var(--orange-wheel); }
+body .tile.out .word { background: var(--hot-orange); }
+
+body table { background: var(--smoky-black) !important; color: var(--text); border-collapse: separate; border-spacing: 0;
+             border: 2px solid var(--line); border-radius: var(--radius); box-shadow: var(--card-shadow); }
+body th { background: var(--eerie-light); color: var(--moss); font-family: var(--font-mono); font-size: .85rem; }
+body th, body td { border-bottom: 1px solid var(--line) !important; }
+body tr:last-child td { border-bottom: 0 !important; }
+body tr:first-child th:first-child { border-top-left-radius: 14px; }
+body tr:first-child th:last-child { border-top-right-radius: 14px; }
+body tr:last-child td:first-child { border-bottom-left-radius: 14px; }
+body tr:last-child td:last-child { border-bottom-right-radius: 14px; }
+body tr:hover td { background: var(--eerie-black); }
+
 /* ---- Buttons ---- */
+body .button, body .btn { display: inline-block; padding: 12px 18px; text-decoration: none; cursor: pointer; line-height: 1.2; }
+body .button, body .btn, body .filters a, body button.button {
+  font-family: var(--font-mono); font-size: .95rem; border-radius: 10px; }
 body .button, body .btn.main, body .filters a.on, body .btn:not(.plain), body button.button {
-  background: var(--hot-orange) !important; color: var(--smoky-black) !important; border: 1px solid var(--hot-orange) !important;
+  background: var(--hot-orange) !important; color: var(--smoky-black) !important; border: 2px solid var(--hot-orange) !important;
   font-weight: bold; }
 body .button:hover, body .btn:hover, body .filters a.on:hover { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; }
 body .filters a, body .btn.plain {
-  background: transparent !important; color: var(--text) !important; border: 1px solid var(--moss) !important; }
-body .filters a:hover, body .btn.plain:hover { border-color: var(--orange-wheel) !important; color: var(--orange-wheel) !important; }
-body .filters a.on { color: var(--smoky-black) !important; }
+  background: transparent !important; color: var(--text) !important; border: 2px solid var(--text) !important; font-weight: normal; }
+body .filters a:hover, body .btn.plain:hover { background: var(--text) !important; color: var(--smoky-black) !important; }
+body .filters a.on { color: var(--smoky-black) !important; font-weight: bold; }
+
+/* Buttons inside table rows are smaller and outlined, so the main buttons on the page stand out. */
+body table td button.btn:not(.plain), body table .btn:not(.plain), body table .btn, body table .button { padding: 8px 12px; font-size: .85rem; margin: 2px 0;
+  background: transparent !important; color: var(--text) !important; border: 2px solid var(--text) !important; font-weight: normal; }
+body table td button.btn:not(.plain):hover, body table .btn:not(.plain):hover, body table .btn:hover, body table .button:hover { background: var(--text) !important; color: var(--smoky-black) !important; }
+body td { vertical-align: middle; }
 
 /* ---- Forms ---- */
 body label { color: var(--text); }
 body input, body select, body textarea {
-  background: var(--eerie-light); color: var(--text); border: 1px solid var(--moss); border-radius: 6px; }
+  background: var(--eerie-light); color: var(--text); border: 2px solid var(--moss); border-radius: 10px; font-family: var(--font-body); }
 body input::placeholder { color: #8b8a80; }
 
 /* ---- Status words (always written, never colour alone) ---- */
-body .tag { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+body .tag { font-weight: bold; padding: 3px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: .85rem; }
 body .tag-OK  { background: var(--moss) !important; color: var(--smoky-black) !important; }
 body .tag-LOW { background: var(--orange-wheel) !important; color: var(--smoky-black) !important; }
 body .tag-OUT { background: var(--smoky-black) !important; color: var(--hot-orange) !important; border: 2px solid var(--hot-orange); }
@@ -77,12 +120,38 @@ body .on { color: var(--moss) !important; }
 body .off { color: var(--hot-orange) !important; }
 
 /* ---- Messages ---- */
-body .message { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--moss); padding: 10px; border-radius: 6px; }
-body .error { background: var(--smoky-black) !important; color: var(--orange-wheel) !important; border-left: 5px solid var(--hot-orange); padding: 10px; border-radius: 6px; }
-body .waiting { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--orange-wheel); }
+body .message { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--moss); padding: 10px 14px; border-radius: 12px; }
+body .error { background: var(--smoky-black) !important; color: var(--orange-wheel) !important; border-left: 5px solid var(--hot-orange); padding: 10px 14px; border-radius: 12px; }
+body .waiting { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--orange-wheel); border-radius: 12px; }
 
 /* ---- Login page ---- */
 body .box h1 { margin-top: 0; }
 body .box button, body .content button[type=submit] {
-  background: var(--hot-orange) !important; color: var(--smoky-black) !important; font-weight: bold; }
+  background: var(--hot-orange) !important; color: var(--smoky-black) !important; font-weight: bold;
+  font-family: var(--font-mono); border-radius: 10px; }
 body .box button:hover, body .content button[type=submit]:hover { background: var(--orange-wheel) !important; }
+
+/* ---- Home hero (heading, short text, buttons and the drawing, like the reference) ---- */
+.hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.hero-text { flex: 1 1 320px; min-width: 0; }
+.hero-text p { max-width: 460px; }
+.hero-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.hero-art { flex: 0 0 240px; width: 240px; height: 200px; }
+.art-ring { fill: none; stroke: var(--moss); stroke-width: 1.5; }
+.art-spool { fill: var(--hot-orange); }
+.art-hole { fill: var(--eerie-black); }
+.art-core { fill: none; stroke: var(--smoky-black); stroke-width: 3; }
+.art-star { fill: var(--orange-wheel); }
+.art-star-light { fill: var(--text); }
+.art-dot { fill: var(--moss); }
+
+/* ---- Small screens (phone or tablet at the printer) ---- */
+@media (max-width: 720px) {
+  .content { margin: 10px; padding: 16px; border-radius: 20px; }
+  .topbar { padding: 10px 14px; }
+  .topbar form { margin-left: auto; }
+  .menu { order: 3; flex-basis: 100%; }
+  .hero-art { display: none; }
+  /* Tables keep a readable width and scroll sideways inside their own box (the page itself never scrolls sideways). */
+  body table { min-width: 880px; }
+}

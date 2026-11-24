@@ -1155,3 +1155,36 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   | CLAUDE.md.txt was NOT recreated or committed.
 
 2026-11-25 | Agent G (documentation & presentation) | FINAL DOC SYNC against origin/main-o7f8p8 at 10f78ab (branches main-0rpyg5, main-tq6ebi and Agent F's review are now merged). Full suite on that commit: 379 passed, 2 skipped, 6 xfailed (about 68 seconds). Updated README.md, GLOSSARY.md and PRESENTATION_NOTES.md: new test count; "Last bought" memory (money follows can_see_prices, edits still 403); sample hardware in pcs marked as SAMPLE and to confirm with the founder (R4); OK / LOW / OUT explained in plain English; 44 px tap size; plain-English 403/404/400 pages with "Back to Home"; money spent and low-stock events now described as working (they were "Not set up yet"); Version 1 built list kept apart from Version 2 ideas. | Re-check once more only if more branches are merged. Team: confirm the hardware list and the real suppliers with the founder (Section 16). | PROBLEMS: (1) The "SupplyTrail" pitch figures (supplier search from about 2 hours a week towards about 30 minutes a week) were not found anywhere in the repo, so PRESENTATION_NOTES.md labels them as the team's goal and an estimate, not measured and not confirmed by the founder (R4); Mark: please confirm the source. (2) Six tests are xfail (known bugs from Agent F's review); owners should fix them and remove the marks. (3) Still stale in the guide (R3, not mine): Section 6 price_per_unit / shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link. (4) No activity-log screen (F9) or backup button yet.
+
+2026-11-24 | Agent E | CHECKED: "Usage per material shows sample bars at Jun 2026" is NOT a bug. The chart always
+  shows the last 6 months, oldest on the left: Jun, Jul, Aug, Sep, Oct, Nov 2026. "Jun 2026" is only the FIRST
+  (leftmost) label and has no data. The sample usage (18 to 22 Nov 2026) is in the LAST slot, "Nov 2026", at
+  the right edge. Proof: built a database from the real sample_data and read /stats/data/usage: month data is
+  [0, 0, 0, 0, 0, 500/500/260/170] with labels Jun..Nov 2026; week view puts all of it in "Week of 16 Nov";
+  low-stock events and spending also use Malaysia time and land in Nov 2026 (spending MYR 76.00, one bar).
+  Took a browser screenshot: bars are at the right, under "Nov 2026". Checked for off-by-months, date format
+  and UTC versus Malaysia time: none found (a movement at 31 Oct 16:00 UTC correctly counts as 1 Nov in
+  Malaysia). Added 2 tests in tests/test_stats_dashboard.py (sample-style dates land in November by month and
+  by week; month edges use Malaysia time). No code change. The chart recolour in stats.html was already
+  committed (658fdd2) and merged with PR #1. Full suite passes. | If a screen still shows bars under
+  Jun 2026, the database holds other (older) movements; check data/tracker.db. | None.
+
+2026-11-24 | Agent E (restyle done at the team's request, touching Agent H's files app/static/theme.css and
+  app/templates/base.html, plus login.html and my home.html and stats.html) | DONE: new look from the team's
+  design reference (rounded outlined cards with a solid offset shadow, light and dark cards side by side,
+  section titles in highlighted tags, mono-font buttons and links, one header row, hero with a small drawing
+  on Home). THE COLOUR PALETTE IS UNCHANGED: only the 7 colours already in theme.css :root are used, no new ones.
+  What changed: theme.css rewritten (same variables, new shapes, fonts Space Grotesk and Space Mono from Google
+  Fonts with safe fallbacks if offline); base.html is now one header row (logo, menu, user and Log out) and the
+  current page is marked in the menu (aria-current); home.html has a hero (welcome, two buttons, an inline
+  drawing) and the four boxes as a light/dark checkerboard; login.html loads the fonts; stats.html charts use the
+  same font. Row buttons inside tables are outlined and smaller; on a phone tables scroll sideways inside their own
+  box (the page itself never does). Nothing a page DOES changed: same links (url_for), the Log out form is still
+  a POST with the csrf_token, the Users link keeps its can_manage_users check, no role logic added. Checked in a
+  browser (login, Home, Materials, Suppliers, Statistics, phone width 390): readable, no sideways page scroll.
+  Full suite passes. | Agent H: please review the new theme.css and keep it as the base. Pages not
+  checked in a browser: supplier detail, suggestion, material add/edit/record forms, Users screens; they use
+  the same classes so should follow, but please look. | (1) The fonts come from fonts.googleapis.com and
+  fonts.gstatic.com; if the team wants no outside requests, remove the 3 font lines in base.html and
+  login.html (the page then uses Segoe UI or Arial). (2) The Home drawing is plain decoration (aria-hidden).
+

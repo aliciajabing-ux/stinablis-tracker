@@ -7,27 +7,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Stinablis Tracker{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='theme.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap">
 </head>
 <body>
-  <div class="topbar">
-    <strong>Stinablis Tracker</strong>
+  {# One header row: logo, menu links and Log out (the current page is marked with aria-current). #}
+  {% set here = request.endpoint or '' %}
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z"/></svg>
+      <strong>Stinablis Tracker</strong>
+    </a>
     {% if current_user %}
+    <nav class="menu" aria-label="Main menu">
+      <a href="{{ url_for('home') }}"{% if here == 'home' %} class="active" aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('materials.list_materials') }}"{% if here.startswith('materials.') %} class="active" aria-current="page"{% endif %}>Materials</a>
+      <a href="{{ url_for('suppliers.supplier_list') }}"{% if here.startswith('suppliers.') %} class="active" aria-current="page"{% endif %}>Suppliers</a>
+      <a href="{{ url_for('stats.statistics_page') }}"{% if here.startswith('stats.') %} class="active" aria-current="page"{% endif %}>Statistics</a>
+      {% if can_manage_users(current_user) %}<a href="{{ url_for('users.list_users') }}"{% if here.startswith('users.') %} class="active" aria-current="page"{% endif %}>Users</a>{% endif %}
+    </nav>
     <form method="post" action="{{ url_for('auth.logout') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <span>{{ current_user['username'] }} ({{ current_user['role']|lower }})</span>
       <button type="submit">Log out</button>
     </form>
     {% endif %}
-  </div>
-  {% if current_user %}
-  <nav class="menu" aria-label="Main menu">
-    <a href="{{ url_for('home') }}">Home</a>
-    <a href="{{ url_for('materials.list_materials') }}">Materials</a>
-    <a href="{{ url_for('suppliers.supplier_list') }}">Suppliers</a>
-    <a href="{{ url_for('stats.statistics_page') }}">Statistics</a>
-    {% if can_manage_users(current_user) %}<a href="{{ url_for('users.list_users') }}">Users</a>{% endif %}
-  </nav>
-  {% endif %}
+  </header>
   <div class="content">
     {% block content %}{% endblock %}
   </div>
