@@ -38,7 +38,7 @@ def sample_database_file(tmp_path):
 
 # Returns a test browser logged in as the first active user with this role.
 def logged_in_as(sample_database_file, role):
-    website = create_app({"DATABASE": sample_database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": sample_database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     connection = sqlite3.connect(sample_database_file)
     username = connection.execute("SELECT username FROM users WHERE role = ? AND is_active = 1", (role,)).fetchone()[0]
     connection.close()

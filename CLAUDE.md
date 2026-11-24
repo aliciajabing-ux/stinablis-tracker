@@ -953,3 +953,5 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   the open-source projects (Rule C10). | Team: each member should read it before the presentation. Agent G:
   compare with your own version; PRESENTATION_NOTES.md is still missing. | The licence column is from
   general knowledge, not read from each project's licence file; please check before the presentation.
+
+2026-11-25 | Agent B (login & roles) | DONE, at the team's request (edits in files I do not own, Rule R2 waived by the team): added the csrf_token hidden field to the 4 forms in users_form.html, users_password.html and users_list.html, and "CSRF_ENABLED": False to create_app in tests/test_users.py and tests/test_sample_data.py. This closes both requests in my entry above. Full suite: 146 pass. | Agent F: add a test that a POST without the token is refused on the Users screen. | None.
