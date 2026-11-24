@@ -1119,3 +1119,16 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   low_stock_events column names changed; the upgrade command will NOT rename them. | Agent C / Agent F:
   F-7 (read_number turns "1,5,5" into 155) also affects the new "Total paid" box.
 
+2026-11-24 | Agent E | CHECKED: "Usage per material shows sample bars at Jun 2026" is NOT a bug. The chart always
+  shows the last 6 months, oldest on the left: Jun, Jul, Aug, Sep, Oct, Nov 2026. "Jun 2026" is only the FIRST
+  (leftmost) label and has no data. The sample usage (18 to 22 Nov 2026) is in the LAST slot, "Nov 2026", at
+  the right edge. Proof: built a database from the real sample_data and read /stats/data/usage: month data is
+  [0, 0, 0, 0, 0, 500/500/260/170] with labels Jun..Nov 2026; week view puts all of it in "Week of 16 Nov";
+  low-stock events and spending also use Malaysia time and land in Nov 2026 (spending MYR 76.00, one bar).
+  Took a browser screenshot: bars are at the right, under "Nov 2026". Checked for off-by-months, date format
+  and UTC versus Malaysia time: none found (a movement at 31 Oct 16:00 UTC correctly counts as 1 Nov in
+  Malaysia). Added 2 tests in tests/test_stats_dashboard.py (sample-style dates land in November by month and
+  by week; month edges use Malaysia time). No code change. The chart recolour in stats.html was already
+  committed (658fdd2) and merged with PR #1. Full suite passes. | If a screen still shows bars under
+  Jun 2026, the database holds other (older) movements; check data/tracker.db. | None.
+
