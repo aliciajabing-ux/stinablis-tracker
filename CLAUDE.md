@@ -570,3 +570,12 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   routes use admin_required, but the new tests do not prove it yet. Statistics
   CSV export and the spending chart are still Admin only (decision covered
   seeing prices, not exports). Agents A, C, D, E have no log entries yet.
+
+2026-11-24 | Agent B (login & roles) | Added CSRF tokens (answers request 5 above). New file
+  app/csrf.py: each session gets a secret code; every POST/PUT/DELETE must send it or the server
+  answers 400 "page has expired". Added a hidden "csrf_token" box to all 9 POST forms (base, login,
+  materials x3, suppliers x4 - small one-line edits in Agent C/D templates, done at the team's
+  request). app/__init__.py calls csrf.start_csrf_protection and has a CSRF_ENABLED setting (keep True;
+  existing tests set it False). 5 new tests; all 113 pass. | Any new form that uses method="post" MUST
+  include <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">. JavaScript that sends
+  data must add the header X-CSRF-Token. Browser-test one form per screen. | None.

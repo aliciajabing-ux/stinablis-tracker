@@ -10,7 +10,7 @@ import os
 
 from flask import Flask
 
-from app import auth, routes_materials, routes_stats, routes_suppliers
+from app import auth, csrf, routes_materials, routes_stats, routes_suppliers
 from app.permissions import login_required
 
 
@@ -22,6 +22,7 @@ def create_app(test_settings=None):
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         DATABASE=auth.DEFAULT_DATABASE_FILE,
+        CSRF_ENABLED=True,                  # keep True; only the automatic tests switch it off
     )
     if test_settings:
         website.config.update(test_settings)
@@ -29,6 +30,7 @@ def create_app(test_settings=None):
     if not website.config["SECRET_KEY"]:
         raise RuntimeError("Please set the STINABLIS_SECRET_KEY setting before starting. See the top of app/__init__.py.")
 
+    csrf.start_csrf_protection(website)
     website.register_blueprint(auth.auth_blueprint)
     # ---- Other agents: register your screens (blueprints) here, one line each. ----
     website.register_blueprint(routes_materials.materials_blueprint)   # Agent C: materials and stock
