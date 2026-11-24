@@ -199,6 +199,12 @@ the numbers change whenever someone adds a test.)
 * There is no activity-log screen (F9) and no one-click database backup yet. Every change is still
   written to the activity log table.
 * There is no screen to correct a wrong stock count.
+* **Open phone-test findings (from the status log, not re-tested in a browser by me):**
+  **F-11** the Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
+  columns; **F-12** supplier phone numbers and emails are plain text, not tappable `tel:` / `mailto:` links
+  (I also found no such links in the templates); **F-13** on the Statistics page the "Average delivery time
+  per supplier" chart is cut off on the left on a phone. Text size and buttons were fine in that test. No
+  fix for these is logged yet.
 * Six automatic tests are marked "expected failure" because they describe known bugs found by
   Agent F (see the status log).
 

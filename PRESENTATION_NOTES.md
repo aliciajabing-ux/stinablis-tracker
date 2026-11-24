@@ -49,7 +49,9 @@ Facts:
     tall, so a thumb can tap them), a "Last bought" reminder next to each material, plain-English error
     pages with a **Back to Home** button, a phone-friendly layout, and every permission checked on the
     server. Be honest about phones: the team's phone test found buttons and text fine, but wide tables
-    scroll sideways and phone numbers are not yet tappable (status log, F-11 and F-12).
+    scroll sideways (F-11), phone numbers are not yet tappable (F-12), and on the Statistics page the
+    "Average delivery time per supplier" chart is cut off on the left (F-13). These are open findings
+    from the status log, not re-tested in a browser by me; no fix is logged yet.
     *To check before the demo:* the top menu links get their size from `theme.css`; confirm in a browser
     that they are about 44 px tall, like the other controls.
   - *SupplyTrail pitch (team goal, not a measured result).* The aim is to cut the time spent searching
