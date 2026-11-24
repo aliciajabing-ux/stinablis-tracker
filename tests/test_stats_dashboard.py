@@ -242,8 +242,11 @@ def test_spending_chart_and_home_box_show_real_money(admin, employee, database_f
 def add_low_event(database_file, event_id, material_id, utc_text):
     connection = sqlite3.connect(database_file)
     connection.execute(
-        "INSERT INTO low_stock_events (id, material_id, status_after, quantity_after, reorder_level, created_at) "
-        "VALUES (?, ?, 'LOW', 400, 500, ?)", (event_id, material_id, utc_text))
+        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at) "
+        "VALUES (?, ?, 'USED', 400, 'U1', ?)", ("MV" + event_id, material_id, utc_text))
+    connection.execute(
+        "INSERT INTO low_stock_events (id, material_id, status, quantity_at_event, reorder_level_at_event, "
+        "movement_id, created_at) VALUES (?, ?, 'LOW', 400, 500, ?, ?)", (event_id, material_id, "MV" + event_id, utc_text))
     connection.commit()
     connection.close()
 

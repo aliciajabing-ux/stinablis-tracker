@@ -29,7 +29,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label for="quantity">How much ({{ material.unit }})</label>
   <input id="quantity" name="quantity" type="text" inputmode="decimal" required value="{{ typed_quantity }}">
-  {% if kind == 'received' %}
+  {% if can_enter_money %}
   <label for="supplier_id">Bought from (optional)</label>
   <select id="supplier_id" name="supplier_id">
     <option value="">- not sure / skip -</option>
