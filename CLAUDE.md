@@ -131,8 +131,10 @@ ROLE 2: EMPLOYEE (general staff, for example operators at the printers)
   - Record stock received (for example "received 2 spools today").
   - See low-stock warnings.
   - See the basic statistics for their daily work.
+  - SEE supplier prices, shipping costs and money totals (team decision
+    2026-11-24). Seeing is not changing.
   Cannot:
-  - See or change supplier prices (costs).
+  - Change supplier prices (costs).
   - Add, change, or delete suppliers.
   - Add, change, or delete materials.
   - Manage user accounts.
@@ -149,7 +151,8 @@ PERMISSION RULE (very important)
   data leak.
 
 SENSITIVE DATA (must never reach an employee account)
-- Supplier prices and cost totals.
+- (Supplier prices and cost totals: employees may now SEE these, since
+  2026-11-24. They must still never be able to CHANGE them.)
 - User passwords (stored in scrambled form only; never shown).
 - Admin account details.
 
@@ -169,7 +172,7 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Total number of materials
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
-        * Estimated money spent this month (Admin only)
+        * Estimated money spent this month (Admin and Employee, view only)
     - A "Needs attention" list: the low and out-of-stock materials, with
       a button to see the suggested supplier.
 
@@ -185,10 +188,10 @@ F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
     - One row per supplier: name, type (ONLINE or LOCAL), address,
       phone, email, website, and notes.
     - Each supplier has a list of materials they sell, with:
-        * Price per unit (Admin only)
+        * Price per unit (Admin and Employee can see; only Admin can change)
         * Minimum order quantity
         * Lead time in days (how long from ordering to arriving)
-        * Shipping cost (Admin only)
+        * Shipping cost (Admin and Employee can see; only Admin can change)
 
 F5. LOW-STOCK ALERTS
     - Each material has a "reorder level": the quantity at which we
@@ -211,8 +214,8 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
         * Estimated cost
         * Estimated arrival date = today + lead time days
         * Contact details
-    - Admin sees cost. Employee sees supplier name, lead time, arrival
-      date, and contact details, but not prices.
+    - Admin and Employee both see cost, supplier name, lead time, arrival
+      date, and contact details (team decision 2026-11-24).
 
 F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Usage per material per week or per month (bar chart).
@@ -442,7 +445,7 @@ Every member must be able to explain, in plain words:
      number goes down -> Row is written to the history -> If low, the
      Home screen shows the warning.)
   4. How the best supplier is picked (Section 7 example).
-  5. How we stopped employees from seeing prices (permissions.py).
+  5. How we let employees SEE prices but not change them (permissions.py).
   6. What open-source projects we looked at and what we borrowed.
 
 GLOSSARY.md must explain every technical word we use, for example:
@@ -458,7 +461,8 @@ GLOSSARY.md must explain every technical word we use, for example:
 14. SECURITY CHECKLIST (must pass before the demo)
 ---------------------------------------------------------------------
 [ ] Employee cannot open the Suppliers edit page by typing its address.
-[ ] Employee cannot see any price in any response (check the page source).
+[ ] Employee sees prices but has no edit buttons, and cannot change a
+    price by typing an address (changed 2026-11-24).
 [ ] Wrong password 5 times locks the account for 15 minutes.
 [ ] Passwords are stored scrambled (check the database file).
 [ ] Admin actions are written to the activity log.
@@ -475,7 +479,7 @@ GLOSSARY.md must explain every technical word we use, for example:
 [ ] Record 400 g used again -> quantity 0 -> status OUT.
 [ ] Two suppliers for one material: the one with the shorter lead time
     and lower total cost is listed first.
-[ ] Employee account: cannot see prices, cannot add a supplier.
+[ ] Employee account: can see prices, cannot add or change a supplier.
 [ ] Admin account: sees prices and the spending chart.
 [ ] Estimated arrival date is correct for the lead time (today + days).
 [ ] Malaysia time (UTC+8) shows correctly on every date.
@@ -550,3 +554,19 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   decision: add a CSRF token to forms? Not built; SameSite=Lax cookie is the only
   protection for now. (6) Admin user-management screen (F8) has no owner in
   Section 11; it can use auth.set_password.
+
+2026-11-24 | Team decision + fix (done at the team's request, across Agent B/D/E
+  files) | Team decided employees may SEE prices and money totals but not
+  change them. Updated Sections 4, 5 (F2, F4, F6), 13, 14 and 15 of this guide
+  first. Then fixed a bug this caused: routes_suppliers.py and
+  supplier_detail.html used can_see_prices to mean "is Admin", so employees
+  could open switched-off suppliers and saw Change / Switch off / Add buttons.
+  They now use can_manage_suppliers. Rewrote 3 old tests that expected
+  "no prices for employees" (now: employees see prices but no edit buttons).
+  All 108 tests pass. | Agent F: add a test that an employee gets 403 when
+  typing the supplier/offer edit addresses directly. Team: commit and push (the
+  GitHub copy is behind). Remember to run set-password for the sample users.
+  | Edit buttons were hidden from employees by the page only before; the
+  routes use admin_required, but the new tests do not prove it yet. Statistics
+  CSV export and the spending chart are still Admin only (decision covered
+  seeing prices, not exports). Agents A, C, D, E have no log entries yet.

@@ -8,9 +8,9 @@
 
 import os
 
-from flask import Flask, render_template
+from flask import Flask
 
-from app import auth, routes_materials, routes_suppliers
+from app import auth, routes_materials, routes_stats, routes_suppliers
 from app.permissions import login_required
 
 
@@ -33,11 +33,12 @@ def create_app(test_settings=None):
     # ---- Other agents: register your screens (blueprints) here, one line each. ----
     website.register_blueprint(routes_materials.materials_blueprint)   # Agent C: materials and stock
     website.register_blueprint(routes_suppliers.suppliers_blueprint)   # Agent D: suppliers and suggestions
+    website.register_blueprint(routes_stats.stats_blueprint)           # Agent E: statistics and dashboard
 
-    # The first screen after login. Agent E will replace this with the real dashboard.
+    # The first screen after login. Agent E: now the real dashboard (see routes_stats.py).
     @website.route("/")
     @login_required
     def home():
-        return render_template("home.html")
+        return routes_stats.show_dashboard()
 
     return website

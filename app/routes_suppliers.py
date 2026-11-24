@@ -7,7 +7,7 @@ from flask import Blueprint, abort, redirect, render_template, request, url_for
 
 from app.alerts import STATUS_OK, add_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
-from app.permissions import admin_required, can_see_prices, login_required
+from app.permissions import admin_required, can_manage_suppliers, can_see_prices, login_required
 from app.suggest import get_suggestions
 
 suppliers_blueprint = Blueprint("suppliers", __name__)
@@ -97,12 +97,12 @@ def make_next_id(database, table_name, letter):
 # Returns the supplier row, or stops with "not found" (Employees cannot open switched-off suppliers).
 def get_supplier_or_404(database, supplier_id):
     supplier = database.execute("SELECT * FROM suppliers WHERE id = ?", (supplier_id,)).fetchone()
-    if supplier is None or (supplier["is_active"] == 0 and not can_see_prices(get_current_user())):
+    if supplier is None or (supplier["is_active"] == 0 and not can_manage_suppliers(get_current_user())):
         abort(404)
     return supplier
 
 
-# Returns the offers of one supplier. Price and shipping columns are only read for Admin.
+# Returns the offers of one supplier. Price and shipping columns are read for Admin and Employee (see only).
 def get_offers_for_supplier(database, supplier_id, show_prices):
     money = ", o.price_per_pack_myr, o.shipping_cost_myr" if show_prices else ""
     return database.execute(
@@ -122,7 +122,7 @@ def get_material_choices(database):
 @suppliers_blueprint.route("/suppliers")
 @login_required
 def supplier_list():
-    admin_view = can_see_prices(get_current_user())
+    admin_view = can_manage_suppliers(get_current_user())
     query = "SELECT * FROM suppliers" + ("" if admin_view else " WHERE is_active = 1") + " ORDER BY name"
     return render_template("suppliers.html", suppliers=get_db().execute(query).fetchall())
 
@@ -134,10 +134,12 @@ def supplier_detail(supplier_id):
     database = get_db()
     supplier = get_supplier_or_404(database, supplier_id)
     show_prices = can_see_prices(get_current_user())
+    can_manage = can_manage_suppliers(get_current_user())
     offers = get_offers_for_supplier(database, supplier_id, show_prices)
-    if not show_prices:
+    if not can_manage:
         offers = [offer for offer in offers if offer["is_active"] == 1]
-    return render_template("supplier_detail.html", supplier=supplier, offers=offers, show_prices=show_prices)
+    return render_template("supplier_detail.html", supplier=supplier, offers=offers,
+                           show_prices=show_prices, can_manage=can_manage)
 
 
 # Admin only: shows the "Add supplier" form and saves a new supplier.

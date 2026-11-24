@@ -131,8 +131,10 @@ ROLE 2: EMPLOYEE (general staff, for example operators at the printers)
   - Record stock received (for example "received 2 spools today").
   - See low-stock warnings.
   - See the basic statistics for their daily work.
+  - SEE supplier prices, shipping costs and money totals (changed 2026-11-24:
+    team decision; read only).
   Cannot:
-  - See or change supplier prices (costs).
+  - Change supplier prices (costs).
   - Add, change, or delete suppliers.
   - Add, change, or delete materials.
   - Manage user accounts.
@@ -149,7 +151,8 @@ PERMISSION RULE (very important)
   data leak.
 
 SENSITIVE DATA (must never reach an employee account)
-- Supplier prices and cost totals.
+- (Supplier prices and cost totals: Employees MAY now SEE them, read only.
+  Decision 2026-11-24. They still cannot change them.)
 - User passwords (stored in scrambled form only; never shown).
 - Admin account details.
 
@@ -169,7 +172,7 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Total number of materials
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
-        * Estimated money spent this month (Admin only)
+        * Estimated money spent this month (Admin and Employee can see it)
     - A "Needs attention" list: the low and out-of-stock materials, with
       a button to see the suggested supplier.
 
@@ -185,10 +188,10 @@ F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
     - One row per supplier: name, type (ONLINE or LOCAL), address,
       phone, email, website, and notes.
     - Each supplier has a list of materials they sell, with:
-        * Price per unit (Admin only)
+        * Price per unit (everyone can see; only Admin can change)
         * Minimum order quantity
         * Lead time in days (how long from ordering to arriving)
-        * Shipping cost (Admin only)
+        * Shipping cost (everyone can see; only Admin can change)
 
 F5. LOW-STOCK ALERTS
     - Each material has a "reorder level": the quantity at which we
@@ -211,8 +214,8 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
         * Estimated cost
         * Estimated arrival date = today + lead time days
         * Contact details
-    - Admin sees cost. Employee sees supplier name, lead time, arrival
-      date, and contact details, but not prices.
+    - Admin and Employee both see cost, supplier name, lead time, arrival
+      date, and contact details (changed 2026-11-24).
 
 F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Usage per material per week or per month (bar chart).
@@ -457,7 +460,8 @@ GLOSSARY.md must explain every technical word we use, for example:
 14. SECURITY CHECKLIST (must pass before the demo)
 ---------------------------------------------------------------------
 [ ] Employee cannot open the Suppliers edit page by typing its address.
-[ ] Employee cannot see any price in any response (check the page source).
+[ ] Employee can SEE prices but cannot change them: editing a price by typing the
+    address or sending data gives 403 (changed 2026-11-24).
 [ ] Wrong password 5 times locks the account for 15 minutes.
 [ ] Passwords are stored scrambled (check the database file).
 [ ] Admin actions are written to the activity log.
@@ -617,3 +621,101 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   tests/test_auth_permissions.py (menu appears when logged in, not on the login page).
   | Agent E: when you replace home.html, keep "extends base.html" so the menu stays.
   Add a link here if you add a Statistics page. | None.
+
+2026-11-23 | Agent B (login & roles) | Committed my remaining files (base.html with menu bar,
+  home.html, tests/test_auth_permissions.py) and updated .gitignore (.venv/ and
+  __pycache__/ added; data/ kept). All 80 tests passed before the commit. Not pushed.
+  | CLAUDE.md.txt is still untracked (not mine to add; the team should decide whether to
+  keep it, since it duplicates README.md). | None.
+
+2026-11-23 | Agent E (statistics & dashboard) | Wrote app/routes_stats.py, home.html (four boxes,
+  Needs attention list with Find supplier buttons, See statistics button) and stats.html
+  (usage bar chart by week/month, low-stock line chart, average delivery time per supplier,
+  Admin-only spending chart and CSV download; Chart.js 4.4.1 loaded from a CDN). In
+  app/__init__.py I registered the blueprint and replaced the placeholder "/" (it now calls
+  routes_stats.show_dashboard; the endpoint name "home" is kept). Employee gets 403 on the CSV
+  and spending address; Employee pages and chart data contain no money (tests prove it). Found
+  and fixed one leak while testing: the spending chart script was sent to Employees. 27 new
+  tests; see TESTS.md. | Agent F: review and do the manual test, including a phone-sized window.
+  | QUESTIONS (R4, built but switched off, screens say "Not set up yet"; flags
+  SPENDING_METHOD_CONFIRMED and LOW_EVENTS_METHOD_CONFIRMED in routes_stats.py): (1) Where does
+  "money spent" come from? stock_movements has no price. PROPOSAL: each RECEIVED movement is
+  priced as quantity x the price per unit of the cheapest active offer for that material, and is
+  credited to that supplier. Weakness: we do not know who the stock was really bought from, and
+  prices change. Better option: add a supplier and a price to the "Record received" form (needs
+  Agent A and C). Team to choose. (2) How is a "low-stock event" counted? There is no stored
+  event. PROPOSAL: replay stock_movements (starting stock and received add, used subtracts); one
+  event = one USED row that moves a material from OK to LOW or OUT; counted by Malaysia-time
+  month, using today's reorder level. Weakness: ADJUSTED rows have no +/- direction. (3) "Usage per
+  material" mixes g, ml and pcs on one chart (units shown in each label); shows the 8 most used
+  materials and the last 6 weeks or months. OK? (4) "Estimated money spent" is shown for the
+  current Malaysia-time month.
+  | REQUEST TO AGENT B (R3, app/templates/base.html): please add a "Statistics" link to the menu:
+  url_for('stats.statistics_page'). Until then Home has a "See statistics" button.
+  | NOTE: the charts need internet for Chart.js; if the shop has none at the printers, we should
+  save the file into app/static/ (team decision). No CSRF issue here (no forms).
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E ticked off. Added a "Statistics"
+  link to the menu in app/templates/base.html (Home, Materials, Suppliers, Statistics; links to
+  stats.statistics_page; no role check, the page checks its own permissions). Menu test in
+  tests/test_auth_permissions.py now also checks the Statistics link. Full suite: 107 pass.
+  | Agent E may remove the temporary "See statistics" button from Home if wanted. Change is
+  not committed yet. | None.
+
+2026-11-24 | Agent E (statistics & dashboard) | Team answered my questions: (1) money spent:
+  Option B, store the real cost when stock is received. (2) low-stock events: Option B, store
+  the event when it happens. (3) usage chart mixing g/ml/pcs, 8 most used, last 6 periods: Yes.
+  (4) money box shows the current Malaysia-time month: Yes. Manual tests on a real phone: all 3
+  pass (TESTS.md). | Spending and low-stock events stay "Not set up yet" until A and C finish
+  below; then I will read the real data and switch both flags on. | REQUESTS (R3):
+  TO AGENT A (schema.sql, setup_database.py): (a) in stock_movements add nullable columns
+  supplier_id (TEXT, refers to suppliers) and total_cost_myr (REAL, >= 0), filled only for
+  RECEIVED rows. (b) new table low_stock_events: id, material_id, status (LOW or OUT),
+  quantity_at_event, reorder_level_at_event, movement_id (the USED row that caused it),
+  created_at (UTC). Rows are added, never edited or deleted. Existing databases need a
+  safe upgrade (add columns, create table) without losing data.
+  TO AGENT C (routes_materials.py, materials_record.html): on "Record received" ask for the
+  supplier (list of active suppliers) and total price paid in MYR, and save them on the
+  RECEIVED row. These two boxes must only appear for Admin; Employees must still be able to
+  record received stock (Section 4: Employees cannot see prices), so for an Employee the cost
+  stays empty. TEAM TO DECIDE (R4): should an Admin fill the cost in later for rows an
+  Employee recorded? Also on every "Record used" that moves a material from OK to LOW or OUT,
+  write one low_stock_events row (use alerts.get_status before and after) and one
+  activity_log line.
+  | Nothing built by me for this yet. Money from RECEIVED rows with no cost will be left
+  out of the totals, and the screen will say so.
+
+2026-11-24 | Agent E (statistics & dashboard) | TEAM DECISION CHANGE: Employees may SEE prices,
+  shipping costs and money totals, but still cannot change suppliers, offers or materials.
+  Guide updated first (Section 4 roles and sensitive data, F2, F4, F6, Section 14 checklist).
+  My side: Home money box already follows can_see_prices(), so it will show for Employees as soon
+  as that function changes. I split the Statistics page: spending chart and CSV download now use
+  is_admin() (F7 still says Admin only; team to confirm, see question below). | REQUESTS (R3):
+  TO AGENT B (app/permissions.py): make can_see_prices return True for an active Admin OR an
+  active Employee (keep can_manage_* Admin only). TO AGENTS B, C, D, F: old tests that say
+  "Employee sees no price / no MYR" must be rewritten to "Employee sees prices but gets 403 when
+  changing them"; Agent D's supplier templates and suggest page may test role directly and need
+  checking (Rule C7). My tests in tests/test_stats_dashboard.py with "Employee ... no money" will
+  fail after Agent B's change and I will update them then. | QUESTION (R4): should Employees also
+  see the spending chart and the CSV download (F7 says Admin only)? Until answered they stay Admin
+  only.
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E (Employees may SEE prices).
+  app/permissions.py: can_see_prices now returns True for an active Admin or active Employee;
+  switched-off, not logged in and unknown roles still False. can_manage_materials,
+  can_manage_suppliers, can_manage_users, can_view_activity_log and admin_required are
+  unchanged (Admin only). My tests updated (24 pass): prices visible to Admin and Employee,
+  Employee still cannot manage anything. Full suite: 104 pass, 4 fail (all in other agents'
+  files, not edited): tests/test_stats_dashboard.py::test_home_employee_has_no_money_box_or_money,
+  tests/test_suppliers_suggest.py::test_employee_suggestion_page_has_no_prices_anywhere_in_the_source,
+  ::test_employee_supplier_pages_have_no_prices (all three expect "no price": expected, Agents
+  D/E should update them), and ::test_employee_cannot_see_switched_off_supplier (NOT just an
+  old expectation: see next). | REQUEST TO AGENT D (Rule R3): app/routes_suppliers.py uses
+  can_see_prices() as a stand-in for "is Admin" (lines ~100, 125, 136-139: switched-off
+  suppliers/offers hidden, and show_prices in supplier_detail.html also controls the Add /
+  Change buttons at lines ~17, 33, 44). Now that Employees can see prices, Employees can open
+  switched-off suppliers and are shown the Add / Change links (the server still answers 403
+  when they click, but the buttons must not show, and switched-off records must stay hidden,
+  Rule C9). Please use a separate check from permissions.py (can_manage_suppliers) for those,
+  and use can_see_prices only for the money columns. Same check for Agent E's files. | Until
+  D fixes this the supplier pages show Employees buttons they cannot use. Not committed yet.

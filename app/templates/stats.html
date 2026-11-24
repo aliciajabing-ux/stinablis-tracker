@@ -1,0 +1,85 @@
+{# WHAT THIS FILE DOES: The Statistics page: usage, low-stock, delivery-time and (Admin only) spending charts.
+   WHO CAN USE IT: Both. Spending and the download button are only drawn for Admin (the guide keeps these Admin only); the server also blocks Employees. #}
+{% extends "base.html" %}
+{% block title %}Statistics - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  .panel { background:#fff; border-radius:6px; padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
+  .chart-area { position:relative; width:100%; height:300px; }
+  .button, .panel select { padding:12px 18px; font-size:1rem; border-radius:6px; }
+  .button { display:inline-block; background:#1a5fb4; color:#fff; text-decoration:none; }
+  .waiting { background:#fff7e0; padding:10px; border-radius:6px; }
+</style>
+<h1>Statistics</h1>
+<p>Simple charts of how materials are used. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
+<div class="panel">
+  <h2>Usage per material</h2>
+  <p>How much was used in each week or month.</p>
+  <label for="period">Show by: </label>
+  <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
+  <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
+</div>
+<div class="panel">
+  <h2>Low-stock events per month</h2>
+  {% if low_events_ready %}<div class="chart-area"><canvas id="low-chart" aria-label="Low-stock events line chart"></canvas></div>
+  {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how a low-stock event is counted.</p>{% endif %}
+</div>
+<div class="panel">
+  <h2>Average delivery time per supplier</h2>
+  <p>Days from ordering to arriving. This is an average over what each supplier sells.</p>
+  <div class="chart-area"><canvas id="lead-chart" aria-label="Average delivery days bar chart"></canvas></div>
+</div>
+{% if show_admin_tools %}
+<div class="panel">
+  <h2>Spending per supplier this month</h2>
+  {% if spending_ready %}<div class="chart-area"><canvas id="spending-chart" aria-label="Spending per supplier chart"></canvas></div>
+  {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how money spent is counted.</p>{% endif %}
+</div>
+<p><a class="button" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a></p>
+{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  var urls = {
+    usage: "{{ url_for('stats.usage_data') }}",
+    low: "{{ url_for('stats.low_stock_data') }}",
+    lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools and spending_ready %},
+    spending: "{{ url_for('stats.spending_data') }}"{% endif %}
+  };
+  var charts = {};
+  // Draws (or redraws) one chart inside the canvas with the given id.
+  function drawChart(canvasId, config) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === "undefined") { return; }
+    if (charts[canvasId]) { charts[canvasId].destroy(); }
+    config.options = Object.assign({responsive: true, maintainAspectRatio: false}, config.options || {});
+    charts[canvasId] = new Chart(canvas, config);
+  }
+  // Loads the usage numbers for the chosen period and draws the bar chart.
+  function loadUsage() {
+    var period = document.getElementById("period").value;
+    fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
+      drawChart("usage-chart", {type: "bar", data: d});
+    });
+  }
+  document.getElementById("period").addEventListener("change", loadUsage);
+  loadUsage();
+  fetch(urls.lead).then(function (r) { return r.json(); }).then(function (d) {
+    drawChart("lead-chart", {type: "bar", options: {indexAxis: "y"},
+      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: "#1a5fb4"}]}});
+  });
+  if (document.getElementById("low-chart")) {
+    fetch(urls.low).then(function (r) { return r.json(); }).then(function (d) {
+      drawChart("low-chart", {type: "line",
+        data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: "#e66100"}]}});
+    });
+  }
+  {% if show_admin_tools and spending_ready %}
+  if (urls.spending) {
+    fetch(urls.spending).then(function (r) { return r.json(); }).then(function (d) {
+      drawChart("spending-chart", {type: "bar",
+        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: "#26a269"}]}});
+    });
+  }
+  {% endif %}
+</script>
+{% endblock %}

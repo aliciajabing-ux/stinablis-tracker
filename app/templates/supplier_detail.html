@@ -1,5 +1,5 @@
 {# WHAT THIS FILE DOES: One supplier: contact details and the materials it sells (prices only when show_prices is true).
-   WHO CAN USE IT: Both (prices and edit buttons are Admin only). #}
+   WHO CAN USE IT: Both (Admin and Employee see prices; edit buttons are Admin only). #}
 {% extends "base.html" %}
 {% block title %}{{ supplier['name'] }} - Stinablis Tracker{% endblock %}
 {% block content %}
@@ -14,7 +14,7 @@
   <p><strong>Email:</strong> {{ supplier['email'] or '-' }}</p>
   <p><strong>Website:</strong> {{ supplier['website'] or '-' }}</p>
   <p><strong>Notes:</strong> {{ supplier['notes'] or '-' }}</p>
-  {% if show_prices %}
+  {% if can_manage %}
   <a class="button" href="{{ url_for('suppliers.supplier_edit', supplier_id=supplier['id']) }}">Change supplier</a>
   <form method="post" action="{{ url_for('suppliers.supplier_switch', supplier_id=supplier['id']) }}" style="display:inline">
     <button class="button" type="submit">{{ 'Switch off' if supplier['is_active'] == 1 else 'Switch on' }}</button>
@@ -24,7 +24,8 @@
 <h2>Materials this supplier sells</h2>
 <div class="scroll"><table>
   <tr><th>Material</th><th>Pack size</th><th>Minimum order (packs)</th><th>Lead time (days)</th>
-    {% if show_prices %}<th>Price per pack</th><th>Shipping</th><th>Status</th><th></th>{% endif %}</tr>
+    {% if show_prices %}<th>Price per pack</th><th>Shipping</th>{% endif %}
+    {% if can_manage %}<th>Status</th><th></th>{% endif %}</tr>
   {% for o in offers %}
   <tr>
     <td>{{ o['material_name'] }} {{ o['material_colour'] or '' }}</td>
@@ -32,6 +33,8 @@
     <td>{{ o['minimum_order_packs'] }}</td><td>{{ o['lead_time_days'] }}</td>
     {% if show_prices %}
     <td>MYR {{ '%.2f' % o['price_per_pack_myr'] }}</td><td>MYR {{ '%.2f' % o['shipping_cost_myr'] }}</td>
+    {% endif %}
+    {% if can_manage %}
     <td>{{ 'Active' if o['is_active'] == 1 else 'Switched off' }}</td>
     <td><a href="{{ url_for('suppliers.offer_edit', offer_id=o['id']) }}">Change</a>
       <form method="post" action="{{ url_for('suppliers.offer_switch', offer_id=o['id']) }}" style="display:inline">
@@ -41,5 +44,5 @@
   {% else %}<tr><td colspan="8">No materials listed yet.</td></tr>
   {% endfor %}
 </table></div>
-{% if show_prices %}<p><a class="button" href="{{ url_for('suppliers.offer_new', supplier_id=supplier['id']) }}">Add material this supplier sells</a></p>{% endif %}
+{% if can_manage %}<p><a class="button" href="{{ url_for('suppliers.offer_new', supplier_id=supplier['id']) }}">Add material this supplier sells</a></p>{% endif %}
 {% endblock %}

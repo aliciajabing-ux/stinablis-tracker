@@ -168,18 +168,19 @@ def test_out_material_screen_works(admin):
     assert "OUT" in admin.get("/suggest/M3").get_data(as_text=True)
 
 
-def test_employee_suggestion_page_has_no_prices_anywhere_in_the_source(employee):
+def test_employee_suggestion_page_shows_prices(employee):
+    # Team decision 2026-11-24: employees may SEE prices (but not change them).
     page = employee.get("/suggest/M1").get_data(as_text=True)
-    assert "Local Shop" in page and "082-111" in page          # name and contact are allowed
-    for secret in ["MYR", "72.00", "70.00", "50.00", "Estimated cost"]:
-        assert secret not in page
+    assert "Local Shop" in page and "082-111" in page
+    assert "Estimated cost" in page and "MYR" in page
 
 
-def test_employee_supplier_pages_have_no_prices(employee):
-    for address in ["/suppliers", "/suppliers/S1", "/suppliers/S2"]:
-        page = employee.get(address).get_data(as_text=True)
-        assert "MYR" not in page and "72.00" not in page and "Shipping" not in page
-    assert "Lead time" in employee.get("/suppliers/S1").get_data(as_text=True)
+def test_employee_supplier_pages_show_prices_but_no_edit_buttons(employee):
+    page = employee.get("/suppliers/S1").get_data(as_text=True)
+    assert "MYR 72.00" in page and "Lead time" in page
+    for edit_control in ["Change", "Switch off", "Switch on", "Add material this supplier sells", "/edit"]:
+        assert edit_control not in page
+    assert "Add supplier" not in employee.get("/suppliers").get_data(as_text=True)
 
 
 def test_admin_supplier_page_shows_prices(admin):
