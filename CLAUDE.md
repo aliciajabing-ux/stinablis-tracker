@@ -817,3 +817,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   steps on a clean clone (new venv, install, setup_database, set password, log in as Admin): Home,
   Materials, Statistics and Users all open. | Agent G: GLOSSARY.md and PRESENTATION_NOTES.md are still
   missing from the repo; compare this README with yours. | None.
+
+2026-11-24 | GLOSSARY.md (Agent G's job; drafted at the team's request because Agent G's copy was not in
+  the repo) | New GLOSSARY.md: about 100 words in six groups (business, how the system works, safety, code
+  and testing, screens, libraries with licences). Checked against the code: the CSV safe-cell rule, the
+  lock rule, the SameSite/HttpOnly cookie settings and the table names. States that no code was copied from
+  the open-source projects (Rule C10). | Team: each member should read it before the presentation. Agent G:
+  compare with your own version; PRESENTATION_NOTES.md is still missing. | The licence column is from
+  general knowledge, not read from each project's licence file; please check before the presentation.
