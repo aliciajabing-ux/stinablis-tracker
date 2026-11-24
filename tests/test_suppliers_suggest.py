@@ -221,6 +221,38 @@ def test_employee_attempts_change_nothing(employee, database_file):
     assert read_rows(database_file, "SELECT is_active FROM supplier_offers WHERE id='O1'")[0]["is_active"] == 1
 
 
+VALID_SUPPLIER_FORM = {"name": "Renamed Shop", "supplier_type": "ONLINE", "address": "x", "phone": "1",
+                       "email": "a@b.c", "website": "", "notes": ""}
+VALID_OFFER_FORM = {"material_id": "M1", "pack_unit": "g", "pack_size": "1000", "price_per_pack_myr": "1",
+                    "minimum_order_packs": "1", "shipping_cost_myr": "0", "lead_time_days": "1"}
+
+
+# A fully valid form sent by an Employee must still be refused, so only the permission check can be what stops it.
+@pytest.mark.parametrize("address, form", [
+    ("/suppliers/new", VALID_SUPPLIER_FORM),
+    ("/suppliers/S1/edit", VALID_SUPPLIER_FORM),
+    ("/suppliers/S1/offers/new", VALID_OFFER_FORM),
+    ("/offers/O1/edit", VALID_OFFER_FORM),
+])
+def test_employee_with_a_valid_form_gets_403_and_nothing_changes(employee, database_file, address, form):
+    before = (read_rows(database_file, "SELECT * FROM suppliers"), read_rows(database_file, "SELECT * FROM supplier_offers"),
+              read_rows(database_file, "SELECT * FROM activity_log"))
+    assert employee.post(address, data=form).status_code == 403
+    after = (read_rows(database_file, "SELECT * FROM suppliers"), read_rows(database_file, "SELECT * FROM supplier_offers"),
+             read_rows(database_file, "SELECT * FROM activity_log"))
+    assert [[tuple(r) for r in part] for part in before] == [[tuple(r) for r in part] for part in after]
+
+
+def test_the_same_valid_forms_do_work_for_the_admin(admin, database_file):
+    assert admin.post("/offers/O1/edit", data=VALID_OFFER_FORM).status_code == 302
+    assert read_rows(database_file, "SELECT price_per_pack_myr FROM supplier_offers WHERE id='O1'")[0][0] == 1
+
+
+def test_employee_price_stays_the_same_after_typing_the_price_address(employee, database_file):
+    employee.post("/offers/O1/edit", data=VALID_OFFER_FORM)
+    assert read_rows(database_file, "SELECT price_per_pack_myr FROM supplier_offers WHERE id='O1'")[0][0] == 72.0
+
+
 # ---------- Admin changes (guide F4, C8, C9) ----------
 
 GOOD_OFFER = {"material_id": "M2", "pack_size": "1000", "pack_unit": "g", "price_per_pack_myr": "60",

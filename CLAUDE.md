@@ -601,3 +601,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   or code change. Existing tests prove it (Employee gets 403 on /stats/export.csv and /stats/data/spending;
   the Statistics page has no chart or download for Employees). | Next: Agent F test that Employees get 403
   when typing the supplier and offer edit addresses. | None.
+
+2026-11-24 | Agent F work (done by Agent E at the team's request) | DONE: Employee 403 proof for supplier and
+  offer edit addresses. tests/test_suppliers_suggest.py: the old test sent a half-empty form, so a form check
+  could have stopped it too. New tests send COMPLETE valid forms as an Employee to /suppliers/new,
+  /suppliers/S1/edit, /suppliers/S1/offers/new and /offers/O1/edit: all give 403 and the suppliers, offers and
+  activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
+  Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
+  in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
