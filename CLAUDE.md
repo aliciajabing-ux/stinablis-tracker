@@ -788,3 +788,13 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   using can_manage_users from permissions.py (Rule C7). All 138 tests pass. | Agent F: re-run and try the
   screens in a browser on a phone. Team: forms still have no CSRF token (open since Agent B). Also decide
   who owns F8 in Section 11. | A user with no password cannot log in; "Add user" always sets one.
+
+2026-11-24 | Sample-data date bug (found by Agent G; fixed at the team's request, touching Agent A's
+  sample_data and Agent F's tests) | Changed the 5 dates in sample_data/stock_movements.csv from
+  "2026-11-10T02:00:00Z" to "2026-11-10 02:00:00", the format the app reads. Added
+  tests/test_sample_data.py (3 checks): it builds a database from the real sample files and proves the
+  dates have the right format and that the Record used/received pages, /stats/data/usage and
+  /stats/export.csv open without a 500 error. The checks failed before the fix and pass now. All 141
+  tests pass. | Agent A: databases already created with the old file still hold the old dates; delete
+  data/tracker.db and run app/setup_database.py again, or use the repair in README.md. Also still to do
+  from Agent G's request: schema.sql comments, SAMPLE_DATA_README.txt, requirements.txt. | None.
