@@ -570,3 +570,14 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   routes use admin_required, but the new tests do not prove it yet. Statistics
   CSV export and the spending chart are still Admin only (decision covered
   seeing prices, not exports). Agents A, C, D, E have no log entries yet.
+
+2026-11-24 | Users screen (F8, no owner in Section 11; built at the team's request) | Wrote
+  app/routes_users.py, templates users_list.html, users_form.html, users_password.html and
+  tests/test_users.py (30 checks). Admin can add a user (with first password), change a role,
+  reset a password (also unlocks the account) and switch an account off or on. Nothing is deleted.
+  Safety rules: an Admin cannot switch off or demote themselves, and the last active Admin cannot be
+  switched off. Every action is written to the activity log. Employees get 403 on every address.
+  Registered the blueprint in app/__init__.py and added an Admin-only "Users" menu link in base.html,
+  using can_manage_users from permissions.py (Rule C7). All 138 tests pass. | Agent F: re-run and try the
+  screens in a browser on a phone. Team: forms still have no CSRF token (open since Agent B). Also decide
+  who owns F8 in Section 11. | A user with no password cannot log in; "Add user" always sets one.

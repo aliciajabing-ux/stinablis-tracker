@@ -1,0 +1,41 @@
+{# WHAT THIS FILE DOES: The Users screen: every account with buttons to change role, reset password, switch off/on.
+   WHO CAN USE IT: Admin only (the server refuses everyone else). #}
+{% extends "base.html" %}
+{% block title %}Users - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  .btn { display:inline-block; padding:10px 14px; border-radius:6px; border:1px solid #1a5fb4; background:#1a5fb4;
+         color:#fff; font-size:1rem; text-decoration:none; cursor:pointer; }
+  .btn.plain { background:#fff; color:#1a5fb4; }
+  .user { background:#fff; border-radius:6px; padding:14px; margin-bottom:10px; }
+  .user form { display:inline-block; margin:4px 6px 0 0; }
+  .user select { padding:9px; font-size:1rem; }
+  .off { color:#a51d2d; font-weight:bold; } .on { color:#1b6b3a; font-weight:bold; }
+  .message { background:#d8ecd8; padding:10px; border-radius:6px; margin-bottom:12px; }
+</style>
+<h1>Users</h1>
+<p>Everyone who can log in. Accounts are never deleted. Switch an account off instead, and its history is kept.</p>
+{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
+<p><a class="btn" href="{{ url_for('users.add_user') }}">Add user</a></p>
+{% for user in users %}
+<div class="user">
+  <strong>{{ user['username'] }}</strong>{% if user['id'] == me['id'] %} (you){% endif %}
+  - {{ user['role']|title }} -
+  {% if user['is_active'] %}<span class="on">ON</span>{% else %}<span class="off">OFF</span>{% endif %}
+  {% if not user['password_hash'] %} - <span class="off">no password yet</span>{% endif %}
+  <div>
+    <form method="post" action="{{ url_for('users.change_role', user_id=user['id']) }}">
+      <select name="role" aria-label="Role of {{ user['username'] }}">
+        {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == user['role'] }}>{{ role|title }}</option>{% endfor %}
+      </select>
+      <button class="btn plain" type="submit">Change role</button>
+    </form>
+    <a class="btn plain" href="{{ url_for('users.reset_password', user_id=user['id']) }}">Reset password</a>
+    <form method="post" action="{{ url_for('users.switch_active', user_id=user['id']) }}">
+      <input type="hidden" name="turn" value="{{ 'off' if user['is_active'] else 'on' }}">
+      <button class="btn plain" type="submit">{{ 'Switch off' if user['is_active'] else 'Switch on' }}</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

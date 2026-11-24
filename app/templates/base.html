@@ -34,6 +34,7 @@
     <a href="{{ url_for('materials.list_materials') }}">Materials</a>
     <a href="{{ url_for('suppliers.supplier_list') }}">Suppliers</a>
     <a href="{{ url_for('stats.statistics_page') }}">Statistics</a>
+    {% if can_manage_users(current_user) %}<a href="{{ url_for('users.list_users') }}">Users</a>{% endif %}
   </nav>
   {% endif %}
   <div class="content">

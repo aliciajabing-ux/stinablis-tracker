@@ -10,8 +10,8 @@ import os
 
 from flask import Flask
 
-from app import auth, routes_materials, routes_stats, routes_suppliers
-from app.permissions import login_required
+from app import auth, routes_materials, routes_stats, routes_suppliers, routes_users
+from app.permissions import can_manage_users, login_required
 
 
 # Builds and returns the web application. Other agents add their screens in the marked place below.
@@ -34,6 +34,9 @@ def create_app(test_settings=None):
     website.register_blueprint(routes_materials.materials_blueprint)   # Agent C: materials and stock
     website.register_blueprint(routes_suppliers.suppliers_blueprint)   # Agent D: suppliers and suggestions
     website.register_blueprint(routes_stats.stats_blueprint)           # Agent E: statistics and dashboard
+    website.register_blueprint(routes_users.users_blueprint)           # Users screen (F8, Admin only)
+
+    website.jinja_env.globals["can_manage_users"] = can_manage_users   # lets the menu ask permissions.py
 
     # The first screen after login. Agent E: now the real dashboard (see routes_stats.py).
     @website.route("/")
