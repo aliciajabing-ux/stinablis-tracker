@@ -808,3 +808,12 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   install step to "pip install -r requirements.txt" (the README in this repo is still the old copy of
   the guide). Team: Section 6 of this guide still says price_per_unit and shipping_cost; the table has
   price_per_pack_myr, minimum_order_packs and shipping_cost_myr. | None.
+
+2026-11-24 | README.md (Agent G's job; rebuilt at the team's request because Agent G's copy was not in
+  the repo) | Replaced the old README.md, which was an out-of-date copy of this guide (721 lines; the
+  only differences were older wording from before the 2026-11-24 decisions, and it stays in Git
+  history), with a short how-to: virtual environment, pip install -r requirements.txt, setup_database,
+  set-password, secret key, start, roles table, tests, folder map and known problems. I followed the
+  steps on a clean clone (new venv, install, setup_database, set password, log in as Admin): Home,
+  Materials, Statistics and Users all open. | Agent G: GLOSSARY.md and PRESENTATION_NOTES.md are still
+  missing from the repo; compare this README with yours. | None.
