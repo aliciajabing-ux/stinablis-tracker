@@ -208,10 +208,23 @@ def test_account_switched_off_while_logged_in_loses_access(client, database_file
     assert client.get("/").status_code == 302
 
 
-def test_only_admin_can_see_prices(client, database_file):
+def test_admin_and_employee_can_see_prices_but_others_cannot(database_file):
     assert can_see_prices(read_user(database_file, "boss")) is True
-    assert can_see_prices(read_user(database_file, "worker")) is False
-    assert can_see_prices(None) is False
+    assert can_see_prices(read_user(database_file, "worker")) is True
+    assert can_see_prices(read_user(database_file, "gone")) is False     # switched off
+    assert can_see_prices(None) is False                                 # not logged in
+    assert can_see_prices({"is_active": 1, "role": "VISITOR"}) is False  # unknown role
+
+
+def test_employee_can_see_prices_but_cannot_change_anything(database_file):
+    from app.permissions import (can_manage_materials, can_manage_suppliers,
+                                 can_manage_users, can_view_activity_log)
+    worker = read_user(database_file, "worker")
+    assert can_see_prices(worker) is True
+    assert can_manage_materials(worker) is False
+    assert can_manage_suppliers(worker) is False
+    assert can_manage_users(worker) is False
+    assert can_view_activity_log(worker) is False
 
 
 def test_login_and_lock_are_written_to_activity_log(client, database_file):
@@ -248,10 +261,10 @@ def test_menu_links_show_only_when_logged_in(database_file):
     website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
     menu_client = website.test_client()
     login_page = menu_client.get("/login").data
-    for link_text in [b">Home<", b">Materials<", b">Suppliers<"]:
+    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
         assert link_text not in login_page
     log_in(menu_client, "worker", EMPLOYEE_PASSWORD)
     home_page = menu_client.get("/").data
-    for link_text in [b">Home<", b">Materials<", b">Suppliers<"]:
+    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
         assert link_text in home_page
     assert b'href="/materials/"' in home_page or b'href="/materials"' in home_page

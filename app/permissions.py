@@ -23,9 +23,10 @@ def is_employee(user):
     return user is not None and user["is_active"] == 1 and user["role"] == EMPLOYEE_ROLE
 
 
-# Returns True if the user may see supplier prices, shipping costs and money totals (Admin only).
+# Returns True if the user may SEE supplier prices, shipping costs and money totals (Admin and Employee,
+# team decision 2026-11-24). Seeing is not changing: only Admin can change prices.
 def can_see_prices(user):
-    return is_admin(user)
+    return is_admin(user) or is_employee(user)
 
 
 # Returns True if the user may add, change or remove materials (Admin only).
