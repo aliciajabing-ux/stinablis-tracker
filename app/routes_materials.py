@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status
+from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import admin_required, can_manage_materials, can_record_stock, login_required
 
@@ -106,8 +106,24 @@ def record_stock_change(database, material, movement_type, quantity, note, user,
         database.rollback()
         return False
     add_movement_rows(database, material, movement_type, quantity, note, user, supplier, total_cost)
+    if movement_type == "USED":
+        write_low_stock_event_if_needed(database, material)
     database.commit()
     return True
+
+
+# Writes a low_stock_events row if this material has just fallen from OK to LOW or OUT (no commit here).
+def write_low_stock_event_if_needed(database, material):
+    after = database.execute("SELECT quantity_on_hand FROM materials WHERE id = ?", (material["id"],)).fetchone()[0]
+    status_before = get_status(material["quantity_on_hand"], material["reorder_level"])
+    status_after = get_status(after, material["reorder_level"])
+    if status_before != STATUS_OK or status_after == STATUS_OK:
+        return
+    database.execute(
+        "INSERT INTO low_stock_events (id, material_id, status_after, quantity_after, reorder_level, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        ("E" + uuid.uuid4().hex[:12], material["id"], status_after, after, material["reorder_level"],
+         utc_now().strftime(TIME_FORMAT)))
 
 
 # Adds the stock_movements row and the activity_log row for one stock change (no commit here).

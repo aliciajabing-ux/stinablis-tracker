@@ -202,10 +202,6 @@ def test_average_lead_time_per_supplier(database_file):
 
 # ---------- Proposed methods (switched off until the team answers) ----------
 
-def test_low_events_are_switched_off_until_confirmed(admin):
-    assert admin.get("/stats/data/low-stock").get_json() == {"labels": [], "counts": []}
-
-
 # Adds a RECEIVED line with a supplier and a total paid (UTC time text).
 def add_purchase(database_file, movement_id, supplier_id, total_cost, utc_text, kind="RECEIVED"):
     connection = sqlite3.connect(database_file)
@@ -242,14 +238,32 @@ def test_spending_chart_and_home_box_show_real_money(admin, employee, database_f
     assert employee.get("/stats/data/spending").status_code == 403
 
 
-def test_proposed_low_event_counts_only_the_drop_from_ok(database_file):
-    add_movement(database_file, "A", "M1", "ADJUSTED", 800, "2026-11-01 01:00:00")
-    add_movement(database_file, "B", "M1", "USED", 400, "2026-11-02 01:00:00")   # 400: OK -> LOW (event)
-    add_movement(database_file, "C", "M1", "USED", 100, "2026-11-03 01:00:00")   # still LOW (no event)
-    add_movement(database_file, "D", "M1", "RECEIVED", 1000, "2026-11-04 01:00:00")
-    add_movement(database_file, "E", "M1", "USED", 900, "2026-12-02 01:00:00")   # OK -> LOW again, December
+# Adds one saved low-stock event (time is UTC text).
+def add_low_event(database_file, event_id, material_id, utc_text):
+    connection = sqlite3.connect(database_file)
+    connection.execute(
+        "INSERT INTO low_stock_events (id, material_id, status_after, quantity_after, reorder_level, created_at) "
+        "VALUES (?, ?, 'LOW', 400, 500, ?)", (event_id, material_id, utc_text))
+    connection.commit()
+    connection.close()
+
+
+def test_low_events_are_counted_per_malaysia_month(database_file):
+    add_low_event(database_file, "A", "M1", "2026-11-02 01:00:00")
+    add_low_event(database_file, "B", "M2", "2026-11-20 01:00:00")
+    add_low_event(database_file, "C", "M1", "2026-10-31 17:00:00")    # 1 Nov 01:00 in Malaysia
+    add_low_event(database_file, "D", "M1", "2026-12-02 01:00:00")
     events = routes_stats.count_low_stock_events(open_database(database_file))
-    assert events == {date(2026, 11, 1): 1, date(2026, 12, 1): 1}
+    assert events == {date(2026, 11, 1): 3, date(2026, 12, 1): 1}
+
+
+def test_low_stock_chart_reads_saved_events_for_both_roles(admin, employee, database_file, monkeypatch):
+    monkeypatch.setattr(routes_stats, "malaysia_now", lambda: NOW)
+    add_low_event(database_file, "A", "M1", "2026-11-02 01:00:00")
+    for browser in (admin, employee):
+        chart = browser.get("/stats/data/low-stock").get_json()
+        assert chart["labels"][-1] == "Nov 2026" and chart["counts"][-1] == 1
+        assert "Not set up yet" not in browser.get("/stats/").get_data(as_text=True)
 
 
 def test_money_text_format():

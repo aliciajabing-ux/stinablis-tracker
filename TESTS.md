@@ -124,7 +124,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Usage chart adds USED rows only, by month and by week (week starts Monday) | F7 | Pass |
 | A movement at 17:00 UTC on 31 Oct counts in November (Malaysia time, UTC+8) | Section 15 | Pass |
 | Average delivery time per supplier ignores switched-off offers | F7 | Pass |
-| Low-stock events show "Not set up yet" until the team confirms the method | Rule R4 | Pass |
+| Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop), counted per Malaysia-time month | F5, F7 | Pass |
 | Money spent = real "Total paid" from Record received, per supplier, Malaysia-time month | F2, F7 | Pass |
 | PROPOSED spending method (received stock x cheapest offer) and PROPOSED low-event method (drop from OK) calculate as written | R4 (switched off) | Pass |
 | Money prints as "MYR 72.00"; CSV cells cannot run as spreadsheet formulas | Section 5 | Pass |

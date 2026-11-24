@@ -3,8 +3,7 @@
 # WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the spending chart and CSV download are Admin only. All checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
-# One thing is NOT confirmed by the team yet (guide Rule R4), so that screen says "not set up yet":
-#   How a "low-stock event" is counted (LOW_EVENTS_METHOD_CONFIRMED). See the STATUS LOG question.
+# A low-stock event = a "Record used" that drops a material from OK to LOW or OUT (saved in low_stock_events).
 
 import csv
 import io
@@ -12,15 +11,14 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, Response, jsonify, render_template, request
 
-from app.alerts import (STATUS_OK, count_materials_by_status, get_materials_needing_attention,
-                        get_status)
+from app.alerts import count_materials_by_status, get_materials_needing_attention
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import admin_required, can_see_prices, is_admin, login_required
 
 stats_blueprint = Blueprint("stats", __name__, url_prefix="/stats", template_folder="templates")
 
 SPENDING_METHOD_CONFIRMED = True       # money spent = real totals typed on "Record received"
-LOW_EVENTS_METHOD_CONFIRMED = False    # team must answer the STATUS LOG question first
+LOW_EVENTS_METHOD_CONFIRMED = True     # event = a Record used that drops a material from OK to LOW or OUT
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 PERIODS_SHOWN = 6                      # how many weeks or months the charts show
 MOST_USED_MATERIALS_SHOWN = 8
@@ -86,29 +84,13 @@ def get_usage_by_period(database, period, now=None):
                          for name, by_start in ranked]}
 
 
-# Returns every stock change of every material in time order, with the material's reorder level.
-def read_stock_history(database):
-    return database.execute(
-        "SELECT s.material_id, s.movement_type, s.quantity, s.created_at, m.reorder_level "
-        "FROM stock_movements s JOIN materials m ON m.id = s.material_id "
-        "ORDER BY s.created_at, s.id").fetchall()
-
-
-# PROPOSED (not confirmed): a low-stock event is one USED row that moves a material from OK to LOW or OUT.
-# Returns {month start date: number of events}. Starting stock and received stock add; used stock subtracts.
+# Returns {month start date: number of low-stock events}, read from the low_stock_events table.
+# An event is saved when a "Record used" moves a material from OK to LOW or OUT.
 def count_low_stock_events(database):
-    quantity = {}
     events = {}
-    for row in read_stock_history(database):
-        before = quantity.get(row["material_id"], 0)
-        sign = -1 if row["movement_type"] == "USED" else 1
-        after = before + sign * row["quantity"]
-        quantity[row["material_id"]] = after
-        went_low = get_status(before, row["reorder_level"]) == STATUS_OK and \
-            get_status(after, row["reorder_level"]) != STATUS_OK
-        if row["movement_type"] == "USED" and went_low:
-            month = period_start(to_malaysia_time(row["created_at"]), "month")
-            events[month] = events.get(month, 0) + 1
+    for row in database.execute("SELECT created_at FROM low_stock_events").fetchall():
+        month = period_start(to_malaysia_time(row["created_at"]), "month")
+        events[month] = events.get(month, 0) + 1
     return events
 
 

@@ -583,4 +583,15 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   ALTER TABLE stock_movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id);
   ALTER TABLE stock_movements ADD COLUMN total_cost_myr REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0);
   (or delete it and run setup_database.py again for sample data). | Old received lines have no total, so they
-  count as MYR 0 until someone types one. Not committed yet.
+  count as MYR 0 until someone types one. Committed and pushed.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: low-stock events chart works.
+  Team decision: a low-stock event = one "Record used" that drops a material from OK to LOW or OUT; further
+  drops while it stays LOW or OUT do not count again. Changes: app/schema.sql (new table low_stock_events: id,
+  material_id, status_after, quantity_after, reorder_level at that moment, created_at), app/routes_materials.py
+  (Record used writes the event row in the same save as the stock change), app/routes_stats.py
+  (LOW_EVENTS_METHOD_CONFIRMED = True; the chart counts rows per Malaysia-time month; the old "replay history"
+  guess is removed), tests (122 pass). Both roles can see the chart (no money in it). | Team: an existing
+  data/tracker.db needs this once (the table is new): run the CREATE TABLE low_stock_events block from
+  app/schema.sql, or delete the file and run setup_database.py again. | Drops that happened before today have
+  no event rows, so the chart starts counting from now. Not committed yet.

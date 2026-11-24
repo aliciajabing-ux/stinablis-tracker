@@ -76,6 +76,16 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     total_cost_myr  REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0)  -- RECEIVED only: what was paid
 );
 
+-- One row each time a material falls from OK to LOW or OUT (written when someone records stock used).
+CREATE TABLE IF NOT EXISTS low_stock_events (
+    id                  TEXT PRIMARY KEY,
+    material_id         TEXT NOT NULL REFERENCES materials(id),
+    status_after        TEXT NOT NULL CHECK (status_after IN ('LOW', 'OUT')),
+    quantity_after      REAL NOT NULL,
+    reorder_level       REAL NOT NULL,          -- the level at that moment, so later edits do not change history
+    created_at          TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Who changed what, and when. Admins can read it. Nobody can edit it.
 CREATE TABLE IF NOT EXISTS activity_log (
     id              TEXT PRIMARY KEY,
