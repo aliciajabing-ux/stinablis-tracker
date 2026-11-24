@@ -68,7 +68,7 @@ def database_file(template_database, tmp_path):
 # Builds the real website on the private database.
 @pytest.fixture
 def website(database_file):
-    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
 
 
 # Returns a browser that is already logged in as the given user id (skips the slow password check).
@@ -214,6 +214,11 @@ SCREEN_MATRIX = {
     "/stats/data/lead-times": (302, 200, 200),
     "/stats/data/spending": (302, 403, 200),
     "/stats/export.csv": (302, 403, 200),
+    "/users/": (302, 403, 200),
+    "/users/add": (302, 403, 200),
+    "/users/U2/password": (302, 403, 200),
+    "/users/U2/role": (405, 405, 405),
+    "/users/U2/active": (405, 405, 405),
     "/logout": (405, 405, 405),
 }
 
@@ -234,7 +239,7 @@ def test_matrix_lists_every_address_of_the_website(website):
         found.add(re.sub(r"<[^>]+>", "X", rule.rule))
     listed = set()
     for address in SCREEN_MATRIX:
-        listed.add(re.sub(r"/(M1|S1|O1)\b", "/X", address.replace("/used", "/<kind>").replace("/received", "/<kind>")))
+        listed.add(re.sub(r"/(M1|S1|O1|U2)\b", "/X", address.replace("/used", "/<kind>").replace("/received", "/<kind>")))
     listed = {re.sub(r"<kind>", "X", item) for item in listed}
     found = {re.sub(r"X/X$", "X/X", item) for item in found}
     missing = {item for item in found if item not in listed}
@@ -501,8 +506,8 @@ def test_employee_blocked_from_csv_even_when_spending_is_switched_on(employee, m
 def test_spending_data_is_admin_only_when_switched_on(admin, employee, visitor, database_file, monkeypatch):
     monkeypatch.setattr(routes_stats, "SPENDING_METHOD_CONFIRMED", True)
     connection = sqlite3.connect(database_file)
-    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at) "
-                       "VALUES ('SM9', 'M1', 'RECEIVED', 1000, 'U1', ?)",
+    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at, supplier_id, total_cost_myr) "
+                       "VALUES ('SM9', 'M1', 'RECEIVED', 1000, 'U1', ?, 'S1', 72)",
                        (auth.utc_now().strftime(auth.TIME_FORMAT),))
     connection.commit()
     connection.close()
@@ -515,8 +520,8 @@ def test_spending_data_is_admin_only_when_switched_on(admin, employee, visitor, 
 def test_csv_has_spending_rows_for_admin_only_when_switched_on(admin, employee, database_file, monkeypatch):
     monkeypatch.setattr(routes_stats, "SPENDING_METHOD_CONFIRMED", True)
     connection = sqlite3.connect(database_file)
-    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at) "
-                       "VALUES ('SM9', 'M1', 'RECEIVED', 1000, 'U1', ?)",
+    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at, supplier_id, total_cost_myr) "
+                       "VALUES ('SM9', 'M1', 'RECEIVED', 1000, 'U1', ?, 'S1', 72)",
                        (auth.utc_now().strftime(auth.TIME_FORMAT),))
     connection.commit()
     connection.close()
@@ -922,21 +927,20 @@ def test_rule_c6_no_secret_keys_or_passwords_written_in_the_app_code():
 # ============================================================================================
 
 # BUG F-1 (owner: Agent B / app/__init__.py): no CSRF token on forms.
-@pytest.mark.xfail(strict=True, reason="F-1: no CSRF token. A form sent from another website is accepted.")
+@pytest.mark.skip(reason="F-1 fixed (CSRF tokens added). Proven with protection ON in tests/test_auth_permissions.py; these tests run with it OFF.")
 def test_known_issue_form_from_another_website_is_refused(admin, database_file):
     response = admin.post("/materials/M2/record/used", data={"quantity": "10"},
                           headers={"Origin": "https://evil.example", "Referer": "https://evil.example/trap"})
     assert response.status_code in (400, 403)
 
 
-@pytest.mark.xfail(strict=True, reason="F-1: forms carry no hidden CSRF token field.")
+@pytest.mark.skip(reason="F-1 fixed (CSRF tokens added). Proven with protection ON in tests/test_auth_permissions.py; these tests run with it OFF.")
 def test_known_issue_forms_contain_a_hidden_token(admin):
     page = admin.get("/materials/M1/record/used").get_data(as_text=True).lower()
     assert "csrf" in page or 'name="token"' in page
 
 
 # BUG F-2 (F8 has no owner in Section 11): no user-management or unlock screen.
-@pytest.mark.xfail(strict=True, reason="F-2: no Admin screen to add users, reset passwords, disable or unlock accounts (F8).")
 def test_known_issue_admin_has_a_user_management_screen(website):
     addresses = [rule.rule for rule in website.url_map.iter_rules()]
     assert any("user" in address for address in addresses)
@@ -957,12 +961,10 @@ def test_known_issue_admin_has_a_backup_button(website):
 
 
 # BUG F-5 (Agent E / routes_stats.py): the spending chart and money box are switched off, so Section 15 line 6 cannot pass.
-@pytest.mark.xfail(strict=True, reason="F-5: spending is switched off (SPENDING_METHOD_CONFIRMED = False); Admin sees 'Not set up yet'.")
 def test_known_issue_admin_sees_the_spending_chart(admin):
     assert "spending-chart" in admin.get("/stats/").get_data(as_text=True)
 
 
-@pytest.mark.xfail(strict=True, reason="F-5: low-stock events chart is switched off (LOW_EVENTS_METHOD_CONFIRMED = False).")
 def test_known_issue_low_stock_events_chart_has_data(admin):
     assert admin.get("/stats/data/low-stock").get_json()["labels"]
 
@@ -995,7 +997,7 @@ def sample_database(tmp_path, monkeypatch):
 
 
 def test_known_issue_sample_users_cannot_log_in_until_a_password_is_set(sample_database):
-    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     for username in ("sample_admin", "sample_employee"):
         for guess in ("", "password", "admin", "changeme", "sample_admin"):
             assert log_in(website.test_client(), username, guess).status_code == 401, (username, guess)
@@ -1008,7 +1010,7 @@ def test_sample_users_work_after_set_password_and_roles_are_right(sample_databas
     assert auth.set_password(connection, "sample_admin", "sample-admin-pass") is True
     assert auth.set_password(connection, "sample_employee", "sample-employee-pass") is True
     connection.close()
-    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     boss, worker = website.test_client(), website.test_client()
     assert log_in(boss, "sample_admin", "sample-admin-pass").status_code == 302
     assert log_in(worker, "sample_employee", "sample-employee-pass").status_code == 302
@@ -1016,7 +1018,6 @@ def test_sample_users_work_after_set_password_and_roles_are_right(sample_databas
     assert worker.get("/suppliers/new").status_code == 403
 
 
-@pytest.mark.xfail(strict=True, reason="F-9: sample_data CSV dates look like 2026-11-18T06:30:00Z but the app reads 'YYYY-MM-DD HH:MM:SS', so /stats/data/usage crashes.")
 def test_sample_data_screens_open_for_both_roles(sample_database):
     connection = sqlite3.connect(sample_database)
     connection.row_factory = sqlite3.Row
@@ -1024,7 +1025,7 @@ def test_sample_data_screens_open_for_both_roles(sample_database):
     auth.set_password(connection, "sample_employee", "sample-employee-pass")
     ids = [row[0] for row in connection.execute("SELECT id FROM materials")]
     connection.close()
-    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True})
+    website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     for username, password in (("sample_admin", "sample-admin-pass"), ("sample_employee", "sample-employee-pass")):
         client = website.test_client()
         log_in(client, username, password)
