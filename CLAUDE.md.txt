@@ -1,0 +1,52 @@
+﻿
+2026-11-23 | Agent B (login & roles) | Wrote app/__init__.py (create_app: secret key
+  from STINABLIS_SECRET_KEY, safe cookie settings, "/" home page), app/templates/
+  base.html (Log out button) and home.html (placeholder). 22 automatic tests pass.
+  Founder-side manual test passed: admin login, employee login, 5 wrong passwords
+  lock the account, correct password refused while locked. Sample passwords set
+  (not stored in Git). | Agent F: review and extend tests. Then Agents C and D can
+  start; register your screens at the marked line in app/__init__.py, and use only
+  permissions.py for role checks. Agent E replaces home.html. | Still open: CSRF
+  tokens on forms (not built); no Admin screen yet to unlock/reset accounts (F8);
+  add .venv/ to .gitignore (no .gitignore exists yet).
+
+2026-11-23 | Agent B (login & roles) | DONE: request from Agent D ticked off. Added a menu bar
+  to app/templates/base.html, shown only when logged in: Home, Materials, Suppliers (links
+  built with url_for; no role checks, each page checks its own permissions). Tap-friendly
+  (padding 10px 14px, font 1rem) and wraps on narrow screens. Added 1 test in
+  tests/test_auth_permissions.py (menu appears when logged in, not on the login page).
+  | Agent E: when you replace home.html, keep "extends base.html" so the menu stays.
+  Add a link here if you add a Statistics page. | None.
+
+2026-11-23 | Agent B (login & roles) | Committed my remaining files (base.html with menu bar,
+  home.html, tests/test_auth_permissions.py) and updated .gitignore (.venv/ and
+  __pycache__/ added; data/ kept). All 80 tests passed before the commit. Not pushed.
+  | CLAUDE.md.txt is still untracked (not mine to add; the team should decide whether to
+  keep it, since it duplicates README.md). | None.
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E ticked off. Added a "Statistics"
+  link to the menu in app/templates/base.html (Home, Materials, Suppliers, Statistics; links to
+  stats.statistics_page; no role check, the page checks its own permissions). Menu test in
+  tests/test_auth_permissions.py now also checks the Statistics link. Full suite: 107 pass.
+  | Agent E may remove the temporary "See statistics" button from Home if wanted. Change is
+  not committed yet. | None.
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E (Employees may SEE prices).
+  app/permissions.py: can_see_prices now returns True for an active Admin or active Employee;
+  switched-off, not logged in and unknown roles still False. can_manage_materials,
+  can_manage_suppliers, can_manage_users, can_view_activity_log and admin_required are
+  unchanged (Admin only). My tests updated (24 pass): prices visible to Admin and Employee,
+  Employee still cannot manage anything. Full suite: 104 pass, 4 fail (all in other agents'
+  files, not edited): tests/test_stats_dashboard.py::test_home_employee_has_no_money_box_or_money,
+  tests/test_suppliers_suggest.py::test_employee_suggestion_page_has_no_prices_anywhere_in_the_source,
+  ::test_employee_supplier_pages_have_no_prices (all three expect "no price": expected, Agents
+  D/E should update them), and ::test_employee_cannot_see_switched_off_supplier (NOT just an
+  old expectation: see next). | REQUEST TO AGENT D (Rule R3): app/routes_suppliers.py uses
+  can_see_prices() as a stand-in for "is Admin" (lines ~100, 125, 136-139: switched-off
+  suppliers/offers hidden, and show_prices in supplier_detail.html also controls the Add /
+  Change buttons at lines ~17, 33, 44). Now that Employees can see prices, Employees can open
+  switched-off suppliers and are shown the Add / Change links (the server still answers 403
+  when they click, but the buttons must not show, and switched-off records must stay hidden,
+  Rule C9). Please use a separate check from permissions.py (can_manage_suppliers) for those,
+  and use can_see_prices only for the money columns. Same check for Agent E's files. | Until
+  D fixes this the supplier pages show Employees buttons they cannot use. Not committed yet.
