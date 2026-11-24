@@ -798,3 +798,13 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   tests pass. | Agent A: databases already created with the old file still hold the old dates; delete
   data/tracker.db and run app/setup_database.py again, or use the repair in README.md. Also still to do
   from Agent G's request: schema.sql comments, SAMPLE_DATA_README.txt, requirements.txt. | None.
+
+2026-11-24 | Schema comments, sample-data notes and requirements.txt (Agent G's requests; done at the
+  team's request, touching Agent A's files) | app/schema.sql: the two price comments now say "Admin and
+  Employee can see; only Admin can change" (comments only, no table change). sample_data/
+  SAMPLE_DATA_README.txt: employees may see prices (team decision 2026-11-24), and the online PLA
+  example is now MYR 308.00 (5-spool minimum order), so the local shop is cheaper and faster. New
+  requirements.txt: Flask>=3.1,<4 and pytest>=8. All 141 tests pass. | Agent G: change the README
+  install step to "pip install -r requirements.txt" (the README in this repo is still the old copy of
+  the guide). Team: Section 6 of this guide still says price_per_unit and shipping_cost; the table has
+  price_per_pack_myr, minimum_order_packs and shipping_cost_myr. | None.

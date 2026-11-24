@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS supplier_offers (
     material_id             TEXT NOT NULL REFERENCES materials(id),
     pack_size               REAL NOT NULL CHECK (pack_size > 0),
     pack_unit               TEXT NOT NULL CHECK (pack_unit IN ('g', 'ml', 'pcs')),
-    price_per_pack_myr      REAL NOT NULL CHECK (price_per_pack_myr >= 0),   -- Admin only on screen
+    price_per_pack_myr      REAL NOT NULL CHECK (price_per_pack_myr >= 0),   -- Admin and Employee can see; only Admin can change
     minimum_order_packs     INTEGER NOT NULL DEFAULT 1 CHECK (minimum_order_packs >= 1),
-    shipping_cost_myr       REAL NOT NULL DEFAULT 0 CHECK (shipping_cost_myr >= 0),  -- Admin only on screen
+    shipping_cost_myr       REAL NOT NULL DEFAULT 0 CHECK (shipping_cost_myr >= 0),  -- Admin and Employee can see; only Admin can change
     lead_time_days          INTEGER NOT NULL CHECK (lead_time_days >= 0),
     is_active               INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1))
 );
