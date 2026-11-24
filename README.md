@@ -719,3 +719,8 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Rule C9). Please use a separate check from permissions.py (can_manage_suppliers) for those,
   and use can_see_prices only for the money columns. Same check for Agent E's files. | Until
   D fixes this the supplier pages show Employees buttons they cannot use. Not committed yet.
+
+2026-11-24 | Agent D (suppliers) | DONE: request from reviewer. suppliers.html no longer checks
+  current_user['role'] in the template (Rule C7). supplier_list in routes_suppliers.py now passes
+  can_manage (from permissions.can_manage_suppliers) and the page uses it. 108 tests pass. | Nothing
+  left from this request. | None.
