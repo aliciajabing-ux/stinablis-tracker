@@ -27,6 +27,7 @@
       <div class="error" role="alert">{{ message }}</div>
     {% endif %}
     <form method="post" action="{{ url_for('auth.login') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label for="username">Username</label>
       <input id="username" name="username" type="text" value="{{ username }}"
              maxlength="100" autocomplete="username" required autofocus>

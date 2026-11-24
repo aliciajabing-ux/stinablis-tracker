@@ -67,7 +67,7 @@ def open_database(database_file):
 # Builds the real website pointed at the temporary database.
 @pytest.fixture
 def website(database_file):
-    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True})
+    return create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
 
 
 # Returns a test browser that is logged in as the given user.

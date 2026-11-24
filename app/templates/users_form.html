@@ -1,0 +1,30 @@
+{# WHAT THIS FILE DOES: The "Add user" form.
+   WHO CAN USE IT: Admin only (the server refuses everyone else). #}
+{% extends "base.html" %}
+{% block title %}Add user - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  label { display:block; margin-top:12px; font-weight:bold; }
+  input, select { padding:10px; font-size:1rem; width:100%; max-width:360px; box-sizing:border-box; }
+  .btn { display:inline-block; padding:12px 18px; margin-top:16px; border-radius:6px; border:1px solid #1a5fb4;
+         background:#1a5fb4; color:#fff; font-size:1rem; text-decoration:none; cursor:pointer; }
+  .btn.plain { background:#fff; color:#1a5fb4; }
+  .problems { background:#f5c2c2; color:#7a0000; padding:10px; border-radius:6px; }
+</style>
+<h1>Add user</h1>
+<p>Create a new login. Tell the person their password in private; they can use it to log in straight away.</p>
+{% if problems %}<div class="problems"><ul>{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label for="username">Username</label>
+  <input id="username" name="username" type="text" maxlength="50" required value="{{ form.username }}">
+  <label for="role">Role</label>
+  <select id="role" name="role">
+    {% for role in roles %}<option value="{{ role }}" {{ 'selected' if role == form.role }}>{{ role|title }}</option>{% endfor %}
+  </select>
+  <label for="password">Password (at least {{ min_length }} characters)</label>
+  <input id="password" name="password" type="password" maxlength="200" required autocomplete="new-password">
+  <div><button class="btn" type="submit">Add user</button>
+  <a class="btn plain" href="{{ url_for('users.list_users') }}">Cancel</a></div>
+</form>
+{% endblock %}

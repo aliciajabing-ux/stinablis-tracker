@@ -8,8 +8,10 @@ Facts below were checked against the code and by running the app on 2026-11-24. 
 are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
 Stinablis facts or real prices (rule R7).
 
-Last re-checked against code: 2026-11-24 (108 automatic tests passing). Agent F's review is still
-pending, so re-check these notes after it lands (see the status log in `CLAUDE.md`).
+Last re-checked against code: 2026-11-25, on the merged branch `main-iyvssn` (146 automatic tests
+passing). Three other branches were not part of that merge when I checked: `main-0rpyg5` (money spent,
+low-stock events, supplier-edit 403 tests), `main-tq6ebi` (small Agent D fix) and Agent F's review
+branch. Re-check these notes when they are merged (see the status log in `CLAUDE.md`).
 
 > **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
 > stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
@@ -31,12 +33,21 @@ Facts:
   warnings; a suggested supplier with an estimated cost and arrival date; simple statistics;
   different rights for different users.
 - **Why our app fits Stinablis better than filament-only tools (like Spoolman) or heavy print-farm
-  ERPs (like FilaOps):** Stinablis does industrial engineering and rapid prototyping in Kuching.
-  Because our system supports pieces (`pcs`) alongside `g` and `ml`, it can also track small
-  hardware items such as screws, springs, magnets, fidget clickers and keychain rings, next to
-  filaments, resins and other supplies, in one simple web app with supplier cost and delivery-time
-  comparisons. This is subject to confirmation with the founder (which materials they really use is
-  still an open question, guide Section 16).
+  ERPs (like FilaOps):**
+  - *One system for several kinds of stock.* Stinablis does industrial engineering and rapid
+    prototyping in Kuching. Because our system supports pieces (`pcs`) alongside grams (`g`) and
+    millilitres (`ml`), it can track filaments, resins and liquids, and also small hardware items such as
+    screws, springs, magnets, fidget clickers and keychain rings, in one simple web app. This is subject
+    to confirmation with the founder (which materials they really use is still an open question,
+    guide Section 16).
+  - *Buying in Kuching.* The Find supplier page compares a fast local shop (for example delivery in
+    1 day) with an online shop that may have a cheaper pack price but a larger minimum order and
+    several days of shipping, using estimated total cost and arrival date. Every number is marked as
+    an estimate. The suppliers in our demo are invented sample data; the founder still has to give us
+    the real ones.
+  - *Made for the shop floor.* Plain-English labels, the words OK / LOW / OUT shown with their
+    colours, big buttons, a phone-friendly layout (checked on a real phone), and every permission
+    checked on the server.
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -56,7 +67,7 @@ Facts:
 | Add / change / switch off suppliers and offers, change prices | Yes | **No** (403) |
 | Statistics: usage, average delivery time | Yes | Yes |
 | Statistics: spending chart, CSV download | Yes | **No** (403) |
-| Manage user accounts | Yes (not built yet) | No |
+| Manage user accounts (Users screen: add user, change role, reset password, switch off) | Yes | **No** (403) |
 
 Facts:
 - Each user has exactly one role. Login is a username and password; 5 wrong passwords lock the
@@ -67,7 +78,8 @@ Facts:
 - Still open for the founder: should Employees see supplier phone numbers and emails? Today they
   can (our proposal); the founder has not confirmed.
 - Settled (guide Section 5, F7): the Statistics spending chart and CSV export are Admin only.
-- Not built yet: the Admin screens for managing users (F8) and the activity log (F9).
+- Built: the Admin Users screen (F8). Not built yet: the activity-log screen (F9). Every change is
+  still written to the activity log table.
 
 ## 3. One feature from start to finish: "Record used"
 
@@ -84,8 +96,10 @@ Step by step (code in `app/routes_materials.py`, `app/alerts.py`):
    The page shows the current stock, the status word and the last 10 history lines in Malaysia time.
 2. **Send:** the person types a quantity (and an optional note) and presses Save. The browser sends
    a POST to the server.
-3. **Server checks permission:** `login_required`, then `can_record_stock(user)` from
-   `permissions.py` (Admin and Employee both pass). Anyone else gets 403 or the login page.
+3. **Server checks the form is genuine and the person is allowed:** the form carries a hidden
+   secret token (CSRF protection); a missing or wrong token is refused. Then `login_required`, then
+   `can_record_stock(user)` from `permissions.py` (Admin and Employee both pass). Anyone else gets 403
+   or the login page.
 4. **Server checks the input:** `read_number` accepts only a plain number (no letters, minus, zero,
    or more than two decimals). The note must be 200 letters or fewer. A bad input gives a message in
    plain words, for example "Please type the quantity as a number, for example 200".
@@ -109,9 +123,9 @@ STOCK_USED activity row appeared.
 **Demo tip:** use the Section 15 checklist. Add a material with reorder level 500 g and quantity
 800 g (status OK), record 400 g used (400 g, LOW), record 400 g used again (0 g, OUT).
 
-> **Warning before you demo (2026-11-24):** with the sample data as it loads today the "Record used"
-> page can crash (500 error) because of a date format problem in the sample file. See the
-> "Known problems" box in `README.md` for the one-line repair. Do the repair before the demo.
+**Sample data check (2026-11-25):** the sample file's date format bug is fixed. An automatic test
+builds the database from the sample files and opens the Record used page, the usage data and the CSV
+without errors. If you built your database before 2026-11-24, build it again (README step 3).
 
 ## 4. How the best supplier is picked
 
@@ -153,6 +167,9 @@ The rules (code in `app/suggest.py`; guide Sections 5 F6 and 7):
 *(Note: `sample_data/SAMPLE_DATA_README.txt` says the online total is MYR 134. That older note
 ignored the minimum order. The app's MYR 308 is the correct result of the rules.)*
 
+The mix of local and online suppliers above comes from invented sample data. Which real suppliers
+are local or online, and their real lead times, is still a founder question (guide Section 16, Q3).
+
 Both Admin and Employee see the same list, costs and contacts (team decision 2026-11-24).
 
 ## 5. How Employees can SEE prices but not CHANGE them (`permissions.py`)
@@ -188,8 +205,9 @@ a good story for "why one question per decision".
 **Verified on 2026-11-24:** logged in as the sample Employee, GET and POST to `/suppliers/new`,
 `/suppliers/S001/edit`, an offer edit address and `/materials/new` all answered **403**, and
 `/stats/export.csv` answered **403**. Employees can still open the supplier pages and the Find
-supplier page with MYR prices. An automatic test written specially for the supplier edit addresses
-is still pending from Agent F.
+supplier page with MYR prices. A test written specially for the supplier and offer edit addresses
+exists on branch `main-0rpyg5` but was not merged when I checked; the materials edit addresses
+already have such tests in the merged code.
 
 What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the spending chart and the CSV export on
 the Statistics page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
@@ -237,11 +255,13 @@ Facts:
 
 1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent
    (the money box says 'Not set up yet' until we confirm how it is counted)."
-2. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
+2. (Optional, 15 seconds) Press **Users** to show the Admin-only screen for accounts.
+3. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
    "Best" at the top, and the word "estimate".
-3. Go to Materials, **Record used**, type a quantity, save. Show the status change.
-4. Log out. Log in as the Employee. Show: prices are visible, no Add / Change / Remove buttons.
-5. Type `/suppliers/new` in the address bar: the "Forbidden" page. "The server blocks it, not just
+4. Go to Materials, **Record used**, type a quantity, save. Show the status change.
+5. Log out. Log in as the Employee. Show: prices are visible, no Add / Change / Remove buttons and
+   no Users link.
+6. Type `/suppliers/new` in the address bar: the "Forbidden" page. "The server blocks it, not just
    the button."
 
 ## Questions you may be asked (honest answers)
@@ -254,13 +274,19 @@ Facts:
 - **"How are passwords stored?"** Scrambled (hashed); nobody can read them back, not even us.
 - **"What if the internet is down?"** The app itself runs on our own computer. Only the Statistics
   charts need the internet, because the chart library is loaded from the web.
-- **"What can it not do yet?"** Email alerts, manual stock correction screen (ADJUSTED), user
-  management screen, activity-log screen, backup button, real "money spent" and "low-stock events"
-  numbers, CSRF protection on forms. All are listed in the status log.
+- **"What can it not do yet?"** Email alerts, a manual stock correction screen (ADJUSTED), an
+  activity-log screen, a one-click backup button, and real "money spent" and "low-stock events"
+  numbers (finished on a separate branch that was not merged when I checked). All are in the status log.
+- **"What would you build next (version 2)?"** Ideas only, not built and not promised (guide
+  Section 17): printable labels for racks and shelves; humidity and dry-box alerts for
+  moisture-sensitive filaments in Sarawak's damp climate; and linking material stock to job quoting so a
+  quote uses real material cost. Barcode scanning, customer orders and invoices are also version 2.
 - **"Why is the money box empty?"** The team agreed to store the real cost when stock is received,
   but that part is not built yet, so the screen says "Not set up yet" rather than guessing.
-- **"How do you know it works?"** 108 automatic tests, a manual checklist (`TESTS.md`), and a
-  phone check.
+- **"How do you know it works?"** 146 automatic tests (merged branch, 2026-11-25), a manual
+  checklist (`TESTS.md`), and a phone check.
+- **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
+  secret token (CSRF protection), on top of the safe cookie settings.
 
 ## Open questions we must NOT answer for the founder (guide Section 16)
 

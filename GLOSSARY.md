@@ -32,7 +32,7 @@ Contents: [The big picture](#the-big-picture) · [Database](#database) · [Web a
   *license* (see [License](#tools-git-and-licenses)).
 - **PRD (Product Requirements Document):** the document that says what we are building and why.
   Ours is `CLAUDE.md`.
-- **Agent (A to G):** one team member or AI helper that owns certain files (guide Section 11).
+- **Agent (A to H):** one team member or AI helper that owns certain files (guide Section 11).
 
 ## Database
 
@@ -129,6 +129,10 @@ Contents: [The big picture](#the-big-picture) · [Database](#database) · [Web a
   fake it. It must stay secret, so it comes from the environment variable and is never saved in
   Git. Without it the app refuses to start.
 - **Role:** the label that decides what a user may do. We have two: **ADMIN** and **EMPLOYEE**.
+- **Users screen (F8):** the Admin-only page (`app/routes_users.py`) to add a user, change a role,
+  reset a password (this also unlocks the account) and switch an account off or on. Nothing is
+  deleted. An Admin cannot switch off or demote themselves, and the last active Admin cannot be
+  switched off.
 - **Permission:** one thing a role may or may not do, for example "see prices" or "manage suppliers".
   All permission rules live in `app/permissions.py` as functions such as `can_see_prices(user)` and
   `can_manage_suppliers(user)`. Screen files must only ask these functions (rule C7).
@@ -138,8 +142,10 @@ Contents: [The big picture](#the-big-picture) · [Database](#database) · [Web a
   nothing.
 - **CSRF (cross-site request forgery):** an attack where another website tricks your browser into
   sending a request to ours while you are logged in. The usual defence is a secret token in each
-  form. **We have not built CSRF tokens yet.** Today the only protection is the SameSite cookie
-  setting (an open item in the status log).
+  form. **We built this** (`app/csrf.py`): every form that changes data carries a hidden `csrf_token`
+  field, and the server answers 400 ("page has expired") if it is missing or wrong. The SameSite cookie
+  setting is a second layer. **CSRF token:** that secret one-time value; it is made new for each
+  login session. Only the automatic tests switch the check off (`CSRF_ENABLED`).
 - **Authentication vs authorization:** *authentication* = "who are you?" (login). *Authorization* =
   "what may you do?" (roles and permissions).
 
@@ -226,7 +232,9 @@ Every answer from the server starts with a number that says how it went.
 
 - **Virtual environment (`.venv`):** a private folder of Python libraries for this project only, so
   it does not mix with other projects. Git ignores it.
-- **pip:** the tool that installs Python libraries (`pip install flask pytest`).
+- **pip:** the tool that installs Python libraries. We run `pip install -r requirements.txt`.
+- **`requirements.txt`:** the list of libraries (and allowed versions) the project needs, so everyone
+  installs the same ones.
 - **Git:** the history book of every change to the code. Each saved change is a **commit** with a
   short message.
 - **GitHub:** the website where we keep the shared copy of the Git history. **Push** = send your

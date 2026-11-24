@@ -43,8 +43,9 @@ Question 4 - Are prices before or after shipping, and is tax included?
 Question 5 - Who is Admin and who are employees?
   ASSUMED: one admin account and one employee account (this file).
 Question 6 - Should employees see supplier contact details?
-  ASSUMED: yes, they can view contact details but cannot edit them
-  or see prices.
+  ASSUMED: yes, they can view contact details but cannot edit them.
+  (Team decision 2026-11-24: employees can also SEE prices and shipping
+  costs. They still cannot change them.)
 Question 7 - Email alerts or on-screen alerts only?
   ASSUMED: on-screen alerts only for version 1.
 Question 8 - Track which printer used which material?
@@ -69,10 +70,11 @@ Example supplier suggestion for M001 (rule from Section 7):
                   = (1000 x 2) - 830 = 1170 g
   Spools needed   = round up 1170 / 1000 = 2 spools
   Option S001 local : 2 x RM 72.00 + RM 0.00 shipping = RM 144.00, arrives in 1 day
-  Option S003 online: 2 x RM 58.00 + RM 18.00 shipping = RM 134.00, arrives in 7 days
-  Note: the online option is cheaper but slower. The guide says to pick
-  "in time" first, but does not define "in time." This is a question for
-  the team to decide (see below).
+  Option S003 online: the minimum order is 5 spools, so 5 x RM 58.00 + RM 18.00 shipping
+                      = RM 308.00, arrives in 7 days
+  Note: the local shop is both cheaper and faster here, so it is listed first.
+  The guide says to pick "in time" first, but does not define "in time."
+  This is a question for the team to decide (see below).
 
 Example for M004 ABS (OUT, zero stock):
   Needed = (500 x 2) - 0 = 1000 g = 1 spool.

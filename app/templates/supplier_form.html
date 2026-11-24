@@ -8,6 +8,7 @@
 <p>Type the supplier name and contact details. Only the name is required.</p>
 {% if message %}<p class="error">{{ message }}</p>{% endif %}
 <form method="post" class="box">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label>Supplier name <input name="name" maxlength="100" required value="{{ supplier['name'] if supplier else '' }}"></label>
   <label>Type <select name="supplier_type">
     {% for t in ['LOCAL', 'ONLINE'] %}<option value="{{ t }}" {{ 'selected' if supplier and supplier['supplier_type'] == t }}>{{ t }}</option>{% endfor %}

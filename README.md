@@ -55,10 +55,10 @@ try again:
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-Install the two libraries the project needs (there is no `requirements.txt` yet; see the status log):
+Install the libraries the project needs (the list is in `requirements.txt`):
 
 ```powershell
-pip install flask pytest
+pip install -r requirements.txt
 ```
 
 We tested with Flask 3.1.3 and pytest 9.2.0.
@@ -121,8 +121,8 @@ PowerShell window.
 
 | Username | Role | Can do |
 |---|---|---|
-| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics; download the statistics CSV |
-| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the usage statistics. **Cannot** change anything else, and is shown a "Forbidden" (403) page if they type an admin address |
+| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics; download the statistics CSV; manage user accounts on the **Users** screen |
+| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the usage statistics. **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
 
 The password for each account is the one you chose in step 4. Employees may *see* prices and money
 (team decision 2026-11-24) but only the Admin can *change* them.
@@ -148,39 +148,52 @@ needs a connection to see the charts.
 python -m pytest tests
 ```
 
-This takes under a minute. On 2026-11-24 it reported **108 passed**. The tests use a temporary
-database and never touch `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves.
+This takes about a minute. After the final merge on 2026-11-25 it reported **146 passed**. The tests
+use a temporary database and never touch `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test
+proves. (Re-run it before the demo; the number changes whenever someone adds a test.)
 
 ---
 
-## Known problems (as of 2026-11-24; see the status log in `CLAUDE.md`)
+## Known problems (as of the final merge, 2026-11-25; see the status log in `CLAUDE.md`)
 
-* **After step 3, "Record used" / "Record received" and the usage chart show an error page
-  (500).** The sample file `sample_data/stock_movements.csv` writes dates like
-  `2026-11-10T02:00:00Z`, but the app expects `2026-11-10 02:00:00`. Until Agent A fixes the
-  sample file, repair your own local database once with this command (it only changes your
-  ignored `data/tracker.db`):
-
-  ```powershell
-  python -c "import sqlite3; d = sqlite3.connect('data/tracker.db'); d.execute('UPDATE stock_movements SET created_at = substr(created_at,1,10) || char(32) || substr(created_at,12,8) WHERE length(created_at) = 20'); d.commit(); print('Dates repaired')"
-  ```
-
-  Then reload the page. (Starting over with step 3 after the fix also works.)
-* "Estimated money spent" on Home and the spending / low-stock charts say "Not set up yet": the
-  team still has to build how those numbers are stored.
-* Forms have no CSRF protection yet (see the glossary).
-* There is no Admin screen yet for user accounts, the activity log, or a one-click database backup
-  (features F8 and F9 in the guide, and a Section 14 checklist item).
+* "Estimated money spent" on Home and the spending / low-stock charts still say "Not set up yet".
+  The database has the new columns, but the "Record received" form does not yet ask for the supplier
+  and cost, and low-stock events are not yet saved when they happen (Agents C and E).
+* A database built before 2026-11-24 may contain old-format dates in its sample history, and the
+  Record used page can fail on it. Build the database again (step 3) to fix it.
+* The statistics charts load Chart.js from the internet. With no connection at the printers the charts
+  stay empty.
+* There is no activity-log screen (F9) and no one-click database backup yet. Every change is still
+  written to the activity log table.
+* There is no screen to correct a wrong stock count.
 
 ## What is not built (do not demo these)
 
 Email alerts, automatic ordering, barcode scanning, printer connections, customer orders and a
 phone app are out of scope for version 1 (guide Section 17).
 
+## Why this fits Stinablis
+
+* **One simple system for different kinds of stock.** Filament-only trackers such as Spoolman, and
+  large print-farm ERPs such as FilaOps, are built around spools or whole factories. Ours keeps
+  filaments (`g`), resins and liquids (`ml`) and small pieces (`pcs`) in one list. Because it supports
+  pieces, it can also track small workshop hardware such as screws, springs, magnets, fidget clickers
+  and keychain rings (subject to confirmation with the founder; which materials Stinablis really uses
+  is still an open question, guide Section 16).
+* **Built for buying in Kuching.** For each LOW or OUT material the Find supplier page compares every
+  supplier of that material on estimated total cost (packs x price + shipping), minimum order and
+  delivery time. The sample data shows the kind of choice: a local shop with delivery in 1 day, against
+  an online shop with a lower price per pack but a larger minimum order and 7 days of shipping. Every
+  number is labelled as an estimate. The real suppliers and lead times still come from the founder.
+* **Made for the shop floor.** Plain-English labels, the status words OK / LOW / OUT shown with their
+  colours, big buttons, a layout that works on a phone at the printer, and every permission checked on
+  the server.
+
 ## Where things are
 
 ```
 CLAUDE.md          the project guide and status log (read first)
+requirements.txt   the libraries to install
 app/               the application (Python / Flask)
   __init__.py        starts the app, needs STINABLIS_SECRET_KEY
   auth.py            login, logout, passwords, 5-wrong-passwords lock
@@ -188,6 +201,8 @@ app/               the application (Python / Flask)
   routes_materials.py  materials screens and Record used / received
   routes_suppliers.py  suppliers screens and the "Find supplier" page
   routes_stats.py      Home boxes, statistics, CSV download
+  routes_users.py      the Users screen (Admin only)
+  csrf.py              the hidden token that protects every form
   alerts.py          OK / LOW / OUT rule
   suggest.py         best-supplier ranking, cost and arrival date
   schema.sql         the database tables

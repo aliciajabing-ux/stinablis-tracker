@@ -18,6 +18,7 @@
 {% if problems %}<div class="problems"><ul>{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
 
 <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label for="name">Name</label>
   <input id="name" name="name" type="text" maxlength="100" required value="{{ form.name or '' }}">
 
