@@ -191,7 +191,8 @@ Every answer from the server starts with a number that says how it went.
 - **Supplier:** a shop that sells materials. Type `LOCAL` or `ONLINE`.
 - **Offer (`supplier_offers`):** one row saying "this supplier sells this material at this price".
 - **Pack:** what an offer is sold in (for example one 1000 g spool). The price is **per pack**, not
-  per gram. The sample data says guide Section 6's `price_per_unit` became `price_per_pack_myr`.
+  per gram. In `app/schema.sql`, supplier offers are priced per pack (`price_per_pack_myr`), not per
+  single gram, millilitre, or piece.
 - **Minimum order (packs):** the fewest packs the supplier will sell in one order.
 - **Lead time:** how many days from ordering to arrival.
 - **Estimated arrival:** today (Malaysia time) + lead time days.

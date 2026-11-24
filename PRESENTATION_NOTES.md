@@ -11,6 +11,9 @@ Stinablis facts or real prices (rule R7).
 Last re-checked against code: 2026-11-24 (108 automatic tests passing). Agent F's review is still
 pending, so re-check these notes after it lands (see the status log in `CLAUDE.md`).
 
+> **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
+> stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
+
 ---
 
 ## 1. The problem
@@ -27,6 +30,11 @@ Facts:
 - What the website does: one list of materials and stock; one list of suppliers; low-stock
   warnings; a suggested supplier with an estimated cost and arrival date; simple statistics;
   different rights for different users.
+- **Why our app fits Stinablis better than filament-only tools (like Spoolman) or heavy print-farm
+  ERPs (like FilaOps):** Stinablis does industrial engineering, prototyping and assembly in Kuching,
+  so staff also need to track small hardware pieces (`pcs`), such as screws, springs, magnets,
+  fidget clickers and keychain rings, alongside filaments, resins and other supplies. We keep all of
+  it in one simple web app, with supplier cost and delivery-time comparisons.
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -56,6 +64,7 @@ Facts:
 - If in doubt, deny (guide Section 4).
 - Still open for the founder: should Employees see supplier phone numbers and emails? Today they
   can (our proposal); the founder has not confirmed.
+- Settled (guide Section 5, F7): the Statistics spending chart and CSV export are Admin only.
 - Not built yet: the Admin screens for managing users (F8) and the activity log (F9).
 
 ## 3. One feature from start to finish: "Record used"
@@ -180,9 +189,10 @@ a good story for "why one question per decision".
 supplier page with MYR prices. An automatic test written specially for the supplier edit addresses
 is still pending from Agent F.
 
-What is still **Admin only** (the 2026-11-24 decision covered seeing prices, not these): the
-spending chart and the CSV download on the Statistics page. Open question in the status log:
-should Employees see those too?
+What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the spending chart and the CSV export on
+the Statistics page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
+covered seeing prices, not these.) The question still open for the founder is whether Employees
+should see supplier phone numbers and emails.
 
 ## 6. Open-source projects we looked at, and credits
 
@@ -203,6 +213,10 @@ should Employees see those too?
 | abduznik/filament-tracker (from the guide) | A simple filament tracker | Basic screens | The GitHub link returned "Not Found" on 2026-11-24; ask the team who found it |
 
 Facts:
+- **Why we built our own instead of using them:** Spoolman tracks filament spools only, and
+  FilaOps is a heavy ERP for print farms. Stinablis also needs to track small hardware pieces
+  (`pcs`) such as screws, springs, magnets, fidget clickers and keychain rings, next to filaments,
+  resins and other supplies, in one simple web app with supplier cost and delivery-time comparisons.
 - **Result of our code search (2026-11-24):** no file in `app/`, `tests/` or `sample_data/` mentions
   any of these projects or contains a pasted-code credit. That means no code was copied. Everyone
   must still confirm this honestly before presenting.

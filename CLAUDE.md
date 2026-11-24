@@ -776,3 +776,5 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   | NOTE: Home "money spent", the spending chart and low-stock events still say "Not set up yet",
   so the notes do not present them as working. Not built and not described as built: user
   management (F8), activity log screen (F9), backup button, CSRF tokens, email alerts.
+
+2026-11-25 | Mark (Agent G) | Reviewed Spoolman and FilaOps on GitHub to borrow practical ideas without copying code: Spoolman shows how to display remaining material clearly, while FilaOps shows how low-stock alerts and reorder planning prevent print jobs from stopping. Where our app helps Stinablis more is tracking filaments, resins, composites, and everyday hardware pieces like screws, springs, magnets, fidget clickers, and keychain rings in one simple web app with supplier cost and delivery-time comparisons. | Commit updated GLOSSARY.md, PRESENTATION_NOTES.md, and CLAUDE.md to branch main-o7f8p8 and coordinate with the team on remaining fixes. | sample_data/stock_movements.csv date format and requirements.txt still belong to other/unassigned files under Rule R3.
