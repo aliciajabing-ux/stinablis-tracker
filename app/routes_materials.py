@@ -11,7 +11,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
-                             login_required)
+                             can_see_prices, login_required)
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
 
@@ -155,6 +155,27 @@ def make_search_pattern(search_text):
     return "%" + safe_text + "%"
 
 
+# Template word helper: shows "pcs" as the plain word "pieces" (g and ml stay as they are).
+@materials_blueprint.app_template_filter("unit_word")
+def unit_word(unit):
+    return "pieces" if unit == "pcs" else unit
+
+
+# Returns a plain "last bought" description for one material (supplier, amount, date, and money only if
+# show_money is True), or None if nothing was ever received with a supplier or a cost.
+def get_last_bought(database, material, show_money):
+    row = database.execute(
+        "SELECT m.quantity, m.total_cost_myr, m.created_at, s.name AS supplier_name FROM stock_movements m "
+        "LEFT JOIN suppliers s ON s.id = m.supplier_id WHERE m.material_id = ? AND m.movement_type = 'RECEIVED' "
+        "AND (m.supplier_id IS NOT NULL OR m.total_cost_myr IS NOT NULL) "
+        "ORDER BY m.created_at DESC, m.rowid DESC LIMIT 1", (material["id"],)).fetchone()
+    if row is None:
+        return None
+    return {"supplier": row["supplier_name"] or "a supplier that was not named",
+            "amount": f"{row['quantity']:g} {unit_word(material['unit'])}", "when": to_malaysia_time(row["created_at"])[:11],
+            "cost": row["total_cost_myr"] if show_money else None}
+
+
 # Shows the table of all active materials, with the search box and the OK / LOW / OUT filter.
 @materials_blueprint.route("/")
 @login_required
@@ -168,6 +189,9 @@ def list_materials():
     materials = [add_status(row) for row in rows]
     if status_filter in (STATUS_OK, STATUS_LOW, STATUS_OUT):
         materials = [m for m in materials if m["status"] == status_filter]
+    show_money = can_see_prices(get_current_user())
+    for material in materials:
+        material["last_bought"] = get_last_bought(get_db(), material, show_money)
     return render_template("materials_list.html", materials=materials, search_text=search_text,
                            status_filter=status_filter, can_manage=can_manage_materials(get_current_user()))
 
@@ -327,6 +351,8 @@ def show_record_form(material, kind, problems, typed_quantity, typed_form):
         (material["id"],)).fetchall()
     history_lines = [{"type": MOVEMENT_WORDS[row["movement_type"]], "quantity": row["quantity"], "note": row["note"],
                       "when": to_malaysia_time(row["created_at"]), "who": row["username"]} for row in history]
-    return render_template("materials_record.html", material=add_status(material), kind=kind, problems=problems,
-                           typed_quantity=typed_quantity, history=history_lines, typed=typed_form,
+    material_with_status = add_status(material)
+    last_bought = get_last_bought(get_db(), material_with_status, can_see_prices(get_current_user()))
+    return render_template("materials_record.html", material=material_with_status, kind=kind, problems=problems,
+                           typed_quantity=typed_quantity, history=history_lines, typed=typed_form, last_bought=last_bought,
                            can_enter_money=can_enter_money, suppliers=get_active_suppliers(get_db()) if can_enter_money else [])

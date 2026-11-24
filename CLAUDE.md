@@ -58,6 +58,10 @@ Web application (a website that only staff can log into) that:
   That information comes from our interview with the founder.
 - [CONFIRM WITH FOUNDER] List of materials they currently use.
 - [CONFIRM WITH FOUNDER] Which suppliers are online and which are local.
+- [CONFIRM WITH FOUNDER] Whether staff also need to track small hardware
+  pieces counted in pcs (for example screws, springs, magnets, fidget
+  clickers, keychain rings). Until the founder answers, such items appear
+  ONLY in the sample/demo data, clearly named as samples (Rule R4).
 
 
 ---------------------------------------------------------------------
@@ -183,6 +187,12 @@ F3. MATERIALS SCREEN
     - Search box and filter buttons (for example "show only LOW").
     - Add / edit / delete a material: ADMIN only.
     - "Record used" and "Record received" buttons: everyone.
+    - "Last bought" memory (decision 2026-11-24): each material row and the
+      Record screens show who it was last bought from, how much, the date
+      and (if typed) the total paid in MYR. It is read from the newest
+      RECEIVED line that names a supplier or a cost. The money part follows
+      can_see_prices() (Admin and Employee, view only). Changing prices
+      stays Admin only and the server still answers 403 to anyone else.
 
 F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
     - One row per supplier: name, type (ONLINE or LOCAL), address,
@@ -306,6 +316,11 @@ All of these numbers are ESTIMATES. The screen must say so.
 - Use colours with words too: green = OK, orange = LOW, red = OUT.
   (Do not rely on colour alone; always write the word.)
 - Maximum 3 clicks to any common task.
+- Buttons and links are at least about 44 px tall so a thumb can tap them.
+- Status words are explained once in plain English on the Materials screen:
+  OK = enough, LOW = at or below the reorder level, OUT = none left.
+- Error pages (no permission, page not found, expired form) use plain words
+  and a button back to Home.
 - Mobile-friendly: it should work on a phone or tablet at the printer.
 - Every form shows a short help sentence under the title.
 - Error messages in plain language. Bad: "Error 422 invalid payload".
@@ -1119,3 +1134,24 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   low_stock_events column names changed; the upgrade command will NOT rename them. | Agent C / Agent F:
   F-7 (read_number turns "1,5,5" into 155) also affects the new "Total paid" box.
 
+
+2026-11-24 | Main Chat (plan, done at the team's request across Agent A, C and B files) | DECISION: adapt
+  three improvements from the ShopGuard idea list into Version 1. (a) Hardware pieces (unit pcs) next to
+  g and ml items in the SAMPLE data only: screws, springs, magnets, fidget clickers and keychain rings,
+  all named "SAMPLE ..." and listed under a hardware supplier; the real Stinablis item list is still
+  [CONFIRM WITH FOUNDER] (Section 2, Section 16 Q1; Rule R4). (b) "Last bought" memory on the Materials
+  list and the Record used / Record received screens (see Section 5 F3), using can_see_prices() for the
+  money and leaving every edit check as it was (can_manage_*, admin_required, 403). (c) A plain-English
+  pass: a one-line OK / LOW / OUT explanation, a LOW / OUT hint on the Record screens, tap-friendly
+  buttons, and plain error pages with a Home button (Section 8). Sections 2, 5 and 8 updated FIRST. |
+  Then: sample_data CSVs, app/routes_materials.py + materials_list.html + materials_record.html (Agent C),
+  app/__init__.py + one new template error_page.html (Agent B), new tests. | CROSS-AGENT REQUESTS (R3,
+  edits made at the team's request, please review): AGENT A: sample_data/materials.csv,
+  supplier_offers.csv, stock_movements.csv and SAMPLE_DATA_README.txt got new sample rows (dates kept in
+  "YYYY-MM-DD HH:MM:SS"). AGENT C: new helper in routes_materials.py for the last-bought line. AGENT B:
+  error pages in app/__init__.py. AGENT H: base.html and app/static/ NOT touched; the shared look and the
+  44 px tap size on every screen are still yours (the new tap-size lines are only inside the Agent C
+  templates). AGENT F: please add Employee-sees-last-bought tests to your review list.
+  | CLAUDE.md.txt was NOT recreated or committed.
+
+2026-11-25 | Agent G (documentation & presentation) | FINAL DOC SYNC against origin/main-o7f8p8 at 10f78ab (branches main-0rpyg5, main-tq6ebi and Agent F's review are now merged). Full suite on that commit: 379 passed, 2 skipped, 6 xfailed (about 68 seconds). Updated README.md, GLOSSARY.md and PRESENTATION_NOTES.md: new test count; "Last bought" memory (money follows can_see_prices, edits still 403); sample hardware in pcs marked as SAMPLE and to confirm with the founder (R4); OK / LOW / OUT explained in plain English; 44 px tap size; plain-English 403/404/400 pages with "Back to Home"; money spent and low-stock events now described as working (they were "Not set up yet"); Version 1 built list kept apart from Version 2 ideas. | Re-check once more only if more branches are merged. Team: confirm the hardware list and the real suppliers with the founder (Section 16). | PROBLEMS: (1) The "SupplyTrail" pitch figures (supplier search from about 2 hours a week towards about 30 minutes a week) were not found anywhere in the repo, so PRESENTATION_NOTES.md labels them as the team's goal and an estimate, not measured and not confirmed by the founder (R4); Mark: please confirm the source. (2) Six tests are xfail (known bugs from Agent F's review); owners should fix them and remove the marks. (3) Still stale in the guide (R3, not mine): Section 6 price_per_unit / shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link. (4) No activity-log screen (F9) or backup button yet.

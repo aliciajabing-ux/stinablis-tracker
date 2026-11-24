@@ -7,6 +7,9 @@
   .filters a, .btn { display: inline-block; padding: 10px 14px; margin: 2px; border-radius: 6px; background: #fff;
                      border: 1px solid #1a5fb4; color: #1a5fb4; text-decoration: none; font-size: 1rem; cursor: pointer; }
   .filters a.on, .btn.main { background: #1a5fb4; color: #fff; }
+  .filters a, .btn { min-height: 44px; box-sizing: border-box; line-height: 22px; }   /* easy to tap on a phone */
+  .memo { display: block; margin-top: 4px; font-size: 0.85rem; color: #444; }
+  .legend { font-size: 0.95rem; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; }
   th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
@@ -20,6 +23,8 @@
 </style>
 <h1>Materials</h1>
 <p>All the materials we keep. Use "Record used" when you take some from the shelf and "Record received" when new stock arrives.</p>
+<p class="legend"><strong>OK</strong> = enough in stock. <strong>LOW</strong> = at or below the reorder level, time to order.
+   <strong>OUT</strong> = none left.</p>
 
 {% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
 
@@ -42,10 +47,14 @@
   <tr><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
   {% for material in materials %}
   <tr>
-    <td>{{ material.name }}</td>
+    <td>{{ material.name }}
+      {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
+        {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>
+      {% else %}<span class="memo">Not bought through this app yet.</span>{% endif %}
+    </td>
     <td>{{ material.material_type or '' }}</td>
     <td>{{ material.colour or '' }}</td>
-    <td>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit }}</td>
+    <td>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</td>
     <td><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
     <td>
       <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>

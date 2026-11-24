@@ -13,7 +13,11 @@ WHAT THIS IS
   these files. Set them during setup and never save them in Git.
 
 FILES
-- materials.csv        : 8 materials with stock on hand and reorder level
+- materials.csv        : 13 materials (g, ml and pcs items) with stock on hand and
+                         reorder level. The 5 hardware pieces (SAMPLE M4 screws, springs,
+                         magnets, fidget clicker kit, keychain rings) are DEMO items only:
+                         the founder has not confirmed what hardware Stinablis tracks
+                         (guide Section 2 and Section 16 Q1).
 - suppliers.csv        : 5 suppliers (3 local, 2 online) with contact info
 - supplier_offers.csv  : which supplier sells which material, with price,
                          pack size, shipping, minimum order and lead time
