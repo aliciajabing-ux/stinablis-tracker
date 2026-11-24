@@ -157,10 +157,10 @@ Every answer from the server starts with a number that says how it went.
 |---|---|---|
 | **200** | OK | The page was sent normally |
 | **302** | Redirect | "Go to that other page" (for example to Home after login, or to the login page if you are not logged in) |
-| **400** | Bad request | The form had a problem (for example letters in a quantity box). The page is shown again with a plain-words message |
+| **400** | Bad request | The form had a problem (for example letters in a quantity box, or a form that has expired). Shown with a plain-words message; the error pages have a **Back to Home** button |
 | **401** | Unauthorized | Wrong username or password |
-| **403** | Forbidden | You are logged in but **not allowed**. An Employee typing an admin address gets this |
-| **404** | Not found | There is no such page, or the material or supplier is switched off |
+| **403** | Forbidden | You are logged in but **not allowed**. An Employee typing an admin address gets this. The page says so in plain words and has a **Back to Home** button |
+| **404** | Not found | There is no such page, or the material or supplier is switched off. Also shown in plain words with a **Back to Home** button |
 | **405** | Method not allowed | You used GET on an address that only accepts POST (or the other way round) |
 | **500** | Server error | A bug in our code. Report it in the status log |
 
@@ -175,6 +175,12 @@ Every answer from the server starts with a number that says how it went.
 - **CDN (content delivery network):** a public website that hosts shared library files for others
   to load.
 - **Responsive / mobile-friendly:** the page rearranges itself so it works on a phone at the printer.
+- **Tap size (44 px):** buttons and links on the new and changed screens are at least about 44 pixels
+  tall, so a thumb can tap them without hitting the wrong thing.
+- **Plain-English error page:** when you have no permission (403), a page is not found (404) or a form
+  has expired (400), the app shows one short sentence in everyday words and a **Back to Home**
+  button. The browser still receives the real error number. Code: `show_plain_error` in
+  `app/__init__.py` and `app/templates/error_page.html`.
 
 ## Dates and money
 
@@ -190,9 +196,15 @@ Every answer from the server starts with a number that says how it went.
 
 - **Material:** one thing we stock (a filament colour, a resin, nuts). It has a **unit**: `g`
   (grams), `ml` (millilitres) or `pcs` (pieces).
+- **Pieces (`pcs`) and hardware items:** small things counted one by one, such as screws, springs,
+  magnets, fidget clickers and keychain rings. The system handles them like any other material, next to
+  `g` and `ml` items. **The hardware in our demo data is SAMPLE data only** (names start with
+  "SAMPLE"); what hardware Stinablis really tracks is still [CONFIRM WITH FOUNDER] (guide Section 2 and
+  Section 16 Q1, Rule R4).
 - **Reorder level:** the quantity at which we should order more (for example 500 g).
-- **Status OK / LOW / OUT:** `OUT` = quantity is zero. `LOW` = quantity is at or below the reorder
-  level. `OK` = anything else. The word is always shown, not just a colour (green / orange / red).
+- **Status OK / LOW / OUT:** `OUT` = none left (quantity is zero). `LOW` = quantity is at or below the
+  reorder level, so it is time to order. `OK` = enough in stock. The Materials page explains these three
+  words in one plain sentence, and the word is always shown, not just a colour (green / orange / red).
 - **Needs attention:** the Home list of LOW and OUT materials, OUT first.
 - **Supplier:** a shop that sells materials. Type `LOCAL` or `ONLINE`.
 - **Offer (`supplier_offers`):** one row saying "this supplier sells this material at this price".
@@ -208,12 +220,22 @@ Every answer from the server starts with a number that says how it went.
   **estimates** and the page says so.
 - **Find supplier / suggestion:** the page that ranks suppliers for a LOW or OUT material (cheapest
   total first, then shortest lead time). Code in `app/suggest.py`.
+- **Last bought (purchase memory):** a short line on the Materials list and on the Record used / Record
+  received pages: who the material was last bought from, how much, the date and, if someone typed it,
+  the total paid in MYR. It is read from the newest "received" line that names a supplier or a cost. The
+  money part is shown to Admin and Employee (view only, `can_see_prices`); changing prices is still
+  Admin only and answers 403 to anyone else. Code: `get_last_bought` in `app/routes_materials.py`.
+- **Total paid / Bought from:** two optional boxes on "Record received". They feed the money numbers:
+  Home's money box adds up the real totals typed here for the current month, and the Admin-only spending
+  chart groups them per supplier. A received line with no total counts as MYR 0.
 - **Record used / Record received:** the two buttons that change stock. They are the only way the
   quantity changes.
-- **Low-stock event:** the moment a material drops from OK to LOW or OUT. (Counting these is not
-  switched on yet.)
+- **Low-stock event:** the moment a "Record used" drops a material from OK to LOW or OUT. One row is
+  saved in the `low_stock_events` table at that moment, and the Statistics chart counts the rows per
+  month (Malaysia time). Further drops while it stays LOW or OUT do not count again.
 - **Not set up yet:** what a screen says when the team has not yet decided how to calculate that
-  number (for example money spent). It is switched off on purpose (rule R4: do not guess).
+  number. It is switched off on purpose (rule R4: do not guess). Money spent and low-stock events used
+  to say this; both are now switched on.
 
 ## Testing
 
