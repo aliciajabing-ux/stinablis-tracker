@@ -1,11 +1,10 @@
 # WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Needs attention" list) and the Statistics screen
 #   (usage chart, low-stock chart, spending, average delivery time, and the CSV download).
-# WHO CAN USE IT: Both. Money (spending box, spending chart, CSV download) is Admin only, checked on the server.
+# WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the spending chart and CSV download are Admin only. All checked on the server.
 #
-# Two things are NOT confirmed by the team yet (guide Rule R4), so the screens say "not set up yet":
-#   1. How "money spent" is worked out (SPENDING_METHOD_CONFIRMED).
-#   2. How a "low-stock event" is counted (LOW_EVENTS_METHOD_CONFIRMED).
-# The proposed methods are written below and tested, but switched off. See the STATUS LOG questions.
+# Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
+# One thing is NOT confirmed by the team yet (guide Rule R4), so that screen says "not set up yet":
+#   How a "low-stock event" is counted (LOW_EVENTS_METHOD_CONFIRMED). See the STATUS LOG question.
 
 import csv
 import io
@@ -20,7 +19,7 @@ from app.permissions import admin_required, can_see_prices, is_admin, login_requ
 
 stats_blueprint = Blueprint("stats", __name__, url_prefix="/stats", template_folder="templates")
 
-SPENDING_METHOD_CONFIRMED = False      # team must answer the STATUS LOG question first
+SPENDING_METHOD_CONFIRMED = True       # money spent = real totals typed on "Record received"
 LOW_EVENTS_METHOD_CONFIRMED = False    # team must answer the STATUS LOG question first
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 PERIODS_SHOWN = 6                      # how many weeks or months the charts show
@@ -132,29 +131,19 @@ def get_average_lead_times(database):
             "days": [round(r["average_days"], 1) for r in rows]}
 
 
-# Returns the cheapest-per-unit active offer for a material (supplier name, price per unit), or None.
-def find_cheapest_offer(database, material_id):
-    return database.execute(
-        "SELECT s.name AS supplier_name, o.price_per_pack_myr / o.pack_size AS price_per_unit "
-        "FROM supplier_offers o JOIN suppliers s ON s.id = o.supplier_id "
-        "JOIN materials m ON m.id = o.material_id "
-        "WHERE o.material_id = ? AND o.is_active = 1 AND o.pack_unit = m.unit "
-        "ORDER BY price_per_unit LIMIT 1", (material_id,)).fetchone()
-
-
-# PROPOSED (not confirmed): money spent = RECEIVED quantity x cheapest active offer's price per unit.
-# Returns {supplier name: MYR} for received stock in the month that starts on month_start.
+# Returns {supplier name: MYR} of what was really paid for stock received in the month that starts on month_start.
+# Only "Record received" lines where someone typed a supplier and a total are counted.
 def get_spending_by_supplier(database, month_start):
     spending = {}
     rows = database.execute(
-        "SELECT material_id, quantity, created_at FROM stock_movements WHERE movement_type = 'RECEIVED'")
+        "SELECT s.name AS supplier_name, m.total_cost_myr, m.created_at FROM stock_movements m "
+        "JOIN suppliers s ON s.id = m.supplier_id "
+        "WHERE m.movement_type = 'RECEIVED' AND m.total_cost_myr IS NOT NULL")
     for row in rows.fetchall():
         if period_start(to_malaysia_time(row["created_at"]), "month") != month_start:
             continue
-        offer = find_cheapest_offer(database, row["material_id"])
-        if offer is not None:
-            name = offer["supplier_name"]
-            spending[name] = spending.get(name, 0) + row["quantity"] * offer["price_per_unit"]
+        name = row["supplier_name"]
+        spending[name] = spending.get(name, 0) + row["total_cost_myr"]
     return spending
 
 

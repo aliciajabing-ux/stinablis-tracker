@@ -71,7 +71,9 @@ CREATE TABLE IF NOT EXISTS stock_movements (
     quantity        REAL NOT NULL CHECK (quantity >= 0),
     note            TEXT,
     user_id         TEXT NOT NULL REFERENCES users(id),
-    created_at      TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at      TEXT DEFAULT CURRENT_TIMESTAMP,
+    supplier_id     TEXT REFERENCES suppliers(id),                      -- RECEIVED only: who it was bought from
+    total_cost_myr  REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0)  -- RECEIVED only: what was paid
 );
 
 -- Who changed what, and when. Admins can read it. Nobody can edit it.

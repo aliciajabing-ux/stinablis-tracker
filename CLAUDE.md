@@ -570,3 +570,17 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   routes use admin_required, but the new tests do not prove it yet. Statistics
   CSV export and the spending chart are still Admin only (decision covered
   seeing prices, not exports). Agents A, C, D, E have no log entries yet.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: "money spent" now works.
+  Decision: money spent = the real "Total paid" typed on "Record received", counted per supplier per
+  Malaysia-time month (not a guess from offers). Changes: app/schema.sql (stock_movements gets supplier_id
+  and total_cost_myr, both empty for USED/ADJUSTED), app/routes_materials.py + materials_record.html (Record
+  received has optional "Bought from" list and "Total paid (MYR)"; money needs a supplier; bad input is
+  refused; the activity log line says who was paid), app/routes_stats.py (SPENDING_METHOD_CONFIRMED = True;
+  spending adds up the real totals), sample_data/stock_movements.csv (new columns), tests (117 pass).
+  Home money box: Admin and Employee. Spending chart and CSV: still Admin only. | Low-stock events chart is
+  still off (needs the table from Agents A/C). Team: an existing data/tracker.db needs two lines run once:
+  ALTER TABLE stock_movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id);
+  ALTER TABLE stock_movements ADD COLUMN total_cost_myr REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0);
+  (or delete it and run setup_database.py again for sample data). | Old received lines have no total, so they
+  count as MYR 0 until someone types one. Not committed yet.

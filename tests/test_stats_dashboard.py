@@ -202,18 +202,44 @@ def test_average_lead_time_per_supplier(database_file):
 
 # ---------- Proposed methods (switched off until the team answers) ----------
 
-def test_spending_and_low_events_are_switched_off_until_confirmed(admin):
-    assert admin.get("/stats/data/spending").get_json() == {"labels": [], "amounts": []}
+def test_low_events_are_switched_off_until_confirmed(admin):
     assert admin.get("/stats/data/low-stock").get_json() == {"labels": [], "counts": []}
-    assert "Not set up yet" in admin.get("/").get_data(as_text=True)
 
 
-def test_proposed_spending_uses_received_stock_and_cheapest_offer(database_file):
-    add_movement(database_file, "A", "M1", "RECEIVED", 2000, "2026-11-05 02:00:00")
-    add_movement(database_file, "B", "M1", "RECEIVED", 1000, "2026-10-05 02:00:00")   # other month
-    add_movement(database_file, "C", "M1", "USED", 500, "2026-11-06 02:00:00")        # used is not spending
+# Adds a RECEIVED line with a supplier and a total paid (UTC time text).
+def add_purchase(database_file, movement_id, supplier_id, total_cost, utc_text, kind="RECEIVED"):
+    connection = sqlite3.connect(database_file)
+    connection.execute(
+        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at, supplier_id, "
+        "total_cost_myr) VALUES (?, 'M1', ?, 1000, 'U1', ?, ?, ?)", (movement_id, kind, utc_text, supplier_id, total_cost))
+    connection.commit()
+    connection.close()
+
+
+def test_spending_adds_up_real_totals_per_supplier_for_this_month_only(database_file):
+    add_purchase(database_file, "A", "S2", 120.5, "2026-11-05 02:00:00")
+    add_purchase(database_file, "B", "S2", 30, "2026-11-20 02:00:00")
+    add_purchase(database_file, "C", "S1", 80, "2026-11-21 02:00:00")
+    add_purchase(database_file, "D", "S1", 999, "2026-10-05 02:00:00")                 # other month
+    add_purchase(database_file, "E", "S1", 500, "2026-11-06 02:00:00", kind="USED")    # used is not spending
+    add_movement(database_file, "F", "M1", "RECEIVED", 1000, "2026-11-07 02:00:00")    # no total typed: skipped
     spending = routes_stats.get_spending_by_supplier(open_database(database_file), date(2026, 11, 1))
-    assert spending == {"Web Store": 120.0}    # 2000 g x (MYR 60 / 1000 g)
+    assert spending == {"Web Store": 150.5, "Kuching Shop": 80.0}
+
+
+def test_spending_month_uses_malaysia_time(database_file):
+    add_purchase(database_file, "A", "S1", 40, "2026-10-31 17:00:00")    # 1 Nov 01:00 in Malaysia
+    spending = routes_stats.get_spending_by_supplier(open_database(database_file), date(2026, 11, 1))
+    assert spending == {"Kuching Shop": 40.0}
+
+
+def test_spending_chart_and_home_box_show_real_money(admin, employee, database_file, monkeypatch):
+    monkeypatch.setattr(routes_stats, "malaysia_now", lambda: NOW)
+    add_purchase(database_file, "A", "S2", 120.5, "2026-11-05 02:00:00")
+    assert admin.get("/stats/data/spending").get_json() == {"labels": ["Web Store"], "amounts": [120.5]}
+    assert "MYR 120.50" in admin.get("/").get_data(as_text=True)
+    assert "MYR 120.50" in employee.get("/").get_data(as_text=True)
+    assert employee.get("/stats/data/spending").status_code == 403
 
 
 def test_proposed_low_event_counts_only_the_drop_from_ok(database_file):

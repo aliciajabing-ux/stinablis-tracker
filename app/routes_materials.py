@@ -91,7 +91,7 @@ def read_material_form(form, is_new):
 
 
 # Records stock used or received: changes the quantity AND writes the history row. Returns True if it worked.
-def record_stock_change(database, material, movement_type, quantity, note, user):
+def record_stock_change(database, material, movement_type, quantity, note, user, supplier=None, total_cost=None):
     if movement_type == "USED":
         changed = database.execute(
             "UPDATE materials SET quantity_on_hand = ROUND(quantity_on_hand - ?, 2), updated_at = ? "
@@ -105,21 +105,24 @@ def record_stock_change(database, material, movement_type, quantity, note, user)
     if changed == 0:
         database.rollback()
         return False
-    add_movement_rows(database, material, movement_type, quantity, note, user)
+    add_movement_rows(database, material, movement_type, quantity, note, user, supplier, total_cost)
     database.commit()
     return True
 
 
 # Adds the stock_movements row and the activity_log row for one stock change (no commit here).
-def add_movement_rows(database, material, movement_type, quantity, note, user):
+def add_movement_rows(database, material, movement_type, quantity, note, user, supplier=None, total_cost=None):
     now_text = utc_now().strftime(TIME_FORMAT)
     database.execute(
-        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("S" + uuid.uuid4().hex[:12], material["id"], movement_type, quantity, note, user["id"], now_text))
+        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at, "
+        "supplier_id, total_cost_myr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("S" + uuid.uuid4().hex[:12], material["id"], movement_type, quantity, note, user["id"], now_text,
+         supplier["id"] if supplier else None, total_cost))
     new_quantity = database.execute(
         "SELECT quantity_on_hand FROM materials WHERE id = ?", (material["id"],)).fetchone()[0]
     details = f"{MOVEMENT_WORDS[movement_type]} {quantity:g} {material['unit']} of {material['name']}. Now {new_quantity:g} {material['unit']}."
+    if supplier is not None and total_cost is not None:
+        details += f" Paid MYR {total_cost:.2f} to {supplier['name']}."
     write_material_log(database, user["id"], "STOCK_" + movement_type, material["id"], details)
 
 
@@ -235,14 +238,19 @@ def record_stock(material_id, kind):
         abort(404)
     material = find_active_material(material_id)
     if request.method == "GET":
-        return show_record_form(material, kind, [], "")
+        return show_record_form(material, kind, [], "", {})
     quantity = read_number(request.form.get("quantity"), allow_zero=False)
     note = read_text(request.form.get("note"), MAX_NOTE_LENGTH)
     problems = check_record_input(material, kind, quantity, note)
-    if not problems and not record_stock_change(get_db(), material, KIND_TO_MOVEMENT[kind], quantity, note, user):
+    supplier, total_cost = None, None
+    if kind == "received":
+        supplier, total_cost, purchase_problems = read_purchase_form(get_db(), request.form)
+        problems += purchase_problems
+    if not problems and not record_stock_change(get_db(), material, KIND_TO_MOVEMENT[kind], quantity, note, user,
+                                                supplier, total_cost):
         problems = [f"There is not enough {material['name']} in stock to take out {quantity:g} {material['unit']}."]
     if problems:
-        return show_record_form(material, kind, problems, request.form.get("quantity", "")), 400
+        return show_record_form(material, kind, problems, request.form.get("quantity", ""), request.form), 400
     flash(f"{MOVEMENT_WORDS[KIND_TO_MOVEMENT[kind]]} {quantity:g} {material['unit']} of {material['name']}.")
     return redirect(url_for("materials.list_materials"))
 
@@ -260,8 +268,32 @@ def check_record_input(material, kind, quantity, note):
     return problems
 
 
+# Returns the active suppliers (for the "Bought from" list on the Record received form).
+def get_active_suppliers(database):
+    return database.execute("SELECT id, name, supplier_type FROM suppliers WHERE is_active = 1 ORDER BY name").fetchall()
+
+
+# Reads the optional "Bought from" and "Total paid" boxes. Returns (supplier row or None, cost or None, problems).
+def read_purchase_form(database, form):
+    problems = []
+    supplier = None
+    supplier_id = (form.get("supplier_id") or "").strip()
+    if supplier_id:
+        supplier = database.execute("SELECT id, name FROM suppliers WHERE id = ? AND is_active = 1",
+                                    (supplier_id,)).fetchone()
+        if supplier is None:
+            problems.append("Please choose a supplier from the list.")
+    cost_text = (form.get("total_cost") or "").strip()
+    total_cost = read_number(cost_text, allow_zero=True) if cost_text else None
+    if cost_text and total_cost is None:
+        problems.append(NUMBER_HELP.format(label="total paid") + " (0 or more).")
+    elif total_cost is not None and supplier is None and not problems:
+        problems.append("Please choose which supplier you paid, or leave the money box empty.")
+    return supplier, total_cost, problems
+
+
 # Shows the record form with the material's status and its last 10 history lines (in Malaysia time).
-def show_record_form(material, kind, problems, typed_quantity):
+def show_record_form(material, kind, problems, typed_quantity, typed_form):
     history = get_db().execute(
         "SELECT m.movement_type, m.quantity, m.note, m.created_at, u.username FROM stock_movements m "
         "JOIN users u ON u.id = m.user_id WHERE m.material_id = ? ORDER BY m.created_at DESC, m.rowid DESC LIMIT 10",
@@ -269,4 +301,5 @@ def show_record_form(material, kind, problems, typed_quantity):
     history_lines = [{"type": MOVEMENT_WORDS[row["movement_type"]], "quantity": row["quantity"], "note": row["note"],
                       "when": to_malaysia_time(row["created_at"]), "who": row["username"]} for row in history]
     return render_template("materials_record.html", material=add_status(material), kind=kind, problems=problems,
-                           typed_quantity=typed_quantity, history=history_lines)
+                           typed_quantity=typed_quantity, history=history_lines, typed=typed_form,
+                           suppliers=get_active_suppliers(get_db()) if kind == "received" else [])
