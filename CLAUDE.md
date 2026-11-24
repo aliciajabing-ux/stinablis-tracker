@@ -594,4 +594,10 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   guess is removed), tests (122 pass). Both roles can see the chart (no money in it). | Team: an existing
   data/tracker.db needs this once (the table is new): run the CREATE TABLE low_stock_events block from
   app/schema.sql, or delete the file and run setup_database.py again. | Drops that happened before today have
-  no event rows, so the chart starts counting from now. Not committed yet.
+  no event rows, so the chart starts counting from now. Committed and pushed.
+
+2026-11-24 | Team decision (recorded by Agent E) | Spending chart and CSV download stay ADMIN ONLY.
+  Employees still SEE prices and the Home money box (view only). Section 5 F7 already says this, so no screen
+  or code change. Existing tests prove it (Employee gets 403 on /stats/export.csv and /stats/data/spending;
+  the Statistics page has no chart or download for Employees). | Next: Agent F test that Employees get 403
+  when typing the supplier and offer edit addresses. | None.
