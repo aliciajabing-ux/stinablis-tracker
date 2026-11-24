@@ -1132,3 +1132,22 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   committed (658fdd2) and merged with PR #1. Full suite passes. | If a screen still shows bars under
   Jun 2026, the database holds other (older) movements; check data/tracker.db. | None.
 
+2026-11-24 | Agent E (restyle done at the team's request, touching Agent H's files app/static/theme.css and
+  app/templates/base.html, plus login.html and my home.html and stats.html) | DONE: new look from the team's
+  design reference (rounded outlined cards with a solid offset shadow, light and dark cards side by side,
+  section titles in highlighted tags, mono-font buttons and links, one header row, hero with a small drawing
+  on Home). THE COLOUR PALETTE IS UNCHANGED: only the 7 colours already in theme.css :root are used, no new ones.
+  What changed: theme.css rewritten (same variables, new shapes, fonts Space Grotesk and Space Mono from Google
+  Fonts with safe fallbacks if offline); base.html is now one header row (logo, menu, user and Log out) and the
+  current page is marked in the menu (aria-current); home.html has a hero (welcome, two buttons, an inline
+  drawing) and the four boxes as a light/dark checkerboard; login.html loads the fonts; stats.html charts use the
+  same font. Row buttons inside tables are outlined and smaller; on a phone tables scroll sideways inside their own
+  box (the page itself never does). Nothing a page DOES changed: same links (url_for), the Log out form is still
+  a POST with the csrf_token, the Users link keeps its can_manage_users check, no role logic added. Checked in a
+  browser (login, Home, Materials, Suppliers, Statistics, phone width 390): readable, no sideways page scroll.
+  Full suite passes. | Agent H: please review the new theme.css and keep it as the base. Pages not
+  checked in a browser: supplier detail, suggestion, material add/edit/record forms, Users screens; they use
+  the same classes so should follow, but please look. | (1) The fonts come from fonts.googleapis.com and
+  fonts.gstatic.com; if the team wants no outside requests, remove the 3 font lines in base.html and
+  login.html (the page then uses Segoe UI or Arial). (2) The Home drawing is plain decoration (aria-hidden).
+
