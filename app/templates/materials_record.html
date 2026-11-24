@@ -6,7 +6,7 @@
 <style>
   label { display: block; margin-top: 12px; font-weight: bold; }
   input, select { padding: 10px; font-size: 1rem; width: 100%; max-width: 360px; box-sizing: border-box; }
-  .btn { display: inline-block; padding: 12px 18px; margin-top: 16px; border-radius: 6px; border: 1px solid #1a5fb4;
+  .btn { display: inline-block; min-height: 44px; box-sizing: border-box; padding: 12px 18px; margin-top: 16px; border-radius: 6px; border: 1px solid #1a5fb4;
          background: #1a5fb4; color: #fff; font-size: 1rem; text-decoration: none; cursor: pointer; }
   .btn.plain { background: #fff; color: #1a5fb4; }
   .problems { background: #f5c2c2; color: #7a0000; padding: 10px; border-radius: 6px; }
@@ -14,20 +14,26 @@
   .tag-OK { background: #d8f3dc; color: #1b4332; }
   .tag-LOW { background: #ffe5b4; color: #7a4100; }
   .tag-OUT { background: #f5c2c2; color: #7a0000; }
+  .memo { background: #eef3fa; padding: 10px; border-radius: 6px; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; }
   th, td { padding: 8px; border-bottom: 1px solid #ddd; text-align: left; }
 </style>
 <h1>Record {{ kind }}: {{ material.name }}{% if material.colour %} ({{ material.colour }}){% endif %}</h1>
 <p>{% if kind == 'used' %}Type how much you took from the shelf, for example 200.{% else %}Type how much new stock arrived, for example 1000.{% endif %}</p>
-<p>Now in stock: <strong>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit }}</strong>
+<p>Now in stock: <strong>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</strong>
    <span class="tag tag-{{ material.status }}">{{ material.status }}</span></p>
+{% if material.status == 'LOW' %}<p>This is LOW: at or below the reorder level of {{ '%g'|format(material.reorder_level) }} {{ material.unit|unit_word }}. Time to order more.</p>
+{% elif material.status == 'OUT' %}<p>This is OUT: none left. Order more as soon as you can.</p>{% endif %}
+{% if last_bought %}<p class="memo">Last bought: {{ last_bought.amount }} from <strong>{{ last_bought.supplier }}</strong>,
+  {{ last_bought.when }}{% if last_bought.cost is not none %}, paid MYR {{ '%.2f'|format(last_bought.cost) }}{% endif %}.
+  (A guide only; check the supplier before you order.)</p>{% endif %}
 
 {% if problems %}<div class="problems"><ul>{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
 
 <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label for="quantity">How much ({{ material.unit }})</label>
+  <label for="quantity">How much ({{ material.unit|unit_word }})</label>
   <input id="quantity" name="quantity" type="text" inputmode="decimal" required value="{{ typed_quantity }}">
   {% if kind == 'received' %}
   <label for="supplier_id">Bought from (optional)</label>
@@ -52,7 +58,7 @@
 <table>
   <tr><th>When (Malaysia time)</th><th>What</th><th>Amount</th><th>Who</th><th>Note</th></tr>
   {% for line in history %}
-  <tr><td>{{ line.when }}</td><td>{{ line.type }}</td><td>{{ '%g'|format(line.quantity) }} {{ material.unit }}</td>
+  <tr><td>{{ line.when }}</td><td>{{ line.type }}</td><td>{{ '%g'|format(line.quantity) }} {{ material.unit|unit_word }}</td>
       <td>{{ line.who }}</td><td>{{ line.note or '' }}</td></tr>
   {% else %}
   <tr><td colspan="5">No history yet.</td></tr>

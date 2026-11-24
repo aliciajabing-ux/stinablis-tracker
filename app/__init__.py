@@ -8,10 +8,25 @@
 
 import os
 
-from flask import Flask
+from flask import Flask, render_template
 
 from app import auth, csrf, routes_materials, routes_stats, routes_suppliers, routes_users
 from app.permissions import can_manage_users, login_required
+
+
+# Plain-English words for the error pages (shown instead of the technical default pages).
+ERROR_WORDS = {
+    403: "You do not have permission to do that. If you think you should, please ask an Admin.",
+    404: "We cannot find that page. Please go back to Home and try again.",
+}
+
+
+# Shows a plain-English page with a Home button. The error number is still sent to the browser (403, 404, 400).
+def show_plain_error(error):
+    message = ERROR_WORDS.get(error.code) or error.description
+    if error.code == 400 and error.description == type(error).description:
+        message = "Something was not right with what was sent. Please go back and try again."
+    return render_template("error_page.html", message=message), error.code
 
 
 # Builds and returns the web application. Other agents add their screens in the marked place below.
@@ -37,6 +52,9 @@ def create_app(test_settings=None):
     website.register_blueprint(routes_suppliers.suppliers_blueprint)   # Agent D: suppliers and suggestions
     website.register_blueprint(routes_stats.stats_blueprint)           # Agent E: statistics and dashboard
     website.register_blueprint(routes_users.users_blueprint)           # Users screen (F8, Admin only)
+
+    for error_number in (400, 403, 404):
+        website.register_error_handler(error_number, show_plain_error)
 
     website.jinja_env.globals["can_manage_users"] = can_manage_users   # lets the menu ask permissions.py
 
