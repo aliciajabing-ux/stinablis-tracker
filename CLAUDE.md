@@ -574,6 +574,55 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   tokens on forms (not built); no Admin screen yet to unlock/reset accounts (F8);
   add .venv/ to .gitignore (no .gitignore exists yet).
 
+2026-11-23 | Agent C (materials & stock) | Wrote app/alerts.py (OK/LOW/OUT rule,
+  needs-attention list, counts), app/routes_materials.py (list with search and
+  filter, add/edit/remove for Admin, Record used/received for everyone, every stock
+  change writes stock_movements + activity_log, Malaysia-time history) and 3
+  templates (materials_list/form/record.html). Registered the blueprint at the
+  marked line in app/__init__.py. 28 new tests, whole suite 50 pass (TESTS.md).
+  Employee page checked for prices: none. Remove only switches a material off (C9).
+  | Agent E: use alerts.count_materials_by_status(db) and
+  alerts.get_materials_needing_attention(db) for the Home boxes and list; link
+  "Find supplier" to Agent D's page. Agent F: review and do the manual tests.
+  | NOTES/REQUESTS: (1) No CSRF tokens on forms (same open item as Agent B).
+  (2) Stock can only change by Used/Received; the starting quantity of a new
+  material is saved as an ADJUSTED row. There is no screen yet to correct a wrong
+  count (ADJUSTED stores no +/- direction); needs a decision (R4). (3) Unit cannot
+  be changed after a material is created (it would make old history wrong).
+  (4) Reorder level is entered per material; the Section 7 "quantity needed"
+  formula is Agent D's. (5) Founder question still open: units/reorder levels.
+
+2026-11-23 | Agent D (suppliers & suggestion) | Wrote app/suggest.py (quantity needed,
+  packs rounded up with minimum order, cost, arrival date in Malaysia time, ranking,
+  money removed for Employees), app/routes_suppliers.py (supplier list and details for
+  everyone; add/change/switch-off supplier and offer for Admin; "Find supplier" page at
+  /suggest/<material id>) and 6 templates (suppliers, supplier_detail, supplier_form,
+  offer_form, suggest, supplier_style). Registered the blueprint at the marked line in
+  app/__init__.py. 29 new tests, whole suite 79 pass (TESTS.md). Employee pages checked
+  for prices in the page source: none. Nothing is ever deleted, only switched off (C9);
+  every change writes the activity log (C8). | Agent E: link each Needs-attention row
+  to url_for('suppliers.suggest_supplier', material_id=...) and the Home menu to
+  url_for('suppliers.supplier_list'). Agent F: review and do the manual tests.
+  | QUESTIONS (R4, I did not guess beyond what is below): (1) F6 rule 1 "deliver in
+  time" has no deadline defined. I built an optional "needed within N days" box; empty
+  means every supplier counts. Founder to confirm. (2) Quantity formula (reorder x 2
+  minus stock) is as written in Section 7 and still [CONFIRM]. (3) An offer is only
+  suggested if its pack unit matches the material's unit (g, ml, pcs). (4) Employees see
+  supplier phone, email and website (proposal in Section 4, still to confirm).
+  (5) Offers use price per PACK (schema), so Section 6's "price_per_unit" is per pack.
+  (6) No CSRF tokens on forms (same open item as B and C). (7) .venv/ and __pycache__
+  still not in .gitignore.
+
+2026-11-23 | Agent D (suppliers & suggestion) | REQUEST TO AGENT B (Rule R3, file
+  app/templates/base.html): please add a small menu bar to the top bar, shown only when
+  logged in, with three plain links: "Home" -> url_for('home'), "Materials" ->
+  url_for('materials.<materials list function>') (Agent C: please state the name of
+  your list function), "Suppliers" -> url_for('suppliers.supplier_list'). Big enough
+  to tap on a phone; the top bar already wraps (flex-wrap). No role checks needed:
+  every link opens a page that checks permissions itself. Reason: the Home page has
+  no links yet, so testers must type addresses by hand. | Nothing else needed from B.
+  | None.
+
 2026-11-23 | Agent B (login & roles) | DONE: request from Agent D ticked off. Added a menu bar
   to app/templates/base.html, shown only when logged in: Home, Materials, Suppliers (links
   built with url_for; no role checks, each page checks its own permissions). Tap-friendly
@@ -588,12 +637,77 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   | CLAUDE.md.txt is still untracked (not mine to add; the team should decide whether to
   keep it, since it duplicates README.md). | None.
 
+2026-11-23 | Agent E (statistics & dashboard) | Wrote app/routes_stats.py, home.html (four boxes,
+  Needs attention list with Find supplier buttons, See statistics button) and stats.html
+  (usage bar chart by week/month, low-stock line chart, average delivery time per supplier,
+  Admin-only spending chart and CSV download; Chart.js 4.4.1 loaded from a CDN). In
+  app/__init__.py I registered the blueprint and replaced the placeholder "/" (it now calls
+  routes_stats.show_dashboard; the endpoint name "home" is kept). Employee gets 403 on the CSV
+  and spending address; Employee pages and chart data contain no money (tests prove it). Found
+  and fixed one leak while testing: the spending chart script was sent to Employees. 27 new
+  tests; see TESTS.md. | Agent F: review and do the manual test, including a phone-sized window.
+  | QUESTIONS (R4, built but switched off, screens say "Not set up yet"; flags
+  SPENDING_METHOD_CONFIRMED and LOW_EVENTS_METHOD_CONFIRMED in routes_stats.py): (1) Where does
+  "money spent" come from? stock_movements has no price. PROPOSAL: each RECEIVED movement is
+  priced as quantity x the price per unit of the cheapest active offer for that material, and is
+  credited to that supplier. Weakness: we do not know who the stock was really bought from, and
+  prices change. Better option: add a supplier and a price to the "Record received" form (needs
+  Agent A and C). Team to choose. (2) How is a "low-stock event" counted? There is no stored
+  event. PROPOSAL: replay stock_movements (starting stock and received add, used subtracts); one
+  event = one USED row that moves a material from OK to LOW or OUT; counted by Malaysia-time
+  month, using today's reorder level. Weakness: ADJUSTED rows have no +/- direction. (3) "Usage per
+  material" mixes g, ml and pcs on one chart (units shown in each label); shows the 8 most used
+  materials and the last 6 weeks or months. OK? (4) "Estimated money spent" is shown for the
+  current Malaysia-time month.
+  | REQUEST TO AGENT B (R3, app/templates/base.html): please add a "Statistics" link to the menu:
+  url_for('stats.statistics_page'). Until then Home has a "See statistics" button.
+  | NOTE: the charts need internet for Chart.js; if the shop has none at the printers, we should
+  save the file into app/static/ (team decision). No CSRF issue here (no forms).
+
 2026-11-24 | Agent B (login & roles) | DONE: request from Agent E ticked off. Added a "Statistics"
   link to the menu in app/templates/base.html (Home, Materials, Suppliers, Statistics; links to
   stats.statistics_page; no role check, the page checks its own permissions). Menu test in
   tests/test_auth_permissions.py now also checks the Statistics link. Full suite: 107 pass.
   | Agent E may remove the temporary "See statistics" button from Home if wanted. Change is
   not committed yet. | None.
+
+2026-11-24 | Agent E (statistics & dashboard) | Team answered my questions: (1) money spent:
+  Option B, store the real cost when stock is received. (2) low-stock events: Option B, store
+  the event when it happens. (3) usage chart mixing g/ml/pcs, 8 most used, last 6 periods: Yes.
+  (4) money box shows the current Malaysia-time month: Yes. Manual tests on a real phone: all 3
+  pass (TESTS.md). | Spending and low-stock events stay "Not set up yet" until A and C finish
+  below; then I will read the real data and switch both flags on. | REQUESTS (R3):
+  TO AGENT A (schema.sql, setup_database.py): (a) in stock_movements add nullable columns
+  supplier_id (TEXT, refers to suppliers) and total_cost_myr (REAL, >= 0), filled only for
+  RECEIVED rows. (b) new table low_stock_events: id, material_id, status (LOW or OUT),
+  quantity_at_event, reorder_level_at_event, movement_id (the USED row that caused it),
+  created_at (UTC). Rows are added, never edited or deleted. Existing databases need a
+  safe upgrade (add columns, create table) without losing data.
+  TO AGENT C (routes_materials.py, materials_record.html): on "Record received" ask for the
+  supplier (list of active suppliers) and total price paid in MYR, and save them on the
+  RECEIVED row. These two boxes must only appear for Admin; Employees must still be able to
+  record received stock (Section 4: Employees cannot see prices), so for an Employee the cost
+  stays empty. TEAM TO DECIDE (R4): should an Admin fill the cost in later for rows an
+  Employee recorded? Also on every "Record used" that moves a material from OK to LOW or OUT,
+  write one low_stock_events row (use alerts.get_status before and after) and one
+  activity_log line.
+  | Nothing built by me for this yet. Money from RECEIVED rows with no cost will be left
+  out of the totals, and the screen will say so.
+
+2026-11-24 | Agent E (statistics & dashboard) | TEAM DECISION CHANGE: Employees may SEE prices,
+  shipping costs and money totals, but still cannot change suppliers, offers or materials.
+  Guide updated first (Section 4 roles and sensitive data, F2, F4, F6, Section 14 checklist).
+  My side: Home money box already follows can_see_prices(), so it will show for Employees as soon
+  as that function changes. I split the Statistics page: spending chart and CSV download now use
+  is_admin() (F7 still says Admin only; team to confirm, see question below). | REQUESTS (R3):
+  TO AGENT B (app/permissions.py): make can_see_prices return True for an active Admin OR an
+  active Employee (keep can_manage_* Admin only). TO AGENTS B, C, D, F: old tests that say
+  "Employee sees no price / no MYR" must be rewritten to "Employee sees prices but gets 403 when
+  changing them"; Agent D's supplier templates and suggest page may test role directly and need
+  checking (Rule C7). My tests in tests/test_stats_dashboard.py with "Employee ... no money" will
+  fail after Agent B's change and I will update them then. | QUESTION (R4): should Employees also
+  see the spending chart and the CSV download (F7 says Admin only)? Until answered they stay Admin
+  only.
 
 2026-11-24 | Agent B (login & roles) | DONE: request from Agent E (Employees may SEE prices).
   app/permissions.py: can_see_prices now returns True for an active Admin or active Employee;
@@ -631,6 +745,46 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   routes use admin_required, but the new tests do not prove it yet. Statistics
   CSV export and the spending chart are still Admin only (decision covered
   seeing prices, not exports). Agents A, C, D, E have no log entries yet.
+
+2026-11-24 | Agent G (documentation & presentation) | DONE: README.md (short "how to run it":
+  venv, pip install, setup_database, set-password, STINABLIS_SECRET_KEY, start, roles and log-in,
+  tests, known problems), GLOSSARY.md (about 100 entries, grouped, incl. 403/CSRF/session/cookie/
+  blueprint, and a table of libraries we use with licenses) and PRESENTATION_NOTES.md (the six
+  Section 13 topics, a 2-minute demo script, honest answers to likely questions). Followed my own
+  steps on a clean copy (new venv, pip install flask pytest, setup_database, set-password, run the
+  app as Admin and Employee, run the tests): works; 108 tests pass. The old README.md was a copy of
+  this guide; I replaced it with the short how-to. Its status-log entries (Agents B-E) were NOT in
+  this file, so I copied them in above, unchanged, to keep them (they also remain in Git history).
+  The guide is CLAUDE.md in the repo, so README says so (this file still calls itself
+  PROJECT_GUIDE.txt in its header and in Section 10; team please change that text).
+  | LEFT TO DO: (a) re-check all three files after Agent F's review and after the requests below
+  land; (b) each member's 3 sentences about two open-source projects (Section 3 TEAM TO DO), I did
+  not write them for you; (c) the Section 16 founder questions are untouched and still open (R4).
+  | PROBLEM FOUND (real, please fix): sample_data/stock_movements.csv writes dates like
+  2026-11-10T02:00:00Z but the app reads 2026-11-10 02:00:00. On a database made by
+  app/setup_database.py these pages crash with 500: /materials/<id>/record/used (and received) for
+  any material that has history, /stats/data/usage, and /stats/export.csv. The 108 tests pass
+  because they build their own data. README has a temporary one-line repair for local databases.
+  | REQUESTS (R3, files I do not own): (1) AGENT A: change the 5 dates in
+  sample_data/stock_movements.csv to "YYYY-MM-DD HH:MM:SS" (or make setup_database.py convert
+  them); update schema.sql comments that say price columns are "Admin only on screen" and
+  sample_data/SAMPLE_DATA_README.txt (says Employees cannot see prices; says the online PLA total is
+  MYR 134, but the 5-spool minimum order makes it MYR 308 in the app). Section 6 of this guide still
+  says price_per_unit; the table has price_per_pack_myr. (2) NO OWNER: a requirements.txt does not
+  exist. Suggest Agent A or B add one with flask and pytest (we tested Flask 3.1.3, pytest 9.2.0);
+  then I will change README step 2 to "pip install -r requirements.txt". (3) AGENT F: add a test
+  that builds the database with setup_database.py and opens the record page, the usage data and
+  the CSV; and the pending test that an Employee gets 403 on the supplier/offer edit addresses
+  (I checked by hand: 403 on GET and POST for /suppliers/new, /suppliers/S001/edit, an offer edit
+  and /materials/new). (4) TEAM: CLAUDE.md.txt is still an untracked duplicate of old log lines;
+  decide whether to delete it (I did not). The FilaOps link in Section 3 is wrong: the project is
+  github.com/BLB3DPrinting/filaops and its license is custom, not MIT (read it before using any
+  code; we use none). github.com/abduznik/filament-tracker returns "Not Found". Xeferis/
+  filament-tracker has no license (never copy from it). Spoolman, InvenTree, OSSMS and Stockify
+  show MIT. No code from any of them is in our files (searched).
+  | NOTE: Home "money spent", the spending chart and low-stock events still say "Not set up yet",
+  so the notes do not present them as working. Not built and not described as built: user
+  management (F8), activity log screen (F9), backup button, CSRF tokens, email alerts.
 
 2026-11-24 | Users screen (F8, no owner in Section 11; built at the team's request) | Wrote
   app/routes_users.py, templates users_list.html, users_form.html, users_password.html and
@@ -756,10 +910,46 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   with the CSRF field. base.html is Agent H's; I will not edit it again. | AGENT H MUST KEEP: the
   csrf_token hidden field in every POST form, Log out as a POST form, "extends base.html" on every page
   after login, and the Users link (it now exists) with its can_manage_users check. | PROBLEMS (all in
-  files I do not own, so not edited, Rule R2): full suite = 119 pass, 24 FAIL, all in tests/test_users.py.
+  files I do not own, so not edited, Rule R2): full suite after merging everything = 120 pass, 26 FAIL: 24 in tests/test_users.py and 2 in tests/test_sample_data.py (line 41, same missing "CSRF_ENABLED": False).
   Cause: the Users screen was built before CSRF existed. REQUESTS (Rule R3): (1) Users screen owner:
   add <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> to the 4 forms in
   app/templates/users_form.html, users_password.html and users_list.html (2 forms); without it a real
   browser gets "page has expired". (2) Agent F / Users owner: tests/test_users.py line 38 must pass
   "CSRF_ENABLED": False in create_app (as the other test files do), plus one test that a POST without the
   token is refused. Styling problems: same list as the 2026-11-24 entry; nothing new.
+2026-11-24 | Sample-data date bug (found by Agent G; fixed at the team's request, touching Agent A's
+  sample_data and Agent F's tests) | Changed the 5 dates in sample_data/stock_movements.csv from
+  "2026-11-10T02:00:00Z" to "2026-11-10 02:00:00", the format the app reads. Added
+  tests/test_sample_data.py (3 checks): it builds a database from the real sample files and proves the
+  dates have the right format and that the Record used/received pages, /stats/data/usage and
+  /stats/export.csv open without a 500 error. The checks failed before the fix and pass now. All 141
+  tests pass. | Agent A: databases already created with the old file still hold the old dates; delete
+  data/tracker.db and run app/setup_database.py again, or use the repair in README.md. Also still to do
+  from Agent G's request: schema.sql comments, SAMPLE_DATA_README.txt, requirements.txt. | None.
+
+2026-11-24 | Schema comments, sample-data notes and requirements.txt (Agent G's requests; done at the
+  team's request, touching Agent A's files) | app/schema.sql: the two price comments now say "Admin and
+  Employee can see; only Admin can change" (comments only, no table change). sample_data/
+  SAMPLE_DATA_README.txt: employees may see prices (team decision 2026-11-24), and the online PLA
+  example is now MYR 308.00 (5-spool minimum order), so the local shop is cheaper and faster. New
+  requirements.txt: Flask>=3.1,<4 and pytest>=8. All 141 tests pass. | Agent G: change the README
+  install step to "pip install -r requirements.txt" (the README in this repo is still the old copy of
+  the guide). Team: Section 6 of this guide still says price_per_unit and shipping_cost; the table has
+  price_per_pack_myr, minimum_order_packs and shipping_cost_myr. | None.
+
+2026-11-24 | README.md (Agent G's job; rebuilt at the team's request because Agent G's copy was not in
+  the repo) | Replaced the old README.md, which was an out-of-date copy of this guide (721 lines; the
+  only differences were older wording from before the 2026-11-24 decisions, and it stays in Git
+  history), with a short how-to: virtual environment, pip install -r requirements.txt, setup_database,
+  set-password, secret key, start, roles table, tests, folder map and known problems. I followed the
+  steps on a clean clone (new venv, install, setup_database, set password, log in as Admin): Home,
+  Materials, Statistics and Users all open. | Agent G: GLOSSARY.md and PRESENTATION_NOTES.md are still
+  missing from the repo; compare this README with yours. | None.
+
+2026-11-24 | GLOSSARY.md (Agent G's job; drafted at the team's request because Agent G's copy was not in
+  the repo) | New GLOSSARY.md: about 100 words in six groups (business, how the system works, safety, code
+  and testing, screens, libraries with licences). Checked against the code: the CSV safe-cell rule, the
+  lock rule, the SameSite/HttpOnly cookie settings and the table names. States that no code was copied from
+  the open-source projects (Rule C10). | Team: each member should read it before the presentation. Agent G:
+  compare with your own version; PRESENTATION_NOTES.md is still missing. | The licence column is from
+  general knowledge, not read from each project's licence file; please check before the presentation.
