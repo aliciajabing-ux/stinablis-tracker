@@ -634,3 +634,23 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   using can_manage_users from permissions.py (Rule C7). All 138 tests pass. | Agent F: re-run and try the
   screens in a browser on a phone. Team: forms still have no CSRF token (open since Agent B). Also decide
   who owns F8 in Section 11. | A user with no password cannot log in; "Add user" always sets one.
+
+2026-11-25 | Agent A (database) | DONE: schema changes for "money spent" and "low-stock events"
+  (team chose Option B). (1) app/schema.sql: stock_movements has two new empty-by-default columns,
+  supplier_id (links to suppliers) and total_cost_myr (empty or at least 0); only for RECEIVED rows an
+  Admin recorded. (2) New table low_stock_events (id, material_id, status LOW/OUT, quantity_at_event,
+  reorder_level_at_event, movement_id -> the USED row that caused it, created_at). Rows are only added.
+  (3) app/setup_database.py: new safe upgrade, run "python app/setup_database.py upgrade". It adds the
+  two columns only if missing, creates the table only if missing, prints what it did, deletes nothing,
+  and can be run many times. A plain run on an existing database still stops, and now points to
+  "upgrade". (4) sample_data/stock_movements.csv: T001 now has supplier S003 and total 76.00
+  (1 pack at MYR 58.00 + MYR 18.00 shipping, as in supplier_offers.csv O002; fake data). The other
+  rows and low_stock_events stay empty. Note for fake data: O002 says minimum 5 packs but T001 is 1000 g.
+  Proof: upgraded a copy of a database built from the OLD schema (git HEAD): all row counts equal
+  before/after, second run changed nothing, foreign-key check clean, negative cost rejected. A fresh
+  build loads the sample data. Full suite: 138 passed (the request said 141; I did not remove any test,
+  the count in the request may have been from a different checkout). | AGENT C CAN START: (a) "Record
+  received" form asks supplier and total price, Admin only; (b) each "Record used" that moves a material
+  from OK to LOW or OUT writes one low_stock_events row and one activity-log line. Then Agent E can switch
+  on SPENDING_METHOD_CONFIRMED and LOW_EVENTS_METHOD_CONFIRMED. | TEAM: the live data/tracker.db
+  (if you have one) needs "python app/setup_database.py upgrade" once. I did not touch it.
