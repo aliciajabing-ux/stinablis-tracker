@@ -1,0 +1,254 @@
+# Presentation notes (for every team member)
+
+Goal (guide Section 13): **every member can explain these six things in plain words.** Read the
+"Say it like this" box for each topic, learn the facts under it, and practise the demo. Unknown
+words are in [`GLOSSARY.md`](GLOSSARY.md).
+
+Facts below were checked against the code and by running the app on 2026-11-24. The sample numbers
+are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
+Stinablis facts or real prices (rule R7).
+
+Last re-checked against code: 2026-11-24 (108 automatic tests passing). Agent F's review is still
+pending, so re-check these notes after it lands (see the status log in `CLAUDE.md`).
+
+---
+
+## 1. The problem
+
+> **Say it like this:** "Stinablis is a 3D printing company in Kuching. Staff have to remember how
+> much material is left, which supplier sells what at what price, and then notice in time when
+> something is running low. That is slow and easy to get wrong, so printing jobs sometimes stop
+> because the material ran out. We built one website that keeps all of this in one place and warns
+> people early."
+
+Facts:
+- Three jobs that waste time today: (a) tracking how much is left, (b) remembering supplier, price,
+  contact and delivery time, (c) noticing "low" and finding someone to buy from, often too late.
+- What the website does: one list of materials and stock; one list of suppliers; low-stock
+  warnings; a suggested supplier with an estimated cost and arrival date; simple statistics;
+  different rights for different users.
+- Only logged-in staff can use it. It works on a phone browser at the printer.
+- It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
+  printers, customer orders, a phone app (guide Section 17: version 2 ideas).
+
+## 2. The two roles
+
+> **Say it like this:** "There are two kinds of user. The Admin is the owner or manager and can do
+> everything. The Employee, for example a printer operator, can look at everything and record stock
+> used or received, but cannot change materials, suppliers or prices, and cannot manage users."
+
+| | Admin | Employee |
+|---|---|---|
+| See materials, stock, LOW / OUT warnings | Yes | Yes |
+| Record stock **used** / **received** | Yes | Yes |
+| See supplier contacts, **prices, shipping, cost estimates** | Yes | Yes (team decision 2026-11-24) |
+| Add / change / remove materials | Yes | **No** (403) |
+| Add / change / switch off suppliers and offers, change prices | Yes | **No** (403) |
+| Statistics: usage, average delivery time | Yes | Yes |
+| Statistics: spending chart, CSV download | Yes | **No** (403) |
+| Manage user accounts | Yes (not built yet) | No |
+
+Facts:
+- Each user has exactly one role. Login is a username and password; 5 wrong passwords lock the
+  account for 15 minutes.
+- **Safety rule:** permissions are checked on the **server**. Hiding a button is not enough: an
+  Employee who types an admin address is stopped with a "Forbidden" (403) page.
+- If in doubt, deny (guide Section 4).
+- Still open for the founder: should Employees see supplier phone numbers and emails? Today they
+  can (our proposal); the founder has not confirmed.
+- Not built yet: the Admin screens for managing users (F8) and the activity log (F9).
+
+## 3. One feature from start to finish: "Record used"
+
+> **Say it like this:** "Say a printer operator used 200 grams of white PLA. They open Materials, press
+> Record used, type 200 and press Save. The server first checks they are logged in and allowed to
+> record stock. Then it checks that 200 is a proper number and that we really have that much. If all
+> is well it lowers the stock number, writes a line in the stock history, and writes a line in the
+> activity log saying who did it. If the new number is at or below the reorder level, the material
+> shows as LOW on the Home page."
+
+Step by step (code in `app/routes_materials.py`, `app/alerts.py`):
+
+1. **Screen:** Materials list, press **Record used** on a row. Page address `/materials/<id>/record/used`.
+   The page shows the current stock, the status word and the last 10 history lines in Malaysia time.
+2. **Send:** the person types a quantity (and an optional note) and presses Save. The browser sends
+   a POST to the server.
+3. **Server checks permission:** `login_required`, then `can_record_stock(user)` from
+   `permissions.py` (Admin and Employee both pass). Anyone else gets 403 or the login page.
+4. **Server checks the input:** `read_number` accepts only a plain number (no letters, minus, zero,
+   or more than two decimals). The note must be 200 letters or fewer. A bad input gives a message in
+   plain words, for example "Please type the quantity as a number, for example 200".
+5. **Server checks stock:** you cannot take out more than you have. The database update itself only
+   works if enough is left, so two people cannot take the same grams at the same moment.
+6. **Stock number goes down:** `quantity_on_hand` drops by 200, rounded to 2 decimals.
+7. **History row written:** one new row in `stock_movements` (type USED, quantity, note, who, when
+   in UTC). Rows are never edited.
+8. **Activity log row written:** for example "Used 200 g of PLA Basic. Now 630 g." (rule C8).
+9. **Save together:** both rows and the new number are committed at once; if anything fails
+   everything is undone.
+10. **Back to the list** with a short confirmation message.
+11. **LOW or OUT:** the status is not stored; it is worked out each time a page is shown by
+    `get_status` (zero or less = OUT; at or below the reorder level = LOW; otherwise OK). So the Home
+    page "Needs attention" list and the red / orange boxes update by themselves.
+
+Verified on 2026-11-24 with the sample data: PLA Basic White 830 g (reorder level 1000 g, so
+already LOW); an Employee recorded 200 g used; quantity became 630 g, one USED row and one
+STOCK_USED activity row appeared.
+
+**Demo tip:** use the Section 15 checklist. Add a material with reorder level 500 g and quantity
+800 g (status OK), record 400 g used (400 g, LOW), record 400 g used again (0 g, OUT).
+
+> **Warning before you demo (2026-11-24):** with the sample data as it loads today the "Record used"
+> page can crash (500 error) because of a date format problem in the sample file. See the
+> "Known problems" box in `README.md` for the one-line repair. Do the repair before the demo.
+
+## 4. How the best supplier is picked
+
+> **Say it like this:** "When a material is LOW or OUT you press Find supplier. The system works out
+> how much we need to buy, then for every supplier that sells it, how many packs that means, what
+> the total would cost with shipping, and which day it would arrive. Then it lists the suppliers
+> with the cheapest total first and, if the cost is the same, the fastest delivery first. Every
+> money number and date is marked as an estimate."
+
+The rules (code in `app/suggest.py`; guide Sections 5 F6 and 7):
+
+1. **Quantity needed** = (reorder level x 2) minus what we have now (never below zero).
+   *(The guide still marks this formula "[CONFIRM] with the founder".)*
+2. **Packs to order** = quantity needed divided by the pack size, **rounded up** to whole packs,
+   and never fewer than the supplier's minimum order.
+3. **Estimated cost** = packs x price per pack + shipping cost.
+4. **Estimated arrival** = today (Malaysia time) + the supplier's lead time in days.
+5. **Which suppliers count:** only active suppliers and active offers, and only offers sold in the
+   same unit as the material (grams, millilitres or pieces).
+6. **Ordering:** sorted by cheapest estimated cost, then shortest lead time.
+7. **"In time":** the guide says "only suppliers that can deliver in time" but does not define it.
+   So the page has an optional box, "Needed within how many days?". If you fill it in, slower
+   suppliers drop out; if you leave it empty every supplier counts. The founder has not confirmed
+   this.
+
+**Worked example with the invented sample data** (PLA Basic White, 830 g on hand, reorder level
+1000 g, sold in 1000 g spools):
+
+- Quantity needed = (1000 x 2) minus 830 = **1170 g**, which rounds up to **2 spools**.
+- Local shop (SAMPLE Kuching Filament Shop A): 2 x MYR 72.00 + MYR 0.00 shipping = **MYR 144.00**,
+  lead time 1 day, arrives tomorrow.
+- Online shop (SAMPLE OnlineFil Store C): the minimum order is **5** spools, so 5 x MYR 58.00 +
+  MYR 18.00 shipping = **MYR 308.00**, lead time 7 days.
+- Result: the local shop is **Best** at the top. The online price per spool is lower, but the
+  minimum order makes the total higher and it is slower.
+- Second example, ABS Grey (OUT, 0 g): needed = 1000 g = 1 spool; only one supplier sells it, so it
+  is the only line: MYR 93.00, arrives in 7 days.
+
+*(Note: `sample_data/SAMPLE_DATA_README.txt` says the online total is MYR 134. That older note
+ignored the minimum order. The app's MYR 308 is the correct result of the rules.)*
+
+Both Admin and Employee see the same list, costs and contacts (team decision 2026-11-24).
+
+## 5. How Employees can SEE prices but not CHANGE them (`permissions.py`)
+
+> **Say it like this:** "On 24 November the team decided that Employees may see prices, shipping
+> costs and money totals, to make ordering easier, but may not change anything. All our rules about
+> who can do what live in one small file, permissions.py, as plain yes/no questions. One question,
+> can_see_prices, says yes to both Admin and Employee. A different question, can_manage_suppliers,
+> says yes only to Admin. The pages that change data are guarded by the Admin-only check, so even if
+> an Employee types the address of an edit page by hand, the server answers 403 Forbidden."
+
+Facts (`app/permissions.py`):
+
+- `can_see_prices(user)` = active Admin **or** active Employee. Used for the money columns, the
+  suggestion costs and the Home money box.
+- `can_manage_materials`, `can_manage_suppliers`, `can_manage_users`, `can_view_activity_log` =
+  active Admin only.
+- `can_record_stock` = Admin or Employee.
+- `admin_required` is the guard placed on every page that changes things. If the person is not
+  an Admin it stops with **403**; if not logged in it sends them to the login page.
+- **Seeing is not changing:** two different functions, on purpose. When the team changed its mind,
+  only `can_see_prices` had to change, and the "change" buttons and pages stayed Admin-only.
+- Switched-off accounts, not-logged-in visitors and unknown roles get nothing (deny by default).
+- Rule C7: screen files must never write `if role == "admin"`; they only ask `permissions.py`.
+- The page also hides the Add / Change / Switch-off buttons from Employees, but that is only for
+  convenience. The real protection is the server check.
+
+**Bug we found and fixed on the same day:** when prices became visible, some supplier pages used
+`can_see_prices` to mean "is Admin", so Employees briefly saw edit buttons and switched-off
+suppliers. It was fixed by using `can_manage_suppliers` for those (status log, 2026-11-24). This is
+a good story for "why one question per decision".
+
+**Verified on 2026-11-24:** logged in as the sample Employee, GET and POST to `/suppliers/new`,
+`/suppliers/S001/edit`, an offer edit address and `/materials/new` all answered **403**, and
+`/stats/export.csv` answered **403**. Employees can still open the supplier pages and the Find
+supplier page with MYR prices. An automatic test written specially for the supplier edit addresses
+is still pending from Agent F.
+
+What is still **Admin only** (the 2026-11-24 decision covered seeing prices, not these): the
+spending chart and the CSV download on the Statistics page. Open question in the status log:
+should Employees see those too?
+
+## 6. Open-source projects we looked at, and credits
+
+> **Say it like this:** "Before writing code we looked for free, open-source projects so we did not
+> reinvent the wheel. We studied several, borrowed their ideas, such as how to split permissions by
+> role and how to do low-stock alerts, and wrote our own small application. We copied no code from
+> them. If we ever copy code, we first check its license, keep the copyright notice and credit the
+> project."
+
+| Project | What it is | Idea we borrowed | License checked on GitHub, 2026-11-24 |
+|---|---|---|---|
+| [Spoolman](https://github.com/Donkie/Spoolman) (Donkie) | Tracks 3D printer filament spools | A clear list of spools with material and remaining weight | MIT |
+| [InvenTree](https://github.com/inventree/InvenTree) | General inventory system (Python Django + React) | How a mature system tracks stock and has an API. Too big to copy; we studied the ideas | MIT |
+| [FilaOps](https://github.com/BLB3DPrinting/filaops) (found by search; the guide's link `printertechn/filaops` does not exist) | ERP for 3D print farms: inventory, low-stock alerts, bill of materials | Closest match to our low-stock alerts and reordering | Custom licence ("NOASSERTION"). **Read it before using any code; we use none** |
+| [OSSMS](https://github.com/iitzm1lly/ossms) (iitzm1lly) | Office supplies stock system (Next.js, Tauri, SQLite) | A simple, clear split of permissions by role (Admin / Staff / Viewer) | MIT |
+| [Stockify](https://github.com/Princelad/stockify) (Princelad) | Stock and billing system (React and Express) | General small-business stock screens | MIT |
+| [filament-tracker](https://github.com/Xeferis/filament-tracker) (Xeferis) | A simple filament tracker | Basic screens of a simple tracker | **No license found: all rights reserved, never copy code from it** |
+| abduznik/filament-tracker (from the guide) | A simple filament tracker | Basic screens | The GitHub link returned "Not Found" on 2026-11-24; ask the team who found it |
+
+Facts:
+- **Result of our code search (2026-11-24):** no file in `app/`, `tests/` or `sample_data/` mentions
+  any of these projects or contains a pasted-code credit. That means no code was copied. Everyone
+  must still confirm this honestly before presenting.
+- The libraries we install (Flask, Werkzeug, Jinja, pytest) and load (Chart.js) are listed with
+  their licenses at the bottom of [`GLOSSARY.md`](GLOSSARY.md). They are used, not copied.
+- Rule C10 (if you copy code): check the license, add a source-link comment, explain it in the
+  glossary.
+- **Team to do (guide Section 3):** each member opens two of the projects and writes **3 sentences
+  in the status log** about what they found. Nobody has done this yet. Do it in your own words;
+  the judges will ask.
+
+---
+
+## Two-minute demo script
+
+1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent
+   (the money box says 'Not set up yet' until we confirm how it is counted)."
+2. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
+   "Best" at the top, and the word "estimate".
+3. Go to Materials, **Record used**, type a quantity, save. Show the status change.
+4. Log out. Log in as the Employee. Show: prices are visible, no Add / Change / Remove buttons.
+5. Type `/suppliers/new` in the address bar: the "Forbidden" page. "The server blocks it, not just
+   the button."
+
+## Questions you may be asked (honest answers)
+
+- **"Is this real company data?"** No. It is invented sample data. The founder's answers (Section 16)
+  are still needed to replace it.
+- **"Why not just a spreadsheet?"** One place, warnings that appear by themselves, a supplier
+  suggestion, a history of who changed what, and different rights for different people.
+- **"What happens if someone types a forbidden address?"** 403 Forbidden, checked on the server.
+- **"How are passwords stored?"** Scrambled (hashed); nobody can read them back, not even us.
+- **"What if the internet is down?"** The app itself runs on our own computer. Only the Statistics
+  charts need the internet, because the chart library is loaded from the web.
+- **"What can it not do yet?"** Email alerts, manual stock correction screen (ADJUSTED), user
+  management screen, activity-log screen, backup button, real "money spent" and "low-stock events"
+  numbers, CSRF protection on forms. All are listed in the status log.
+- **"Why is the money box empty?"** The team agreed to store the real cost when stock is received,
+  but that part is not built yet, so the screen says "Not set up yet" rather than guessing.
+- **"How do you know it works?"** 108 automatic tests, a manual checklist (`TESTS.md`), and a
+  phone check.
+
+## Open questions we must NOT answer for the founder (guide Section 16)
+
+Which materials, units and reorder levels; which suppliers are online or local and their lead
+times; whether prices include shipping and tax; who is Admin; whether Employees see supplier phone
+and email; whether email alerts are wanted; whether to track which printer used which material;
+whether there are spreadsheets to import. If asked on the day, say: "These are still waiting for
+the founder's answer."
