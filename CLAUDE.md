@@ -609,3 +609,18 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
   Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
   in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
+
+2026-11-24 | Agent E | DONE: chart colours for the dark theme (only app/templates/stats.html; no change to how
+  any page works). Chart.js text (axis labels, legend, titles) is now #ECE9DF and grid lines #3a3933. Bars and
+  the line use only the palette: usage bars cycle #EB4604, #F77E0D, #99A57D, #ECE9DF, #6f7a5a; delivery time =
+  moss; low-stock line = orange wheel (with round points); spending = hot orange. Legends, axis words and
+  tooltips are unchanged, so colour is never the only clue. Checked in a browser (Admin, Employee, phone width
+  390): text readable, no sideways scroll, charts draw. Full suite on this branch: 128 pass. | Nothing needed
+  from Agent H (theme.css and base.html untouched). | (1) The usage chart can show up to 8 materials but the
+  palette has 5 colours, so colours repeat after the fifth; the legend and the pop-up name when you point at a
+  bar tell them apart. If the team wants 8 clear colours, Agent H must add more palette colours (Rule R3).
+  (2) The dark theme (app/static/theme.css) is NOT on this branch (main-0rpyg5); it is on main-iyvssn. The 146
+  tests also belong to that branch. This branch and main-iyvssn both changed the money-spent columns,
+  low_stock_events, routes_materials.py, routes_stats.py, schema.sql and tests, so merging them will conflict
+  and needs the team to pick one version. (3) On a phone, the long supplier names on the delivery-time chart
+  are cut off on the left (existing behaviour, not caused by this change).

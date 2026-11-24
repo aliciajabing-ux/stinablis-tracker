@@ -46,6 +46,26 @@
     spending: "{{ url_for('stats.spending_data') }}"{% endif %}
   };
   var charts = {};
+  // Chart colours (team palette on the dark theme). Words (legend, labels, tooltips) always stay, never colour alone.
+  var TEXT_COLOUR = "#ECE9DF";       // axis labels, legend text, titles
+  var GRID_COLOUR = "#3a3933";       // grid lines
+  var PALETTE = ["#EB4604", "#F77E0D", "#99A57D", "#ECE9DF", "#6f7a5a"];   // hot orange, orange wheel, moss, light, dark moss
+  if (typeof Chart !== "undefined") {
+    Chart.defaults.color = TEXT_COLOUR;
+    Chart.defaults.borderColor = GRID_COLOUR;
+    Chart.defaults.scale.grid.color = GRID_COLOUR;
+    Chart.defaults.scale.ticks.color = TEXT_COLOUR;
+    Chart.defaults.scale.title.color = TEXT_COLOUR;
+    Chart.defaults.plugins.legend.labels.color = TEXT_COLOUR;
+    Chart.defaults.plugins.title.color = TEXT_COLOUR;
+  }
+  // Gives each bar group of the usage chart a palette colour (the colours repeat after five materials; the legend and tooltip name each one).
+  function colourUsageDatasets(chartData) {
+    chartData.datasets.forEach(function (dataset, index) {
+      dataset.backgroundColor = PALETTE[index % PALETTE.length];
+    });
+    return chartData;
+  }
   // Draws (or redraws) one chart inside the canvas with the given id.
   function drawChart(canvasId, config) {
     var canvas = document.getElementById(canvasId);
@@ -58,26 +78,27 @@
   function loadUsage() {
     var period = document.getElementById("period").value;
     fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("usage-chart", {type: "bar", data: d});
+      drawChart("usage-chart", {type: "bar", data: colourUsageDatasets(d)});
     });
   }
   document.getElementById("period").addEventListener("change", loadUsage);
   loadUsage();
   fetch(urls.lead).then(function (r) { return r.json(); }).then(function (d) {
     drawChart("lead-chart", {type: "bar", options: {indexAxis: "y"},
-      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: "#1a5fb4"}]}});
+      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: PALETTE[2]}]}});
   });
   if (document.getElementById("low-chart")) {
     fetch(urls.low).then(function (r) { return r.json(); }).then(function (d) {
       drawChart("low-chart", {type: "line",
-        data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: "#e66100"}]}});
+        data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: PALETTE[1],
+          backgroundColor: PALETTE[1], pointBackgroundColor: PALETTE[1], pointRadius: 4}]}});
     });
   }
   {% if show_admin_tools and spending_ready %}
   if (urls.spending) {
     fetch(urls.spending).then(function (r) { return r.json(); }).then(function (d) {
       drawChart("spending-chart", {type: "bar",
-        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: "#26a269"}]}});
+        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: PALETTE[0]}]}});
     });
   }
   {% endif %}
