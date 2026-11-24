@@ -800,6 +800,7 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   and needs the team to pick one version. (3) On a phone, the long supplier names on the delivery-time chart
   are cut off on the left (existing behaviour, not caused by this change).
 
+
 2026-11-24 | Agent G (documentation & presentation) | DONE: README.md (short "how to run it":
   venv, pip install, setup_database, set-password, STINABLIS_SECRET_KEY, start, roles and log-in,
   tests, known problems), GLOSSARY.md (about 100 entries, grouped, incl. 403/CSRF/session/cookie/
@@ -1027,4 +1028,94 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   | Team: existing databases need "python app/setup_database.py upgrade" once (Agent A's command; it adds
   the two columns and the new table safely). The two ALTER lines in my 2026-11-24 entries are replaced by
   that command. | Old note: "Employees may type the total" in my earlier entries is no longer true.
+
+
+2026-11-25 | Mark (Agent G) | Reviewed Spoolman and FilaOps on GitHub to borrow practical ideas without copying code: Spoolman shows how to display remaining material clearly, while FilaOps shows how low-stock alerts and reorder planning prevent print jobs from stopping. Where our app helps Stinablis more is tracking filaments, resins, composites, and everyday hardware pieces like screws, springs, magnets, fidget clickers, and keychain rings in one simple web app with supplier cost and delivery-time comparisons. | GLOSSARY.md, PRESENTATION_NOTES.md, and this open-source log are committed and pushed on branch main-o7f8p8. Ready to rebase and re-check the docs once Main Chat! merges the other branches. | sample_data/stock_movements.csv date format and requirements.txt still belong to other/unassigned files under Rule R3.
+
+2026-11-25 | Agent G (documentation & presentation) | Post-merge sync of README.md, GLOSSARY.md and PRESENTATION_NOTES.md against origin/main-iyvssn. I merged that branch into main-o7f8p8 here (code merged cleanly; README, GLOSSARY and CLAUDE.md conflicted). I kept Agent G's README and GLOSSARY, took the integration branch's CLAUDE.md and re-added the 2026-11-25 Mark entry. Verified on the merged code: 146 pass (about 60 seconds); CSRF tokens on all 11 POST forms; Users screen (F8) built; requirements.txt exists; sample dates fixed and covered by tests/test_sample_data.py. Updated the three files (setup step uses requirements.txt, 146 tests, CSRF and Users described as built, date-bug warning removed, a "Why this fits Stinablis" section, and a version 2 answer for questions). VERSION 2 IDEAS (Section 17, not built, not promised): printable labels for racks and shelves; humidity and dry-box alerts for moisture-sensitive filaments in Sarawak's climate; linking material stock to job quoting. | Re-check the three files again after the branches below are merged: the "Not set up yet" money and low-stock-event statements, the Agent F review and the supplier-edit 403 test statements will change. | PROBLEMS: three remote branches were NOT in origin/main-iyvssn when I checked: main-0rpyg5 (money spent from Record received, low-stock events, Employee 403 tests on supplier and offer edit addresses, a decision that spending chart and CSV stay Admin only), main-tq6ebi (Agent D can_manage_suppliers fix) and claude/modest-albattani-0zgw7k (Agent F review tests and bugs F-1 to F-10). origin/main is still at bc665d4. Main Chat!: please confirm where the final merge lives. README now says the money box and low-stock chart are "Not set up yet" because that matches the merged code I tested. The hardware pieces list (screws, springs, magnets, fidget clickers, keychain rings) is still unconfirmed by the founder (Section 16 Q1); the docs say so. Guide text still stale (not mine, R3): Section 6 price_per_unit/shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: "money spent" now works.
+  Decision: money spent = the real "Total paid" typed on "Record received", counted per supplier per
+  Malaysia-time month (not a guess from offers). Changes: app/schema.sql (stock_movements gets supplier_id
+  and total_cost_myr, both empty for USED/ADJUSTED), app/routes_materials.py + materials_record.html (Record
+  received has optional "Bought from" list and "Total paid (MYR)"; money needs a supplier; bad input is
+  refused; the activity log line says who was paid), app/routes_stats.py (SPENDING_METHOD_CONFIRMED = True;
+  spending adds up the real totals), sample_data/stock_movements.csv (new columns), tests (117 pass).
+  Home money box: Admin and Employee. Spending chart and CSV: still Admin only. | Low-stock events chart is
+  still off (needs the table from Agents A/C). Team: an existing data/tracker.db needs two lines run once:
+  ALTER TABLE stock_movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id);
+  ALTER TABLE stock_movements ADD COLUMN total_cost_myr REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0);
+  (or delete it and run setup_database.py again for sample data). | Old received lines have no total, so they
+  count as MYR 0 until someone types one. Committed and pushed.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: low-stock events chart works.
+  Team decision: a low-stock event = one "Record used" that drops a material from OK to LOW or OUT; further
+  drops while it stays LOW or OUT do not count again. Changes: app/schema.sql (new table low_stock_events: id,
+  material_id, status_after, quantity_after, reorder_level at that moment, created_at), app/routes_materials.py
+  (Record used writes the event row in the same save as the stock change), app/routes_stats.py
+  (LOW_EVENTS_METHOD_CONFIRMED = True; the chart counts rows per Malaysia-time month; the old "replay history"
+  guess is removed), tests (122 pass). Both roles can see the chart (no money in it). | Team: an existing
+  data/tracker.db needs this once (the table is new): run the CREATE TABLE low_stock_events block from
+  app/schema.sql, or delete the file and run setup_database.py again. | Drops that happened before today have
+  no event rows, so the chart starts counting from now. Committed and pushed.
+
+2026-11-24 | Team decision (recorded by Agent E) | Spending chart and CSV download stay ADMIN ONLY.
+  Employees still SEE prices and the Home money box (view only). Section 5 F7 already says this, so no screen
+  or code change. Existing tests prove it (Employee gets 403 on /stats/export.csv and /stats/data/spending;
+  the Statistics page has no chart or download for Employees). | Next: Agent F test that Employees get 403
+  when typing the supplier and offer edit addresses. | None.
+
+2026-11-24 | Agent F work (done by Agent E at the team's request) | DONE: Employee 403 proof for supplier and
+  offer edit addresses. tests/test_suppliers_suggest.py: the old test sent a half-empty form, so a form check
+  could have stopped it too. New tests send COMPLETE valid forms as an Employee to /suppliers/new,
+  /suppliers/S1/edit, /suppliers/S1/offers/new and /offers/O1/edit: all give 403 and the suppliers, offers and
+  activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
+  Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
+  in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
+
+2026-11-24 | Agent F (testing & review) | Wrote tests/test_review_agent_f.py (about 200 checks). Whole suite:
+  298 passed, 12 expected-failures (xfail = a test that describes a known bug; it turns into an
+  error when the bug is fixed, so then remove the xfail mark). COVERED: employee gets exactly 403 on
+  every supplier/offer add, edit, switch-off address (GET and POST, valid data, other methods) and
+  changes nothing; visitor is sent to login; every address as Admin / Employee / visitor; account
+  lock on the 5th wrong password and unlock after 15 minutes; password_hash is never a plain
+  password; Admin and Employee actions write activity_log (and refused actions write none); number
+  fields reject letters and silly values, text fields reject very long input; CSV export and
+  spending data Admin only; every Section 15 item (800 g -> use 400 -> LOW -> use 400 -> OUT,
+  cheaper+faster supplier first, arrival = today + lead time, Malaysia time UTC+8); every rule of
+  Sections 4 and 7; Rules C2, C5, C6, C9. | NEXT: owners fix the bugs below, then remove the xfail marks.
+  | PROBLEMS (not fixed by me, Rule R3):
+  F-1 (CONFIRMED) No CSRF tokens on any form. Owner: Agent B (+ all form pages).
+  F-2 (CONFIRMED) No Admin screen to add users, reset passwords, disable or unlock accounts (F8);
+      the only way is "python app/auth.py set-password". Owner: team decision (F8 has no owner).
+  F-3 No Admin screen shows the activity log (F9). Owner: team decision.
+  F-4 No one-click database backup for Admin (Section 14). Owner: team decision.
+  F-5 Spending chart and low-stock-events chart are switched off in routes_stats.py
+      (SPENDING_METHOD_CONFIRMED, LOW_EVENTS_METHOD_CONFIRMED = False), waiting for the founder.
+      Owner: Agent E. So the "Admin sees spending chart" check cannot be tested yet.
+  F-6 requirements.txt, GLOSSARY.md and app/models.py (Section 10) do not exist. Owner: Agent G / A.
+      Agent A's files DO exist (app/schema.sql, app/setup_database.py, sample_data/) and Agent C's
+      files DO exist (routes_materials.py, alerts.py, templates), but neither agent wrote a log entry.
+  F-7 BUG: in routes_materials.py read_number() deletes every comma, so typing "1,5,5" records 155 g,
+      and it accepts non-English digits. Reject commas that are not thousands separators. Owner: Agent C.
+  F-8 Rule C3: the two inner "checked_view" functions in permissions.py (lines ~60 and ~70) have no
+      comment line. Owner: Agent B.
+  F-9 BUG: sample_data/*.csv dates look like 2026-11-18T06:30:00Z, but the app reads
+      "YYYY-MM-DD HH:MM:SS". With the sample data, /stats/data/usage crashes (server error).
+      Owner: Agent A (change the sample dates or the import).
+  F-10 (CONFIRMED) Sample users have no password until "python app/auth.py set-password sample_admin"
+      and "... sample_employee" are run; until then nobody can log in (tested: safe, no guessable password).
+  STILL UNTESTED: the real browser screens on a phone, CSV content with the spending chart (switched
+  off, see F-5), email alerts (not built), and a real two-person race on the same stock record.
+
+2026-11-24 | Agent E (merge done at the team's request) | DONE: PR #1 had a merge conflict again because
+  main had moved on (other branches, including an older copy of mine, were merged into main). Merged
+  origin/main into main-0rpyg5. 2 clashes: app/schema.sql (main still had my OLD column names
+  status_after / quantity_after; kept Agent A's design: status, quantity_at_event, reorder_level_at_event,
+  movement_id, matching the code and the setup_database.py upgrade) and this log (kept every entry from
+  both sides). Everything else merged without edits. Full suite: 368 pass, 2 skipped, 6 expected failures
+  (all in Agent F's review file, none about money or low-stock events). | Team: anyone who built a database
+  from main's old schema needs a fresh one (delete data/tracker.db, run setup_database.py) because the
+  low_stock_events column names changed; the upgrade command will NOT rename them. | Agent C / Agent F:
+  F-7 (read_number turns "1,5,5" into 155) also affects the new "Total paid" box.
 

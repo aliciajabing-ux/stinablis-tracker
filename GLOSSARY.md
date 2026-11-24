@@ -1,140 +1,264 @@
 # Glossary: what the technical words mean
 
-Plain-language meanings of the words used in this project (guide Section 13, Rule C10). Each word is
-explained in one or two sentences, with an example from our own tracker where that helps.
-Words are grouped by topic, and A-Z within each group.
+Plain-language meanings of the words used in our code and guide. Each entry says what the word
+means and, where it helps, **where we use it**. If you meet a word that is not here, add it
+(or ask Agent G).
+
+Contents: [The big picture](#the-big-picture) · [Database](#database) · [Web and Flask](#web-and-flask) ·
+[Login and security](#login-and-security) · [Web status numbers](#web-status-numbers-403-and-friends) ·
+[Pages and charts](#pages-and-charts) · [Dates and money](#dates-and-money) ·
+[Our own words](#our-own-words-business-rules) · [Testing](#testing) · [Tools, Git and licenses](#tools-git-and-licenses)
 
 ---
 
-## 1. The business words
+## The big picture
 
-| Word | Meaning |
-|---|---|
-| **Activity log** | The list of "who did what, and when". Example: "boss switched off worker, 24 Nov 2026 14:05". Nobody can edit or delete it. |
-| **Admin** | The owner, manager or trusted person. Can change everything. |
-| **Employee** | General staff, for example a printer operator. Can record stock and see prices, but cannot change materials, suppliers, prices or users. |
-| **Estimate** | A best guess. Costs and arrival dates on the suggestion screen are estimates, and the screen says so. |
-| **Lead time** | How many days pass from ordering to arrival. Arrival date = today + lead time. |
-| **LOW / OUT / OK** | The three stock statuses. LOW: quantity is at or below the reorder level. OUT: quantity is zero. OK: anything else. We always write the word, not only a colour. |
-| **Material** | Something we keep in stock, for example PLA filament, PETG, resin or nuts. |
-| **Minimum order** | The smallest number of packs a supplier will sell. Example: 5 spools. |
-| **MYR** | Malaysian Ringgit, our currency. Example: "MYR 72.00". |
-| **Needs attention list** | The Home page list of materials that are LOW or OUT. |
-| **Offer** | One supplier selling one material, with its price, pack size, shipping, minimum order and lead time. |
-| **Pack** | The unit a supplier sells, for example one 1 kg spool or one 1 L bottle. Prices are per pack, not per gram. |
-| **Quantity on hand** | How much of a material is in stock right now. |
-| **Record received** | The button for "new stock arrived". It adds to the stock. |
-| **Record used** | The button for "we used some". It reduces the stock and can never go below zero. |
-| **Reorder level** | The quantity at which we should order more. Example: reorder at 500 g. |
-| **Stock** | The amount of materials we have on the shelf. |
-| **Supplier** | A company or shop we buy from. It is ONLINE or LOCAL. |
-| **Switched off** | How we "remove" something. The record stays with all its history but no longer shows in normal lists (Rule C9). |
+- **Web application:** a program you use in a web browser instead of installing it. Ours is a
+  website that only logged-in staff can use.
+- **Server:** the computer that runs the application and checks the rules. Everything important
+  (who may do what) is decided here, never only on the screen.
+- **Client / browser:** the program on your phone or computer (Chrome, Edge...) that shows the pages
+  the server sends.
+- **Request and response:** your browser *asks* for a page (request); the server *answers* with the
+  page (response).
+- **Python:** the programming language we write in. Chosen because it is easy to read.
+- **Library (or package):** code written by other people that we install and use, so we do not
+  rewrite it. Ours: Flask, pytest. **Dependency** means a library our project needs.
+- **Function:** a small named piece of code that does one job, for example `get_status(...)`. Our
+  rule (C3): every function has a one-line comment above it saying what it does.
+- **Constant:** a fixed value written in CAPITAL LETTERS, for example `MAX_WRONG_PASSWORDS = 5`.
+- **Dictionary:** a list of labelled values, for example `{"status": "LOW", "name": "PLA"}`.
+- **Open source:** software whose code is public and free to read and often to reuse, under a
+  *license* (see [License](#tools-git-and-licenses)).
+- **PRD (Product Requirements Document):** the document that says what we are building and why.
+  Ours is `CLAUDE.md`.
+- **Agent (A to H):** one team member or AI helper that owns certain files (guide Section 11).
 
----
+## Database
 
-## 2. The words about how the system works
+- **Database:** a set of linked spreadsheets stored in one file. Ours is `data/tracker.db`.
+- **SQLite:** the kind of database we use. It is a single file, so there is no database server to
+  install and a backup is just a file copy.
+- **Table:** one spreadsheet inside the database, for example `materials`. **Row** = one line
+  (one material). **Column** = one heading (for example `reorder_level`).
+- **Schema:** the plan that says which tables and columns exist. It lives in `app/schema.sql`.
+- **SQL:** the language used to talk to the database ("get all materials", "change this quantity").
+  You see it in the code as text such as `SELECT * FROM materials`.
+- **Query:** one question or instruction sent to the database.
+- **Placeholder (`?`):** in our SQL, a `?` marks a spot where a value is filled in safely. This stops
+  **SQL injection**, an attack where someone types SQL code into a form box to trick the database.
+  We never glue what a person typed into the SQL text.
+- **Primary key (`id`):** the unique label of a row, for example `M001` for one material.
+- **Foreign key (`REFERENCES`):** a link from one table to another, for example an offer points to
+  a supplier and a material. The database refuses a link to something that does not exist
+  (`PRAGMA foreign_keys = ON` switches this check on).
+- **CHECK rule:** a rule the database enforces itself, for example the unit must be `g`, `ml` or
+  `pcs`, and quantity can never be below zero.
+- **Commit and rollback:** *commit* = save the changes for good; *rollback* = undo everything since
+  the last commit. When recording stock fails halfway, we roll back so nothing is half-saved.
+- **`quantity_on_hand`:** the number of grams, millilitres or pieces we have now.
+- **Stock movement (`stock_movements` table):** one history row for every change to stock:
+  `USED`, `RECEIVED` or `ADJUSTED` (the starting stock of a new material). These rows are only
+  added, never edited.
+- **Activity log (`activity_log` table):** the "who did what, and when" record (F9). Rows are only
+  added, never edited or deleted. Login, lock, price changes and stock changes all write to it.
+- **Switched off / `is_active`:** we never delete a material, supplier or user that has history
+  (rule C9). We set `is_active = 0` ("switched off") so it disappears from the lists but its history
+  stays. Programmers call this a *soft delete*.
+- **Sample data:** invented data in `sample_data/` used to try the app. It is **not** real
+  Stinablis data and every supplier name starts with "SAMPLE".
+- **CSV (comma-separated values):** a plain text file that a spreadsheet program such as Excel can
+  open. The Admin's statistics download is a CSV.
+- **UUID:** a long random code used so every new row gets an id that no other row has.
 
-| Word | Meaning |
-|---|---|
-| **Application (app)** | The program that runs our website. |
-| **Blueprint** | A Flask way to keep one topic's screens together in one file. Example: `routes_materials.py` holds the Materials blueprint. |
-| **Browser** | The program you use to open websites, for example Chrome or Edge. |
-| **Client** | In this project, the browser (or a test pretending to be one). |
-| **Database** | A set of linked spreadsheets stored in one file. Ours is `data/tracker.db`. |
-| **Endpoint / route** | One web address the app answers, for example `/materials/`. The "routes" files list them. |
-| **Flask** | The small Python library that runs our website. |
-| **Form** | A web page with boxes to fill in and a button to send them. |
-| **Foreign key** | A link from one table to another. Example: an offer points to a supplier and to a material. The database checks that the target exists. |
-| **GET and POST** | The two kinds of requests. GET asks to see a page. POST sends data to change something. Changing things is always POST. |
-| **Hash / scrambled password** | We never store a password. We store a one-way scramble of it. Even the database owner cannot read it back. At login we scramble what you typed and compare. |
-| **HTML** | The language web pages are written in. |
-| **HTTP status code** | A number the server sends back. 200 = fine, 302 = "go to another page", 403 = "not allowed", 404 = "not found", 500 = "the server broke". |
-| **Jinja (template)** | The tool that fills a page with real data. A template is an HTML file with gaps such as `{{ material['name'] }}`. |
-| **JSON** | A plain-text format for sending data to a page. The charts use it. |
-| **Library** | Ready-made code written by other people that we use. See the table at the end. |
-| **Login / session / cookie** | After a correct login, the server gives your browser a small signed note called a cookie. It proves you logged in, so you do not type your password on every page. The time you stay logged in is a session. |
-| **Migration / upgrade** | A safe change to the database layout that keeps the existing data. |
-| **Python** | The programming language we use. |
-| **Redirect** | The server answers "go to this other page" (status 302). Example: after login you are sent to Home. |
-| **Request** | What the browser sends to the server. |
-| **Response** | What the server sends back: a page, or data. |
-| **Row** | One line in a table, for example one material. |
-| **Schema** | The plan of the database: its tables and columns. Ours is in `app/schema.sql`. |
-| **Secret key** | A long private text that signs the login cookie. It is set outside the code (the `STINABLIS_SECRET_KEY` setting) and never put in Git. |
-| **Server** | The computer that runs the app and checks every rule. |
-| **SQL** | The language used to ask the database for data. |
-| **SQLite** | The database program we use. The whole database is one file and needs no separate server. |
-| **Table** | One "spreadsheet" in the database, for example `materials` or `users`. |
-| **Test client** | A pretend browser used by the automatic tests. |
-| **Timezone / UTC** | UTC is the world reference time. We store every date in UTC and show it in Malaysia time (UTC+8). Example: 16:00 UTC shows as 00:00 the next day. |
-| **Virtual environment (`.venv`)** | A private folder of libraries for this project only, so it does not mix with other Python programs. |
-| **Web address (URL)** | The text you type in the browser, for example `http://localhost:5000/users/`. |
+## Web and Flask
 
----
+- **Flask:** the small library (a *web framework*) that lets Python answer web requests. It is
+  the heart of the app.
+- **Route (or address / URL path):** a web address that the app answers, for example
+  `/materials/` or `/suggest/M001`. In the code a route is written as `@something.route("/...")`.
+- **Blueprint:** a bundle of related routes kept in one file so the app stays tidy. We have one for
+  login (`auth_blueprint`), materials, suppliers and statistics. `app/__init__.py` plugs them all in.
+- **`create_app`:** the function in `app/__init__.py` that builds the whole web application and
+  plugs in the blueprints.
+- **View function / page function:** the Python function that runs when someone opens a route and
+  returns the page.
+- **GET and POST:** the two kinds of request. **GET** = "show me this page" (safe, changes nothing).
+  **POST** = "here is a form, please act on it" (can change data). Everything that changes data in our
+  app is a POST; this is why logging out is POST only.
+- **Form:** the boxes and button on a page. What the person typed arrives at the server as a POST.
+- **Redirect (status `302`):** the server answers "go to that other page instead". For example,
+  after a good login you are redirected to Home.
+- **Template (Jinja):** an HTML page with blanks that Python fills in (names, numbers, the user).
+  Templates live in `app/templates/`. **Jinja** is the system that fills them in. `base.html` is the
+  frame (top bar and menu) shared by the other pages.
+- **Flash message:** the short one-time message at the top of a page, such as "Added PLA".
+- **Request / `g` / context processor:** Flask helpers. `g` holds things for one request only (the
+  open database, the current user). The context processor makes `current_user` available inside
+  every page.
+- **Environment variable:** a setting that lives outside the code, in your terminal window. We use
+  one: `STINABLIS_SECRET_KEY`. This keeps secrets out of Git (rule C6).
+- **Decorator (`@login_required`, `@admin_required`):** a line written above a function that adds a
+  check *before* the function runs. It is how every page asks `permissions.py` "may this person
+  in?".
+- **API (and endpoint):** a set of web addresses that programs (not people) use to ask the server
+  for data. Our statistics charts ask addresses such as `/stats/data/usage` for numbers. Each such
+  address is an **endpoint**.
+- **JSON:** a simple text format for sending data between server and page, for example
+  `{"labels": ["Nov"], "amounts": [3]}`. The chart addresses answer in JSON.
+- **Regular expression (`NUMBER_PATTERN`):** a short pattern that checks text has the right shape,
+  for example "digits, then optionally a dot and one or two digits". We use it to reject letters
+  in number boxes.
 
-## 3. The words about safety
+## Login and security
 
-| Word | Meaning |
-|---|---|
-| **Account lock** | After 5 wrong passwords the account is locked for 15 minutes. |
-| **Authentication** | Proving who you are (logging in). |
-| **Authorization / permission** | Deciding what you may do once we know who you are. The rules are in `app/permissions.py`. |
-| **CSRF (cross-site request forgery)** | A trick where a bad web page makes your browser send a form to our site while you are logged in, so the site does something you did not mean. A CSRF token (a hidden random value in each form) stops it. We do not have tokens yet. This is an open item. |
-| **Checked on the server** | Every rule is enforced by the server, not just by hiding buttons. An Employee who types an Admin address still gets "not allowed" (403). |
-| **Deny by default** | If in doubt, refuse. It is easier to allow later than to undo a leak. |
-| **HttpOnly cookie** | A setting that stops page scripts from reading the login cookie. |
-| **SameSite cookie** | A setting that tells the browser not to send our cookie when another website triggers a form post. It is our protection against CSRF for now. |
-| **Sensitive data** | Information that must be protected, such as passwords. |
-| **Spreadsheet formula injection** | A trap where text in a cell starts with `=`, `+`, `-` or `@` and a spreadsheet program runs it as a formula. The CSV download adds an apostrophe in front of such text. |
+- **Login / log out:** proving who you are with a username and password; ending that proof.
+- **Password hash (scrambled password):** we never save the password itself. We save a scrambled
+  version made by a one-way recipe, so even the person who owns the database cannot read it. When
+  you log in, we scramble what you typed the same way and compare. Made by `werkzeug.security`.
+- **Hash:** the scrambled result of that recipe. You cannot turn it back into the password.
+- **Account lock:** after 5 wrong passwords the account is locked for 15 minutes (F1). This slows
+  down people who try thousands of passwords (a *brute-force attack*).
+- **Session:** how the site remembers you are logged in while you click around. After login the
+  server stores your user id in the session.
+- **Cookie:** a tiny piece of text the browser keeps and sends back with every request. Ours holds
+  the (signed) session. Settings we use: **HttpOnly** (page scripts cannot read the cookie) and
+  **SameSite=Lax** (the browser will not send it along with most requests started by other
+  websites).
+- **Secret key (`SECRET_KEY`):** a long random text that signs the session cookie so nobody can
+  fake it. It must stay secret, so it comes from the environment variable and is never saved in
+  Git. Without it the app refuses to start.
+- **Role:** the label that decides what a user may do. We have two: **ADMIN** and **EMPLOYEE**.
+- **Users screen (F8):** the Admin-only page (`app/routes_users.py`) to add a user, change a role,
+  reset a password (this also unlocks the account) and switch an account off or on. Nothing is
+  deleted. An Admin cannot switch off or demote themselves, and the last active Admin cannot be
+  switched off.
+- **Permission:** one thing a role may or may not do, for example "see prices" or "manage suppliers".
+  All permission rules live in `app/permissions.py` as functions such as `can_see_prices(user)` and
+  `can_manage_suppliers(user)`. Screen files must only ask these functions (rule C7).
+- **Server-side check:** the rule is checked on the server, not just by hiding a button. A person
+  who types a forbidden address by hand is still blocked.
+- **Deny by default:** if in doubt, say no. Not logged in, switched off, or an unknown role gets
+  nothing.
+- **CSRF (cross-site request forgery):** an attack where another website tricks your browser into
+  sending a request to ours while you are logged in. The usual defence is a secret token in each
+  form. **We built this** (`app/csrf.py`): every form that changes data carries a hidden `csrf_token`
+  field, and the server answers 400 ("page has expired") if it is missing or wrong. The SameSite cookie
+  setting is a second layer. **CSRF token:** that secret one-time value; it is made new for each
+  login session. Only the automatic tests switch the check off (`CSRF_ENABLED`).
+- **Authentication vs authorization:** *authentication* = "who are you?" (login). *Authorization* =
+  "what may you do?" (roles and permissions).
 
----
+## Web status numbers (403 and friends)
 
-## 4. The words about our code and testing
+Every answer from the server starts with a number that says how it went.
 
-| Word | Meaning |
-|---|---|
-| **Admin-only page guard (`admin_required`)** | A small check placed above a screen's code. It sends logged-out people to login and answers 403 to anyone who is not an Admin. |
-| **Automatic test** | A small program that checks our app still works. We run all of them with `python -m pytest tests`. |
-| **Branch** | A separate line of work in Git. Ours is `main-iyvssn`. |
-| **Commit** | One saved step in Git, with a short message describing it. |
-| **CSV** | A plain spreadsheet file (comma-separated values). Our sample data and the Admin download use it. |
-| **Fixture** | In tests, the code that builds the temporary database before each check. |
-| **Git** | A history book of every change to the code. |
-| **GitHub** | The website where the shared copy of the project lives. |
-| **Pull / push** | Pull: get the newest code from GitHub. Push: send your commits to GitHub. |
-| **pytest** | The tool that runs our automatic tests. |
-| **README** | The short "how to run it" file. |
-| **Sample data** | Invented data in `sample_data/` used for testing. It is not real Stinablis data. |
-| **STATUS LOG** | The list at the bottom of `CLAUDE.md` where each agent writes what it did, what is left, and any problem. |
-| **Stash** | A way in Git to put unsaved changes safely aside. |
-
----
-
-## 5. The words about the screens
-
-| Word | Meaning |
-|---|---|
-| **Chart.js** | A library that draws the charts on the Statistics page. It is loaded from the internet. |
-| **Dashboard** | The Home page with the big number boxes and the Needs attention list. |
-| **Responsive / mobile-friendly** | The page changes its layout to fit a phone or tablet. |
-| **Stock movement** | One row in the history: USED, RECEIVED or ADJUSTED, with the quantity, who did it and when. Stock changes only through movements. |
-| **ADJUSTED** | A movement type for a correction. Today it is used only for a new material's starting quantity. |
-
----
-
-## 6. Libraries we use
-
-| Library | What for | Licence |
+| Number | Name | Meaning in our app |
 |---|---|---|
-| Python | The language | PSF (free to use) |
-| Flask | The website framework | BSD-3-Clause |
-| Werkzeug | Scrambles passwords and is used inside Flask | BSD-3-Clause |
-| Jinja | Fills pages with data | BSD-3-Clause |
-| SQLite | The database (built into Python) | Public domain |
-| pytest | Runs the automatic tests | MIT |
-| Chart.js | Draws the charts | MIT |
+| **200** | OK | The page was sent normally |
+| **302** | Redirect | "Go to that other page" (for example to Home after login, or to the login page if you are not logged in) |
+| **400** | Bad request | The form had a problem (for example letters in a quantity box). The page is shown again with a plain-words message |
+| **401** | Unauthorized | Wrong username or password |
+| **403** | Forbidden | You are logged in but **not allowed**. An Employee typing an admin address gets this |
+| **404** | Not found | There is no such page, or the material or supplier is switched off |
+| **405** | Method not allowed | You used GET on an address that only accepts POST (or the other way round) |
+| **500** | Server error | A bug in our code. Report it in the status log |
 
-Per Rule C10: we have **not copied code** from the open-source projects in Section 3 of the guide
-(Spoolman, InvenTree, FilaOps, OSSMS, Stockify and the small filament trackers). We used them only for ideas:
-role permissions, low-stock alerts and screen layout. Before copying any code from them, check the licence
-first and credit the source in a comment and in this file.
+## Pages and charts
+
+- **HTML:** the language that describes what is on a page (headings, tables, buttons).
+- **CSS:** the language that describes how a page looks (colours, sizes). In our files you see it
+  inside `<style>`.
+- **JavaScript (JS):** code that runs inside the browser. We use a small amount, only to draw charts.
+- **Chart.js:** a free library that draws the bar and line charts. The Statistics page loads it from
+  the internet (from a **CDN**), so that page needs a connection to draw charts.
+- **CDN (content delivery network):** a public website that hosts shared library files for others
+  to load.
+- **Responsive / mobile-friendly:** the page rearranges itself so it works on a phone at the printer.
+
+## Dates and money
+
+- **UTC:** the world's standard clock. We store every date and time in UTC (rule in Section 6).
+- **UTC+8 (Malaysia time):** Kuching time is 8 hours ahead of UTC. The screens add 8 hours when
+  they show a date. For example 16:00 UTC on 31 Oct shows as 00:00 on 1 Nov.
+- **Timestamp:** a date and time saved with a row, for example `created_at`.
+- **MYR:** Malaysian Ringgit. Every money number on screen is written like `MYR 72.00`.
+- **Rounding:** `ROUND(..., 2)` keeps two decimal places so tiny computer errors do not creep in
+  (for example 0.1 + 0.2 must be 0.3).
+
+## Our own words (business rules)
+
+- **Material:** one thing we stock (a filament colour, a resin, nuts). It has a **unit**: `g`
+  (grams), `ml` (millilitres) or `pcs` (pieces).
+- **Reorder level:** the quantity at which we should order more (for example 500 g).
+- **Status OK / LOW / OUT:** `OUT` = quantity is zero. `LOW` = quantity is at or below the reorder
+  level. `OK` = anything else. The word is always shown, not just a colour (green / orange / red).
+- **Needs attention:** the Home list of LOW and OUT materials, OUT first.
+- **Supplier:** a shop that sells materials. Type `LOCAL` or `ONLINE`.
+- **Offer (`supplier_offers`):** one row saying "this supplier sells this material at this price".
+- **Pack:** what an offer is sold in (for example one 1000 g spool). The price is **per pack**, not
+  per gram. In `app/schema.sql`, supplier offers are priced per pack (`price_per_pack_myr`), not per
+  single gram, millilitre, or piece.
+- **Minimum order (packs):** the fewest packs the supplier will sell in one order.
+- **Lead time:** how many days from ordering to arrival.
+- **Estimated arrival:** today (Malaysia time) + lead time days.
+- **Quantity needed:** (reorder level x 2) minus what we have now. Marked **[CONFIRM]** with the
+  founder in the guide.
+- **Estimated cost:** number of packs x price per pack + shipping. All costs and dates on screen are
+  **estimates** and the page says so.
+- **Find supplier / suggestion:** the page that ranks suppliers for a LOW or OUT material (cheapest
+  total first, then shortest lead time). Code in `app/suggest.py`.
+- **Record used / Record received:** the two buttons that change stock. They are the only way the
+  quantity changes.
+- **Low-stock event:** the moment a material drops from OK to LOW or OUT. (Counting these is not
+  switched on yet.)
+- **Not set up yet:** what a screen says when the team has not yet decided how to calculate that
+  number (for example money spent). It is switched off on purpose (rule R4: do not guess).
+
+## Testing
+
+- **Automatic test:** a small program that checks one rule of the app and says pass or fail. We run
+  all of them with `python -m pytest tests`.
+- **pytest:** the tool that finds and runs our tests.
+- **Test client:** a pretend browser inside a test; it logs in and opens pages without opening a
+  real browser.
+- **Fixture:** a ready-made starting situation shared by tests (for example "a fresh database with
+  one admin").
+- **Temporary database (`tmp_path`):** tests build their own throw-away database so they never
+  touch `data/tracker.db`.
+- **Manual test:** a person clicks through the app with a checklist (Section 15 of the guide).
+
+## Tools, Git and licenses
+
+- **Virtual environment (`.venv`):** a private folder of Python libraries for this project only, so
+  it does not mix with other projects. Git ignores it.
+- **pip:** the tool that installs Python libraries. We run `pip install -r requirements.txt`.
+- **`requirements.txt`:** the list of libraries (and allowed versions) the project needs, so everyone
+  installs the same ones.
+- **Git:** the history book of every change to the code. Each saved change is a **commit** with a
+  short message.
+- **GitHub:** the website where we keep the shared copy of the Git history. **Push** = send your
+  commits to GitHub. **Clone** = download a copy.
+- **`.gitignore`:** the list of files Git must skip: the database (`data/`), `.venv/`, and
+  `__pycache__/`.
+- **Command line / terminal / PowerShell:** the text window where you type commands.
+- **License:** the owner's written permission that says how others may reuse a project's code.
+  **MIT** is a short, permissive license: you may reuse the code if you keep the copyright
+  notice. Rule C10: before copying any code, check its license, add a comment with the source link,
+  and explain it here.
+- **Open-source projects we studied (ideas only):** see `PRESENTATION_NOTES.md`, topic 6. No
+  code from them is in our project.
+
+### Code and libraries we use from other people (rule C10)
+
+| What | Used for | License (from the project's own page; re-check before the final presentation) |
+|---|---|---|
+| Flask (and Werkzeug, Jinja) | The web framework, password scrambling, page templates | BSD-3-Clause |
+| pytest | Running the automatic tests | MIT |
+| Chart.js 4.4.1 (loaded from the jsDelivr CDN) | Drawing the statistics charts | MIT |
+
+We **install or load** these libraries; we did not copy their source code into our files. As of
+2026-11-24 a search of `app/`, `tests/` and `sample_data/` finds no comment, link or notice that
+credits copied code, and no file mentions Spoolman, InvenTree, FilaOps, OSSMS or Stockify. If a team
+member pastes code from anywhere, they must add the source link and license in a comment and add a
+row to this table (rule C10).
