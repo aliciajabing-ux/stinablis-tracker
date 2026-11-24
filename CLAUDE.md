@@ -641,3 +641,26 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Rule C9). Please use a separate check from permissions.py (can_manage_suppliers) for those,
   and use can_see_prices only for the money columns. Same check for Agent E's files. | Until
   D fixes this the supplier pages show Employees buttons they cannot use. Not committed yet.
+
+2026-11-24 | Agent B (login & roles) | HANDOFF: app/templates/base.html now belongs to Agent H
+  (Section 11). I will NOT edit it from now on. Before handing over I checked it: it has the menu
+  bar (Home, Materials, Suppliers, Statistics; no Users link because no Users page exists yet), the
+  Log out form (method="post" to auth.logout) with the CSRF field, and no role checks (it only asks
+  "is someone logged in", plus shows the username and role as plain text). Only change I made: fixed
+  the indentation of the CSRF field. Merged branch main-nux7zb (it holds the Agent H entry in Section
+  11) into main-igoj8o; it re-added CLAUDE.md.txt, which I removed again (entries were already merged
+  into this log). All 113 tests pass. | AGENT H MUST KEEP: (1) the hidden field
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> inside the Log out form, and in
+  every other POST form (without it the server answers 400); (2) the Log out button as a POST form,
+  never a link; (3) every page after login must use {% extends "base.html" %} (login.html is the one
+  page that stands alone and has its own style); (4) no "if role == ..." in templates (Rule C7);
+  (5) the menu links use url_for, so keep the endpoint names. Add a Users link only when the page
+  exists. | STYLING PROBLEMS NOTICED, NOT FIXED: app/static/ does not exist yet and all CSS is inline
+  (base.html, login.html, home, materials x3, stats, supplier_style.html), so screens look slightly
+  different; the current page is not highlighted in the menu; no visible keyboard-focus outline on
+  buttons and links; the topbar button is not styled like the other buttons; Sections 8 needs a help
+  sentence under each form title (not on every form yet); the login page does not use the menu look.
+  | REQUESTS (Rule R3): Agent D: app/templates/suppliers.html line 9 uses
+  current_user['role'] == 'ADMIN' in the template, which breaks Rule C7. Please use can_manage_suppliers
+  (for example pass a "can_manage" value from the route, as the materials pages do). Not edited by me.
+  | None.
