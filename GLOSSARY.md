@@ -225,7 +225,9 @@ Every answer from the server starts with a number that says how it went.
   the total paid in MYR. It is read from the newest "received" line that names a supplier or a cost. The
   money part is shown to Admin and Employee (view only, `can_see_prices`); changing prices is still
   Admin only and answers 403 to anyone else. Code: `get_last_bought` in `app/routes_materials.py`.
-- **Total paid / Bought from:** two optional boxes on "Record received". They feed the money numbers:
+- **Total paid / Bought from:** two optional boxes on "Record received" that **only an Admin** sees and
+  can fill (`can_record_purchase_cost` in `app/permissions.py`; an Employee who sends them anyway gets
+  403). They feed the money numbers:
   Home's money box adds up the real totals typed here for the current month, and the Admin-only spending
   chart groups them per supplier. A received line with no total counts as MYR 0.
 - **Record used / Record received:** the two buttons that change stock. They are the only way the

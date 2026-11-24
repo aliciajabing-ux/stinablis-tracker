@@ -8,10 +8,9 @@ Facts below were checked against the code and by running the app on 2026-11-24. 
 are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
 Stinablis facts or real prices (rule R7).
 
-Last re-checked against code: 2026-11-25, branch `main-o7f8p8` at commit `10f78ab` (379 automatic
-tests passed, 2 skipped, 6 "expected failures" that describe known bugs). That commit already includes
-the branches `main-0rpyg5`, `main-tq6ebi` and Agent F's review branch. Re-check these notes if anything
-else is merged (see the status log in `CLAUDE.md`).
+Last re-checked against code: 2026-11-25, final merge commit `6024c83` (384 automatic tests passed,
+2 skipped, 6 "expected failures" that describe known bugs). That commit includes all feature, test and
+design branches. Re-check these notes if anything else is merged (see the status log in `CLAUDE.md`).
 
 > **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
 > stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
@@ -48,8 +47,11 @@ Facts:
   - *Made for the shop floor.* Plain-English labels, the words OK / LOW / OUT shown with their
     colours and explained once in a sentence on the Materials page, big buttons (at least about 44 px
     tall, so a thumb can tap them), a "Last bought" reminder next to each material, plain-English error
-    pages with a **Back to Home** button, a phone-friendly layout (checked on a real phone), and every
-    permission checked on the server.
+    pages with a **Back to Home** button, a phone-friendly layout, and every permission checked on the
+    server. Be honest about phones: the team's phone test found buttons and text fine, but wide tables
+    scroll sideways and phone numbers are not yet tappable (status log, F-11 and F-12).
+    *To check before the demo:* the top menu links get their size from `theme.css`; confirm in a browser
+    that they are about 44 px tall, like the other controls.
   - *SupplyTrail pitch (team goal, not a measured result).* The aim is to cut the time spent searching
     for suppliers, local Kuching shops against online ones, from about 2 hours a week towards about
     30 minutes a week. These two numbers come from the team's pitch. I could not find them in
@@ -69,6 +71,7 @@ Facts:
 |---|---|---|
 | See materials, stock, LOW / OUT warnings | Yes | Yes |
 | Record stock **used** / **received** | Yes | Yes |
+| Type "Bought from" and "Total paid (MYR)" when recording **received** | Yes | **No** (403 if tried) |
 | See supplier contacts, **prices, shipping, cost estimates** | Yes | Yes (team decision 2026-11-24) |
 | See "Last bought" (who, how much, date, total paid in MYR) | Yes | Yes (view only) |
 | Add / change / remove materials | Yes | **No** (403) |
@@ -133,8 +136,12 @@ STOCK_USED activity row appeared.
 **Demo tip:** use the Section 15 checklist. Add a material with reorder level 500 g and quantity
 800 g (status OK), record 400 g used (400 g, LOW), record 400 g used again (0 g, OUT).
 
-**Record received (new):** the form has two optional boxes, "Bought from" and "Total paid (MYR)". What is
-typed there becomes the new "Last bought" line and the real number behind Home's "money spent" box.
+**Record received (new):** the form has two optional boxes, "Bought from" and "Total paid (MYR)". **Only
+an Admin** sees and can fill them. This is enforced on the server by `can_record_purchase_cost` in
+`permissions.py`: an Employee can still record received stock, but without money, and if an Employee
+sends supplier or total anyway the server answers **403** and saves nothing. What the Admin types becomes
+the new "Last bought" line and the real number behind Home's "money spent" box. Employees can still
+**see** "Last bought" and its money, according to `can_see_prices()`, but cannot change it.
 
 **Sample data check (2026-11-25):** the sample file's date format bug is fixed. An automatic test
 builds the database from the sample files and opens the Record used page, the usage data and the CSV
@@ -224,7 +231,8 @@ nothing changes.
 
 **"Last bought" follows the same rule.** The money in the "Last bought" line is shown only if
 `can_see_prices()` says yes (Admin and Employee; a visitor who is not logged in or a switched-off account
-gets nothing). Seeing it changes nothing: editing prices stays behind `can_manage_*` and
+gets nothing). Seeing it changes nothing: typing the purchase cost is behind its own rule,
+`can_record_purchase_cost` (Admin only), and editing prices stays behind `can_manage_*` and
 `admin_required`, so an Employee who types an edit address still gets 403, now with a plain-English page
 and a **Back to Home** button.
 
@@ -295,8 +303,8 @@ point for questions.
 ## Two-minute demo script
 
 1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent this
-   month. Money spent adds up the real totals typed on Record received; on the sample data it may show
-   a small number or MYR 0.00." (Do not claim a real figure.)
+   month. Money spent adds up the real totals an Admin typed on Record received; on the sample data it
+   may show a small number or MYR 0.00." (Do not claim a real figure.)
 2. (Optional, 15 seconds) Press **Users** to show the Admin-only screen for accounts.
 3. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
    "Best" at the top, and the word "estimate".
@@ -328,8 +336,8 @@ point for questions.
   founder question.
 - **"Is the 2 hours to 30 minutes a week saving proven?"** No. It is the team's goal and estimate. We
   have not measured it and the founder has not confirmed the 2-hour starting point.
-- **"How do you know it works?"** 379 automatic tests passed (2 skipped, 6 expected failures
-  that describe known bugs; branch `main-o7f8p8`, 2026-11-25), a manual checklist (`TESTS.md`), and a phone check.
+- **"How do you know it works?"** 384 automatic tests passed (2 skipped, 6 expected failures
+  that describe known bugs; commit `6024c83`, 2026-11-25), a manual checklist (`TESTS.md`), and a phone check.
 - **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
   secret token (CSRF protection), on top of the safe cookie settings.
 
