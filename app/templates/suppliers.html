@@ -6,7 +6,7 @@
 {% include "supplier_style.html" %}
 <h1>Suppliers</h1>
 <p>Shops and websites we buy from. Click a name to see contact details and what they sell.</p>
-{% if current_user['role'] == 'ADMIN' %}<p><a class="button" href="{{ url_for('suppliers.supplier_new') }}">Add supplier</a></p>{% endif %}
+{% if can_manage %}<p><a class="button" href="{{ url_for('suppliers.supplier_new') }}">Add supplier</a></p>{% endif %}
 <div class="scroll"><table>
   <tr><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th></tr>
   {% for s in suppliers %}
