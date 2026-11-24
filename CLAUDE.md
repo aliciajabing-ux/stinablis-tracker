@@ -398,10 +398,18 @@ AGENT G - DOCUMENTATION AND PRESENTATION AGENT
   Files: README.md, GLOSSARY.md, presentation notes.
   Job: explain the code in plain words for the competition.
 
+AGENT H - INTERFACE AND DESIGN AGENT
+  Files: app/static/ (CSS and small JS), app/templates/base.html.
+  Job: one shared look for all screens, following Section 8: plain words,
+  OK/LOW/OUT shown with a colour AND a word, big tap-friendly buttons,
+  works on a phone, help sentence under each form title, plain-language errors.
+  Must NOT change what a page does, only how it looks. No permission logic
+  (Rule C7). Page-specific changes go to the owning agent as a request (R3).
+
 ORDER OF WORK
   1. Database (A)  ->  2. Login and roles (B)  ->  3. Materials (C) and
-  Suppliers (D) in parallel  ->  4. Statistics (E)  ->  5. Testing (F)
-  ->  6. Documentation (G).
+  Suppliers (D) in parallel  ->  4. Statistics (E)  ->  5. Interface and
+  design (H)  ->  6. Testing (F)  ->  7. Documentation (G).
   Nothing from later steps starts until the earlier step passes testing.
 
 
@@ -654,3 +662,104 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   from OK to LOW or OUT writes one low_stock_events row and one activity-log line. Then Agent E can switch
   on SPENDING_METHOD_CONFIRMED and LOW_EVENTS_METHOD_CONFIRMED. | TEAM: the live data/tracker.db
   (if you have one) needs "python app/setup_database.py upgrade" once. I did not touch it.
+2026-11-24 | Agent B (login & roles) | Added CSRF tokens (answers request 5 above). New file
+  app/csrf.py: each session gets a secret code; every POST/PUT/DELETE must send it or the server
+  answers 400 "page has expired". Added a hidden "csrf_token" box to all 9 POST forms (base, login,
+  materials x3, suppliers x4 - small one-line edits in Agent C/D templates, done at the team's
+  request). app/__init__.py calls csrf.start_csrf_protection and has a CSRF_ENABLED setting (keep True;
+  existing tests set it False). 5 new tests; all 113 pass. | Any new form that uses method="post" MUST
+  include <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">. JavaScript that sends
+  data must add the header X-CSRF-Token. Browser-test one form per screen. | None.
+
+--- Entries merged from CLAUDE.md.txt on 2026-11-24 (that file has been removed) ---
+
+2026-11-23 | Agent B (login & roles) | Wrote app/__init__.py (create_app: secret key
+  from STINABLIS_SECRET_KEY, safe cookie settings, "/" home page), app/templates/
+  base.html (Log out button) and home.html (placeholder). 22 automatic tests pass.
+  Founder-side manual test passed: admin login, employee login, 5 wrong passwords
+  lock the account, correct password refused while locked. Sample passwords set
+  (not stored in Git). | Agent F: review and extend tests. Then Agents C and D can
+  start; register your screens at the marked line in app/__init__.py, and use only
+  permissions.py for role checks. Agent E replaces home.html. | Still open: CSRF
+  tokens on forms (not built); no Admin screen yet to unlock/reset accounts (F8);
+  add .venv/ to .gitignore (no .gitignore exists yet).
+
+2026-11-23 | Agent B (login & roles) | DONE: request from Agent D ticked off. Added a menu bar
+  to app/templates/base.html, shown only when logged in: Home, Materials, Suppliers (links
+  built with url_for; no role checks, each page checks its own permissions). Tap-friendly
+  (padding 10px 14px, font 1rem) and wraps on narrow screens. Added 1 test in
+  tests/test_auth_permissions.py (menu appears when logged in, not on the login page).
+  | Agent E: when you replace home.html, keep "extends base.html" so the menu stays.
+  Add a link here if you add a Statistics page. | None.
+
+2026-11-23 | Agent B (login & roles) | Committed my remaining files (base.html with menu bar,
+  home.html, tests/test_auth_permissions.py) and updated .gitignore (.venv/ and
+  __pycache__/ added; data/ kept). All 80 tests passed before the commit. Not pushed.
+  | CLAUDE.md.txt is still untracked (not mine to add; the team should decide whether to
+  keep it, since it duplicates README.md). | None.
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E ticked off. Added a "Statistics"
+  link to the menu in app/templates/base.html (Home, Materials, Suppliers, Statistics; links to
+  stats.statistics_page; no role check, the page checks its own permissions). Menu test in
+  tests/test_auth_permissions.py now also checks the Statistics link. Full suite: 107 pass.
+  | Agent E may remove the temporary "See statistics" button from Home if wanted. Change is
+  not committed yet. | None.
+
+2026-11-24 | Agent B (login & roles) | DONE: request from Agent E (Employees may SEE prices).
+  app/permissions.py: can_see_prices now returns True for an active Admin or active Employee;
+  switched-off, not logged in and unknown roles still False. can_manage_materials,
+  can_manage_suppliers, can_manage_users, can_view_activity_log and admin_required are
+  unchanged (Admin only). My tests updated (24 pass): prices visible to Admin and Employee,
+  Employee still cannot manage anything. Full suite: 104 pass, 4 fail (all in other agents'
+  files, not edited): tests/test_stats_dashboard.py::test_home_employee_has_no_money_box_or_money,
+  tests/test_suppliers_suggest.py::test_employee_suggestion_page_has_no_prices_anywhere_in_the_source,
+  ::test_employee_supplier_pages_have_no_prices (all three expect "no price": expected, Agents
+  D/E should update them), and ::test_employee_cannot_see_switched_off_supplier (NOT just an
+  old expectation: see next). | REQUEST TO AGENT D (Rule R3): app/routes_suppliers.py uses
+  can_see_prices() as a stand-in for "is Admin" (lines ~100, 125, 136-139: switched-off
+  suppliers/offers hidden, and show_prices in supplier_detail.html also controls the Add /
+  Change buttons at lines ~17, 33, 44). Now that Employees can see prices, Employees can open
+  switched-off suppliers and are shown the Add / Change links (the server still answers 403
+  when they click, but the buttons must not show, and switched-off records must stay hidden,
+  Rule C9). Please use a separate check from permissions.py (can_manage_suppliers) for those,
+  and use can_see_prices only for the money columns. Same check for Agent E's files. | Until
+  D fixes this the supplier pages show Employees buttons they cannot use. Not committed yet.
+
+2026-11-24 | Agent B (login & roles) | HANDOFF: app/templates/base.html now belongs to Agent H
+  (Section 11). I will NOT edit it from now on. Before handing over I checked it: it has the menu
+  bar (Home, Materials, Suppliers, Statistics; no Users link because no Users page exists yet), the
+  Log out form (method="post" to auth.logout) with the CSRF field, and no role checks (it only asks
+  "is someone logged in", plus shows the username and role as plain text). Only change I made: fixed
+  the indentation of the CSRF field. Merged branch main-nux7zb (it holds the Agent H entry in Section
+  11) into main-igoj8o; it re-added CLAUDE.md.txt, which I removed again (entries were already merged
+  into this log). All 113 tests pass. | AGENT H MUST KEEP: (1) the hidden field
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> inside the Log out form, and in
+  every other POST form (without it the server answers 400); (2) the Log out button as a POST form,
+  never a link; (3) every page after login must use {% extends "base.html" %} (login.html is the one
+  page that stands alone and has its own style); (4) no "if role == ..." in templates (Rule C7);
+  (5) the menu links use url_for, so keep the endpoint names. Add a Users link only when the page
+  exists. | STYLING PROBLEMS NOTICED, NOT FIXED: app/static/ does not exist yet and all CSS is inline
+  (base.html, login.html, home, materials x3, stats, supplier_style.html), so screens look slightly
+  different; the current page is not highlighted in the menu; no visible keyboard-focus outline on
+  buttons and links; the topbar button is not styled like the other buttons; Sections 8 needs a help
+  sentence under each form title (not on every form yet); the login page does not use the menu look.
+  | REQUESTS (Rule R3): Agent D: app/templates/suppliers.html line 9 uses
+  current_user['role'] == 'ADMIN' in the template, which breaks Rule C7. Please use can_manage_suppliers
+  (for example pass a "can_manage" value from the route, as the materials pages do). Not edited by me.
+  | None.
+
+2026-11-25 | Agent B (login & roles) | HANDOFF CONFIRMED (follow-up to the 2026-11-24 handoff entry).
+  Merged origin/main-igoj8o (Agent H section, CSRF, first handoff) into main-iyvssn, which holds the
+  Users screen and Agent A's work. Fixed the one clash in app/__init__.py (both csrf and routes_users
+  are imported now). base.html is clean: menu (Home, Materials, Suppliers, Statistics, and Users shown
+  through can_manage_users from permissions.py, so no role checks in the template), Log out POST form
+  with the CSRF field. base.html is Agent H's; I will not edit it again. | AGENT H MUST KEEP: the
+  csrf_token hidden field in every POST form, Log out as a POST form, "extends base.html" on every page
+  after login, and the Users link (it now exists) with its can_manage_users check. | PROBLEMS (all in
+  files I do not own, so not edited, Rule R2): full suite = 119 pass, 24 FAIL, all in tests/test_users.py.
+  Cause: the Users screen was built before CSRF existed. REQUESTS (Rule R3): (1) Users screen owner:
+  add <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"> to the 4 forms in
+  app/templates/users_form.html, users_password.html and users_list.html (2 forms); without it a real
+  browser gets "page has expired". (2) Agent F / Users owner: tests/test_users.py line 38 must pass
+  "CSRF_ENABLED": False in create_app (as the other test files do), plus one test that a POST without the
+  token is refused. Styling problems: same list as the 2026-11-24 entry; nothing new.

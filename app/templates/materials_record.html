@@ -26,6 +26,7 @@
 {% if problems %}<div class="problems"><ul>{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
 
 <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <label for="quantity">How much ({{ material.unit }})</label>
   <input id="quantity" name="quantity" type="text" inputmode="decimal" required value="{{ typed_quantity }}">
   <label for="note">Note (optional)</label>

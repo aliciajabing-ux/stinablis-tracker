@@ -17,6 +17,7 @@
   {% if can_manage %}
   <a class="button" href="{{ url_for('suppliers.supplier_edit', supplier_id=supplier['id']) }}">Change supplier</a>
   <form method="post" action="{{ url_for('suppliers.supplier_switch', supplier_id=supplier['id']) }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="button" type="submit">{{ 'Switch off' if supplier['is_active'] == 1 else 'Switch on' }}</button>
   </form>
   {% endif %}
@@ -38,6 +39,7 @@
     <td>{{ 'Active' if o['is_active'] == 1 else 'Switched off' }}</td>
     <td><a href="{{ url_for('suppliers.offer_edit', offer_id=o['id']) }}">Change</a>
       <form method="post" action="{{ url_for('suppliers.offer_switch', offer_id=o['id']) }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">{{ 'Switch off' if o['is_active'] == 1 else 'Switch on' }}</button></form></td>
     {% endif %}
   </tr>
