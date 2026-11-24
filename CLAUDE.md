@@ -398,10 +398,18 @@ AGENT G - DOCUMENTATION AND PRESENTATION AGENT
   Files: README.md, GLOSSARY.md, presentation notes.
   Job: explain the code in plain words for the competition.
 
+AGENT H - INTERFACE AND DESIGN AGENT
+  Files: app/static/ (CSS and small JS), app/templates/base.html.
+  Job: one shared look for all screens, following Section 8: plain words,
+  OK/LOW/OUT shown with a colour AND a word, big tap-friendly buttons,
+  works on a phone, help sentence under each form title, plain-language errors.
+  Must NOT change what a page does, only how it looks. No permission logic
+  (Rule C7). Page-specific changes go to the owning agent as a request (R3).
+
 ORDER OF WORK
   1. Database (A)  ->  2. Login and roles (B)  ->  3. Materials (C) and
-  Suppliers (D) in parallel  ->  4. Statistics (E)  ->  5. Testing (F)
-  ->  6. Documentation (G).
+  Suppliers (D) in parallel  ->  4. Statistics (E)  ->  5. Interface and
+  design (H)  ->  6. Testing (F)  ->  7. Documentation (G).
   Nothing from later steps starts until the earlier step passes testing.
 
 
