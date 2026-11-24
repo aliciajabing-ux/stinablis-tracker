@@ -1188,3 +1188,27 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   fonts.gstatic.com; if the team wants no outside requests, remove the 3 font lines in base.html and
   login.html (the page then uses Segoe UI or Arial). (2) The Home drawing is plain decoration (aria-hidden).
 
+
+2026-11-24 | Agent F (testing & review) | Founder-side phone test (iPhone-size screen, real site on the
+  Mac over Wi-Fi) done by the team member; I added what they found. Only reads; no app code touched.
+  | NEXT: owners fix below, then re-test on the phone. | PROBLEMS (Rule R3):
+  F-11 Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
+      columns (tables sit in an overflow-x box). Text size and buttons are fine. Idea: fewer columns
+      or stacked rows on narrow screens. Owner: Agent C (materials_list.html), Agent D
+      (suppliers.html, supplier_detail.html). Section 8 asks for mobile-friendly.
+  F-12 Phone numbers (and emails) are plain text, not tappable. Use tel: and mailto: links in
+      suggest.html, suppliers.html, supplier_detail.html. Owner: Agent D.
+  F-13 Statistics: the "Average delivery time per supplier" chart is cut off on the left side on a
+      phone (the usage chart is fine). Probably long supplier names squeezing the chart. Owner: Agent E
+      (stats.html / its Chart.js settings, id lead-chart).
+  F-9 UPDATE: confirmed on the phone. "Record used" gives an internal server error for materials
+      that have sample history (M001, M003, M004), because the dates in sample_data/stock_movements.csv
+      are like 2026-11-18T06:30:00Z. Local fix that worked for the tester: on macOS run
+      sed -i '' -E 's/T([0-9:]{8})Z/ \1/' sample_data/stock_movements.csv, delete data/tracker.db,
+      run setup_database.py again, then set-password for both sample users. Owner: Agent A (fix the
+      sample file or the import). Agent C could also make the pages read both date styles.
+  NOT A BUG: "Record used" shows the number keypad on a phone with no letters (it uses
+      inputmode="decimal" on purpose). Good for typing quantities.
+  Also noted: the dev server needed --host 0.0.0.0 and a port other than 5000 (macOS AirPlay) to open
+      from a phone; macOS system Python 3.9 has no hashlib.scrypt, so auth.py crashes there
+      (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.

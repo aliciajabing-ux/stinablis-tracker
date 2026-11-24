@@ -122,14 +122,19 @@ def test_visitor_is_sent_to_login_and_employee_still_cannot_change_anything(samp
     assert employee.post("/materials/new", data={"name": "X", "unit": "g"}).status_code == 403
 
 
-def test_employee_receive_with_supplier_and_money_updates_last_bought(sample_database_file):
-    employee = logged_in_as(sample_database_file, "EMPLOYEE")
+def test_admin_receive_with_supplier_and_money_updates_last_bought_and_employee_cannot_type_money(sample_database_file):
     target = material_id(sample_database_file, "Magnets")
-    response = employee.post(f"/materials/{target}/record/received",
-                             data={"quantity": "100", "supplier_id": "S005", "total_cost": "38"})
+    employee = logged_in_as(sample_database_file, "EMPLOYEE")
+    refused = employee.post(f"/materials/{target}/record/received",
+                            data={"quantity": "100", "supplier_id": "S005", "total_cost": "38"})
+    assert refused.status_code == 403                      # purchase money is Admin only (can_record_purchase_cost)
+    admin = logged_in_as(sample_database_file, "ADMIN")
+    response = admin.post(f"/materials/{target}/record/received",
+                          data={"quantity": "100", "supplier_id": "S005", "total_cost": "38"})
     assert response.status_code == 302
-    page = employee.get("/materials/").get_data(as_text=True)
-    assert "Last bought: 100 pieces from" in page and "MYR 38.00" in page
+    for browser in (admin, employee):                      # both roles may SEE the result
+        page = browser.get("/materials/").get_data(as_text=True)
+        assert "Last bought: 100 pieces from" in page and "MYR 38.00" in page
 
 
 # ---- (c) plain English words and error pages ----
