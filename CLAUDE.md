@@ -640,3 +640,21 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   be taken by macOS AirPlay Receiver. | NEXT: owners fix F-1 to F-13; team decides F-2, F-3, F-4;
   Agent G writes README how-to-run, GLOSSARY.md and requirements.txt. | None new. No app code was
   changed by Agent F at any time; only tests/test_review_agent_f.py and this log.
+
+2026-11-26 | Agent F (testing & review) | TEST RESULTS RECORD (nothing here was changed; this only
+  writes down what was run and passed). Automatic: "python -m pytest -q" on 2026-11-24 in the
+  cloud container (Python 3.13) and again on the team member's Mac (Homebrew Python, after the
+  macOS system Python 3.9 failed on hashlib.scrypt): 298 passed, 12 expected failures (xfail),
+  0 real failures. By file: test_auth_permissions.py 24 passed (Agent B); test_materials.py 28
+  passed (Agent C); test_stats_dashboard.py 27 passed (Agent E); test_suppliers_suggest.py 29 passed
+  (Agent D); test_review_agent_f.py 190 passed + 12 xfail (Agent F). The 12 xfail are the known
+  bugs F-1 to F-9 listed above (they pass only after the owner fixes the bug).
+  Manual, done by the team member on the Mac (real site, real browser): log in as Admin and as
+  Employee; Employee sees prices but no add/change buttons; Employee typing /suppliers/new gets
+  403; record stock used; find a supplier for a low material; statistics page opens and the usage
+  chart fits. Result: all worked as expected after the sample-date fix (F-9). Phone test over
+  Wi-Fi (iPhone-size screen): site opens, login works, buttons and text size OK, number keypad
+  shows for quantities, supplier suggestion readable. Phone FAILED items are F-11, F-12, F-13.
+  | NEXT: re-run all tests after each agent's fix and remove xfail marks that start passing.
+  | NOT tested by anyone yet: the Section 14 item "no secret keys in the Git history", the Admin
+  spending chart (switched off, F-5), email alerts (not built), two people using the app at once.
