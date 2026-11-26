@@ -184,3 +184,11 @@ body .box button:hover, body .content button[type=submit]:hover { background: va
 .table-wrap td:first-child { min-width: 200px; }
 .table-wrap td:last-child { min-width: 300px; }
 .table-wrap td:has(.row-more) { min-width: 380px; }
+
+/* Phone cards (Materials): on a narrow screen the card must fit the screen, so drop the wide-table minimums above
+   (team request 2026-11-26: the Materials page scrolled sideways on a phone). Same 640 px as the card layout. */
+@media (max-width: 640px) {
+  body .table-wrap table { min-width: 0 !important; width: 100%; }
+  body .table-wrap td, body .table-wrap td:first-child, body .table-wrap td:last-child,
+  body .table-wrap td:has(.row-more) { min-width: 0 !important; overflow-wrap: anywhere; }
+}
