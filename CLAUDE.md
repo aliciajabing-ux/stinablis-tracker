@@ -1656,3 +1656,9 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Admin and Employee, no MYR). Order, button links, empty text and permissions unchanged. Checked in a browser as Admin,
   Employee and phone width 390: no sideways scroll, no "MYR", boxes look the same as on Materials. | NEXT: none. If the team
   wants the box at the far LEFT of each line instead, it is a small move in home.html. | None.
+
+2026-11-26 | Agent E (team choice, option D; touches Agent H's theme.css) | DONE: Home boxes 1 and 3 (the "light" ones) are now deep moss
+  (#4F5A3C) with light text, so the text stands out; box 2 stays dark. Only CSS: app/static/theme.css (new variable --deep-moss in the
+  :root list, and the ".tile:nth-child(odd)" rule). THIS IS A COLOUR OUTSIDE THE 7-COLOUR PALETTE (like --out-red); the team picked it
+  from options A to D, so it counts as confirmed. LOW and OUT words keep their own colours. | Agent H: please keep it. Team: anyone with
+  a local edit to theme.css should drop it (git stash drop) to avoid a conflict. | None.
