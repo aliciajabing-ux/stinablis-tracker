@@ -177,8 +177,8 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
         * Estimated money spent this month (Admin and Employee, view only)
-    - A "Needs attention" list: the low and out-of-stock materials, with
-      a button to see the suggested supplier.
+    - A "Notifications" list (called "Needs attention" until 2026-11-26): the
+      low and out-of-stock materials, with a button to see the suggested supplier.
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
@@ -1223,3 +1223,30 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
       (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
 
 2026-11-25 | Agent G (documentation & presentation) | DOC SYNC after the final merge into main (commit 6024c83; I re-ran the suite: 384 passed, 2 skipped, 6 xfailed). Updated README.md, PRESENTATION_NOTES.md and one GLOSSARY.md entry: test count and commit; "Bought from" and "Total paid" on Record received are Admin only (can_record_purchase_cost; an Employee who sends them gets 403), while Employees still see "Last bought" under can_see_prices(); the shared dark theme (app/static/theme.css) is mentioned; the phone test findings F-11 and F-12 are stated honestly. | Before the demo: check in a browser that the top menu links (sized in theme.css by padding plus a small minimum height) are about 44 px tall like the other controls (Agent H). | PROBLEMS (R3, not mine): F-11 to F-13 from the phone test are still open (sideways-scrolling tables, phone numbers not tappable, delivery-time chart cut off); the merge repeated some older status-log entries in this file; the SupplyTrail figures still have no source (see the previous Agent G entry).
+
+2026-11-26 | Agent E | CATCH-UP: things done since my last entries that were not written down yet. (1) The guide:
+  Section 5 F2 now says "Notifications" (it still said "Needs attention"; the guide must change first, so
+  that line is fixed now). (2) Pull request #1 (money spent, low-stock events, Employee 403 tests, chart
+  colours, merge of the dark theme) was opened on 2026-11-24, had a second merge conflict when main moved
+  (only app/schema.sql and this log; kept Agent A's low_stock_events columns and every log entry), and was
+  MERGED into main. (3) Pull request #2 (the "Needs attention" to "Notifications" rename on Home) is open; main
+  had moved again, so I merged origin/main into main-0rpyg5 first: one clash, only this log (kept both sides).
+  Suite on the branch: 385 pass, 2 skipped, 6 expected failures (all Agent F review items). (4) Another
+  session pushed one commit to main-0rpyg5 (branch main-0rpyg5-v2k49y): 4 lines in app/static/theme.css that
+  style the "Last bought" notes (.memo) for the dark theme. Agent H's file; I only merged it in (fast-forward)
+  and the tests still pass. (5) Restyle detail missing from my 2026-11-24 restyle entry: on phones (screen
+  720 px or narrower) theme.css sets "table { min-width: 880px }", so tables keep a readable width and scroll
+  sideways INSIDE their own box (the page itself never scrolls sideways). This is a main cause of F-11
+  (Materials and Suppliers need sideways scrolling on a phone). The better fix is stacked rows on narrow
+  screens; that is a page change for Agent C (materials_list.html) and Agent D (suppliers.html,
+  supplier_detail.html), plus Agent H for the shared CSS (R3). | NEXT: F-13 is mine and still OPEN: the
+  "Average delivery time per supplier" chart is cut off on the left on a phone because the long supplier
+  names squeeze the chart; I plan to shorten or wrap the labels in stats.html (lead-chart) and check it at
+  390 px. I will not start it until the team says go. Agent G: still to change "Needs attention" to
+  "Notifications" in GLOSSARY.md and PRESENTATION_NOTES.md. | PROBLEMS: (a) the merges left repeated and
+  out-of-date-order entries in this log (for example my "money spent" and "low-stock events" entries appear
+  twice, once near the start of my entries and once after the Agent F review). I did not delete anything
+  (Rule R5); the team or Agent G should decide how to tidy it. (b) Older entries of mine still say "Not
+  committed yet" or describe the Admin-and-Employee money boxes; the 2026-11-24 merge entry (Admin only) is the
+  one that is current.
+
