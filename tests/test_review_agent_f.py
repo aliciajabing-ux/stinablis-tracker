@@ -210,11 +210,8 @@ SCREEN_MATRIX = {
     "/suggest/M1": (302, 200, 200),
     "/stats/": (302, 200, 200),
     "/stats/data/usage": (302, 200, 200),
-    "/stats/data/low-stock": (302, 200, 200),
     "/stats/data/lead-times": (302, 200, 200),
-    "/stats/data/spending": (302, 403, 200),
     "/stats/data/purchases": (302, 200, 200),                 # quantities only, no money: both roles
-    "/stats/data/spending-by-material": (302, 403, 200),      # money: Admin only
     "/stats/data/price-comparison": (302, 403, 200),          # money: Admin only
     "/stats/export.csv": (302, 403, 200),
     "/users/": (302, 403, 200),
@@ -506,20 +503,6 @@ def test_employee_blocked_from_csv_even_when_spending_is_switched_on(employee, m
     assert response.status_code == 403 and b"MYR" not in response.data and b"Spending" not in response.data
 
 
-def test_spending_data_is_admin_only_when_switched_on(admin, employee, visitor, database_file, monkeypatch):
-    monkeypatch.setattr(routes_stats, "SPENDING_METHOD_CONFIRMED", True)
-    connection = sqlite3.connect(database_file)
-    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at, supplier_id, total_cost_myr) "
-                       "VALUES ('SM9', 'M1', 'RECEIVED', 1000, 'U1', ?, 'S1', 72)",
-                       (auth.utc_now().strftime(auth.TIME_FORMAT),))
-    connection.commit()
-    connection.close()
-    assert visitor.get("/stats/data/spending").status_code == 302
-    assert employee.get("/stats/data/spending").status_code == 403
-    admin_data = admin.get("/stats/data/spending").get_json()
-    assert admin_data["labels"] and admin_data["amounts"]
-
-
 def test_csv_has_spending_rows_for_admin_only_when_switched_on(admin, employee, database_file, monkeypatch):
     monkeypatch.setattr(routes_stats, "SPENDING_METHOD_CONFIRMED", True)
     connection = sqlite3.connect(database_file)
@@ -538,14 +521,15 @@ def test_statistics_page_for_employee_has_no_spending_chart_or_download(employee
     assert "spending-chart" not in page and "export.csv" not in page and "/data/spending" not in page
 
 
-def test_statistics_page_for_admin_has_spending_chart_and_download_when_switched_on(admin, monkeypatch):
+def test_statistics_page_for_admin_has_the_download_and_no_spending_chart(admin, monkeypatch):
+    # The spending charts were removed on 2026-11-26 (team decision); the Admin keeps the download.
     monkeypatch.setattr(routes_stats, "SPENDING_METHOD_CONFIRMED", True)
     page = admin.get("/stats/").get_data(as_text=True)
-    assert "spending-chart" in page and "export.csv" in page
+    assert "export.csv" in page and "spending-chart" not in page
 
 
 def test_chart_data_for_employee_has_no_money_words(employee):
-    for address in ["/stats/data/usage", "/stats/data/low-stock", "/stats/data/lead-times"]:
+    for address in ["/stats/data/usage", "/stats/data/lead-times"]:
         text = employee.get(address).get_data(as_text=True)
         assert "MYR" not in text and "price" not in text.lower(), address
 
@@ -649,9 +633,11 @@ def test_checklist_employee_can_see_prices_but_cannot_add_or_change_suppliers(em
     assert employee.post("/suppliers/new", data=GOOD_SUPPLIER).status_code == 403
 
 
-def test_checklist_admin_sees_prices_and_the_spending_chart(admin):
+def test_checklist_admin_sees_prices_and_the_price_comparison_charts(admin):
+    # Section 15 line 6 changed on 2026-11-26: the spending charts were removed, the price comparison charts replace them.
     assert "72.00" in admin.get("/suppliers/S1").get_data(as_text=True)
-    assert "spending" in admin.get("/stats/").get_data(as_text=True).lower()
+    page = admin.get("/stats/").get_data(as_text=True)
+    assert "Supplier price comparison" in page and 'id="price-chart-weight"' in page
 
 
 def test_checklist_arrival_date_is_today_plus_lead_time_on_the_screen(admin, monkeypatch):
@@ -961,15 +947,6 @@ def test_known_issue_admin_can_read_the_activity_log(website):
 def test_known_issue_admin_has_a_backup_button(website):
     addresses = [rule.rule for rule in website.url_map.iter_rules()]
     assert any("backup" in address for address in addresses)
-
-
-# BUG F-5 (Agent E / routes_stats.py): the spending chart and money box are switched off, so Section 15 line 6 cannot pass.
-def test_known_issue_admin_sees_the_spending_chart(admin):
-    assert "spending-chart" in admin.get("/stats/").get_data(as_text=True)
-
-
-def test_known_issue_low_stock_events_chart_has_data(admin):
-    assert admin.get("/stats/data/low-stock").get_json()["labels"]
 
 
 # BUG F-6 (Agent A): the folder layout in Section 10 asks for app/models.py, requirements.txt and GLOSSARY.md.

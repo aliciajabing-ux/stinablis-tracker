@@ -117,7 +117,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Home boxes show total, LOW and OUT counts, with the words LOW and OUT | F2, Section 8 | Pass |
 | "Notifications" (was "Needs attention") lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
 | Purchases per material: RECEIVED lines per month with the unit; no money in the data (both roles) | F7 | Pass |
-| Spending per material: totals of the last 6 months, older lines and lines without a total left out (Admin only, Employee 403) | F7 | Pass |
+| Removed 2026-11-26: low-stock events, spending per supplier and spending per material charts; their addresses answer 404 and the page has none of them | F7 | Pass |
 | Supplier price comparison: cheapest offer per kg / litre / piece against the price last paid; "more", "less" and "no offer" wording | F7 | Pass |
 | Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or comparison table | F7, Sec 4 | Pass |
 | CSV lists purchases and spending per material (Admin only) | F7 | Pass |
@@ -131,7 +131,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Usage chart adds USED rows only, by month and by week (week starts Monday) | F7 | Pass |
 | A movement at 17:00 UTC on 31 Oct counts in November (Malaysia time, UTC+8) | Section 15 | Pass |
 | Average delivery time per supplier ignores switched-off offers | F7 | Pass |
-| Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop), counted per Malaysia-time month | F5, F7 | Pass |
+| Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop). The chart that counted them was removed on 2026-11-26; the events are still saved | F5 | Pass |
 | Money spent = real "Total paid" from Record received, per supplier, Malaysia-time month | F2, F7 | Pass |
 | PROPOSED spending method (received stock x cheapest offer) and PROPOSED low-event method (drop from OK) calculate as written | R4 (switched off) | Pass |
 | Money prints as "MYR 72.00"; CSV cells cannot run as spreadsheet formulas | Section 5 | Pass |

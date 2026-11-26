@@ -125,12 +125,12 @@ def test_home_needs_login(website):
 
 # ---------- Employee blocked pages (Section 4, 14) ----------
 
-@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/spending"])
+@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/price-comparison"])
 def test_employee_gets_403_on_money_addresses(employee, address):
     assert employee.get(address).status_code == 403
 
 
-@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/spending", "/stats/", "/stats/data/usage"])
+@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/price-comparison", "/stats/", "/stats/data/usage"])
 def test_not_logged_in_is_sent_to_login(website, address):
     assert website.test_client().get(address).status_code == 302
 
@@ -147,12 +147,12 @@ def test_employee_statistics_page_has_no_money_or_download(employee):
     assert "Usage per material" in page and "Average delivery time" in page
 
 
-def test_admin_statistics_page_has_spending_and_download(admin):
+def test_admin_statistics_page_has_price_comparison_and_download(admin):
     page = admin.get("/stats/").get_data(as_text=True)
-    assert "Spending per supplier" in page and "/stats/export.csv" in page
+    assert "Supplier price comparison" in page and "/stats/export.csv" in page
 
 
-@pytest.mark.parametrize("address", ["/stats/data/usage", "/stats/data/lead-times", "/stats/data/low-stock"])
+@pytest.mark.parametrize("address", ["/stats/data/usage", "/stats/data/lead-times"])
 def test_employee_chart_data_has_no_prices(employee, database_file, address):
     add_movement(database_file, "X1", "M1", "USED", 100, "2026-11-20 01:00:00")
     text = employee.get(address).get_data(as_text=True).lower()
@@ -235,44 +235,26 @@ def test_spending_month_uses_malaysia_time(database_file):
     assert spending == {"Kuching Shop": 40.0}
 
 
-def test_spending_chart_and_home_box_show_real_money(admin, employee, database_file, monkeypatch):
+def test_home_money_box_shows_real_money_to_both_roles(admin, employee, database_file, monkeypatch):
     monkeypatch.setattr(routes_stats, "malaysia_now", lambda: NOW)
     add_purchase(database_file, "A", "S2", 120.5, "2026-11-05 02:00:00")
-    assert admin.get("/stats/data/spending").get_json() == {"labels": ["Web Store"], "amounts": [120.5]}
     assert "MYR 120.50" in admin.get("/").get_data(as_text=True)
     assert "MYR 120.50" in employee.get("/").get_data(as_text=True)
-    assert employee.get("/stats/data/spending").status_code == 403
 
 
-# Adds one saved low-stock event (time is UTC text).
-def add_low_event(database_file, event_id, material_id, utc_text):
-    connection = sqlite3.connect(database_file)
-    connection.execute(
-        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at) "
-        "VALUES (?, ?, 'USED', 400, 'U1', ?)", ("MV" + event_id, material_id, utc_text))
-    connection.execute(
-        "INSERT INTO low_stock_events (id, material_id, status, quantity_at_event, reorder_level_at_event, "
-        "movement_id, created_at) VALUES (?, ?, 'LOW', 400, 500, ?, ?)", (event_id, material_id, "MV" + event_id, utc_text))
-    connection.commit()
-    connection.close()
+# The three charts the team removed on 2026-11-26 are gone for everybody: no page text, no chart, no data address.
+@pytest.mark.parametrize("address", ["/stats/data/low-stock", "/stats/data/spending", "/stats/data/spending-by-material"])
+def test_removed_chart_addresses_are_gone(admin, employee, address):
+    assert admin.get(address).status_code == 404
+    assert employee.get(address).status_code == 404
 
 
-def test_low_events_are_counted_per_malaysia_month(database_file):
-    add_low_event(database_file, "A", "M1", "2026-11-02 01:00:00")
-    add_low_event(database_file, "B", "M2", "2026-11-20 01:00:00")
-    add_low_event(database_file, "C", "M1", "2026-10-31 17:00:00")    # 1 Nov 01:00 in Malaysia
-    add_low_event(database_file, "D", "M1", "2026-12-02 01:00:00")
-    events = routes_stats.count_low_stock_events(open_database(database_file))
-    assert events == {date(2026, 11, 1): 3, date(2026, 12, 1): 1}
-
-
-def test_low_stock_chart_reads_saved_events_for_both_roles(admin, employee, database_file, monkeypatch):
-    monkeypatch.setattr(routes_stats, "malaysia_now", lambda: NOW)
-    add_low_event(database_file, "A", "M1", "2026-11-02 01:00:00")
+def test_removed_charts_are_not_on_the_statistics_page(admin, employee):
     for browser in (admin, employee):
-        chart = browser.get("/stats/data/low-stock").get_json()
-        assert chart["labels"][-1] == "Nov 2026" and chart["counts"][-1] == 1
-        assert "Not set up yet" not in browser.get("/stats/").get_data(as_text=True)
+        page = browser.get("/stats/").get_data(as_text=True)
+        for gone in ("Low-stock events per month", "low-chart", "Spending per supplier", "spending-chart",
+                     "Spending per material", "material-spending-chart"):
+            assert gone not in page, gone
 
 
 # The same five dates as sample_data/stock_movements.csv (18 to 22 November 2026, UTC) must land in November.
@@ -364,8 +346,8 @@ def test_price_comparison_cheapest_offer_against_the_price_last_paid(database_fi
 def test_procurement_data_addresses_follow_the_roles(admin, employee):
     assert admin.get("/stats/data/purchases").status_code == 200
     assert employee.get("/stats/data/purchases").status_code == 200                           # no money in it
-    assert admin.get("/stats/data/spending-by-material").status_code == 200
-    assert employee.get("/stats/data/spending-by-material").status_code == 403                # money: Admin only
+    assert admin.get("/stats/data/price-comparison").status_code == 200
+    assert employee.get("/stats/data/price-comparison").status_code == 403                    # money: Admin only
 
 
 def test_employee_purchases_data_has_no_money_keys(employee, database_file):
@@ -384,18 +366,18 @@ def test_employee_statistics_page_has_purchases_but_no_money_panels(employee):
 def test_admin_statistics_page_has_every_procurement_panel(admin, database_file):
     add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
     page = admin.get("/stats/").get_data(as_text=True)
-    for words in ("Purchases per material", "Spending per material", "Supplier price comparison",
+    for words in ("Purchases per material", "Supplier price comparison",
                   "Cheapest supplier offer", "per kg", "These are estimates"):
         assert words in page, words
 
 
 def test_every_chart_names_its_unit_in_the_axis_title(employee, admin):
     employee_page = employee.get("/stats/").get_data(as_text=True)
-    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)", "Number of events",
+    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)",
                   "Average days from ordering to arriving"):
         assert words in employee_page, words
     admin_page = admin.get("/stats/").get_data(as_text=True)
-    for words in ("MYR spent this month", "MYR spent in the last 6 months"):
+    for words in ("MYR per kg or per litre", "MYR per piece"):
         assert words in admin_page, words
 
 

@@ -1,12 +1,12 @@
 # WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Notifications" list) and the Statistics screen
-#   (usage chart, low-stock chart, spending, average delivery time, and the CSV download).
-# WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the spending chart and CSV download are Admin only. All checked on the server.
+#   (usage, purchases, average delivery time, the supplier price comparison, and the CSV download).
+# WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the price comparison and the CSV download are Admin only. All checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
-# Procurement statistics (decision 2026-11-26) are built from the same "Record received" lines: purchases per
-# material (no money, both roles), spending per material and the supplier price comparison, as a table and as
-# charts (Admin only).
-# A low-stock event = a "Record used" that drops a material from OK to LOW or OUT (saved in low_stock_events).
+# It feeds the Home box and the CSV. Procurement statistics (decision 2026-11-26) are built from the same lines:
+# purchases per material (no money, both roles) and the supplier price comparison, as a table and as charts (Admin only).
+# REMOVED on 2026-11-26 (team decision): the low-stock events chart, the spending per supplier chart and the spending
+# per material chart. Low-stock events are still saved in low_stock_events (Agent C writes them); they are just not charted.
 
 import csv
 import io
@@ -21,7 +21,6 @@ from app.permissions import admin_required, can_see_prices, is_admin, login_requ
 stats_blueprint = Blueprint("stats", __name__, url_prefix="/stats", template_folder="templates")
 
 SPENDING_METHOD_CONFIRMED = True       # money spent = real totals typed on "Record received"
-LOW_EVENTS_METHOD_CONFIRMED = True     # event = a Record used that drops a material from OK to LOW or OUT
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 PERIODS_SHOWN = 6                      # how many weeks or months the charts show
 MOST_USED_MATERIALS_SHOWN = 8
@@ -97,25 +96,6 @@ def get_usage_by_period(database, period, now=None):
 # Returns the stock received per material for each recent month, ready for the bar chart (no money inside).
 def get_purchases_by_material(database, now=None):
     return get_quantity_by_period(database, "RECEIVED", "month", now)
-
-
-# Returns {month start date: number of low-stock events}, read from the low_stock_events table.
-# An event is saved when a "Record used" moves a material from OK to LOW or OUT.
-def count_low_stock_events(database):
-    events = {}
-    for row in database.execute("SELECT created_at FROM low_stock_events").fetchall():
-        month = period_start(to_malaysia_time(row["created_at"]), "month")
-        events[month] = events.get(month, 0) + 1
-    return events
-
-
-# Returns the low-stock events per month for the line chart (counts only, no money).
-def get_low_stock_chart(database, now=None):
-    now = now or malaysia_now()
-    starts = recent_period_starts("month", now.date())
-    events = count_low_stock_events(database)
-    return {"labels": [period_label(s, "month") for s in starts],
-            "counts": [events.get(s, 0) for s in starts]}
 
 
 # Returns the average delivery time in days for each active supplier (no prices read at all).
@@ -290,8 +270,6 @@ def statistics_page():
     comparison_rows = get_price_comparison(get_db()) if admin_tools else []     # money: Admin only
     return render_template("stats.html", show_admin_tools=admin_tools,
                            now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
-                           spending_ready=SPENDING_METHOD_CONFIRMED,
-                           low_events_ready=LOW_EVENTS_METHOD_CONFIRMED,
                            comparison_rows=comparison_rows)
 
 
@@ -310,13 +288,6 @@ def purchases_data():
     return jsonify(get_purchases_by_material(get_db()))
 
 
-# Sends the money spent per material to the spending-per-material chart. Admin only.
-@stats_blueprint.route("/data/spending-by-material")
-@admin_required
-def spending_by_material_data():
-    return jsonify(get_spending_by_material(get_db()))
-
-
 # Sends the supplier price comparison numbers to the two price charts. Admin only.
 @stats_blueprint.route("/data/price-comparison")
 @admin_required
@@ -324,29 +295,11 @@ def price_comparison_data():
     return jsonify(get_price_comparison_chart(get_db()))
 
 
-# Sends low-stock events per month to the line chart (empty until the team confirms the counting rule).
-@stats_blueprint.route("/data/low-stock")
-@login_required
-def low_stock_data():
-    if not LOW_EVENTS_METHOD_CONFIRMED:
-        return jsonify({"labels": [], "counts": []})
-    return jsonify(get_low_stock_chart(get_db()))
-
-
 # Sends average delivery days per supplier to the chart.
 @stats_blueprint.route("/data/lead-times")
 @login_required
 def lead_time_data():
     return jsonify(get_average_lead_times(get_db()))
-
-
-# Sends spending per supplier this month to the chart. Admin only.
-@stats_blueprint.route("/data/spending")
-@admin_required
-def spending_data():
-    spending = get_month_spending(get_db())
-    by_supplier = spending["by_supplier"] if spending else {}
-    return jsonify({"labels": list(by_supplier), "amounts": [round(v, 2) for v in by_supplier.values()]})
 
 
 # Returns text that is safe to open in a spreadsheet (a leading = + - @ could run as a formula).

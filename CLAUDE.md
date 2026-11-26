@@ -229,14 +229,16 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
 
 F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Usage per material per week or per month (bar chart).
-    - Number of low-stock events per month (line chart).
-    - Spending per supplier (pie or bar chart) - ADMIN only.
     - Average lead time per supplier.
+    - REMOVED on 2026-11-26 (team decision): the "low-stock events per month"
+      line chart, the "spending per supplier this month" chart and the
+      "spending per material" chart are no longer on the Statistics screen.
+      (The Home box "money spent this month" stays. Low-stock events are still
+      saved in the database, they are just not charted.)
     - Procurement statistics (decision 2026-11-26), all built from the
       "Record received" lines:
         * Purchases per material per month, with the unit (g, ml, pcs) -
           Admin and Employee (no money in it).
-        * Spending per material, last 6 months, in MYR - ADMIN only.
         * Supplier price comparison per material: cheapest supplier offer
           next to the price last paid, per kg, per litre or per piece -
           ADMIN only. Shown as two bar charts (per kg or litre, and per
@@ -518,7 +520,7 @@ GLOSSARY.md must explain every technical word we use, for example:
 [ ] Two suppliers for one material: the one with the shorter lead time
     and lower total cost is listed first.
 [ ] Employee account: can see prices, cannot add or change a supplier.
-[ ] Admin account: sees prices and the spending chart.
+[ ] Admin account: sees prices and the supplier price comparison charts.
 [ ] Estimated arrival date is correct for the lead time (today + days).
 [ ] Malaysia time (UTC+8) shows correctly on every date.
 
@@ -1358,4 +1360,24 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   work on the branch main-0rpyg5 from now on (not main-0rpyg5-v2k49y), or the two branches drift apart again. | PROBLEMS:
   Section 8 of the guide says "red = OUT"; the red now matches it, while the palette note in the theme file says 7
   colours: team to decide which wins.
+
+2026-11-26 | Team decision + work (done by Agent E at the team's request; touches Agent F's tests) | REMOVED from the
+  Statistics page, as chosen by the team member: (1) "Low-stock events per month" (line chart), (2) "Spending per
+  supplier this month", (3) "Spending per material". Guide F7 and Section 15 (the line "Admin account: sees prices and
+  the spending chart" now says the price comparison charts) were changed FIRST. WHAT WAS REMOVED: the three panels and
+  their script in stats.html, the three data addresses (/stats/data/low-stock, /stats/data/spending,
+  /stats/data/spending-by-material; they now answer 404 for everybody), the LOW_EVENTS_METHOD_CONFIRMED flag, the two
+  unused functions count_low_stock_events and get_low_stock_chart, and the template flags spending_ready and
+  low_events_ready. WHAT WAS KEPT ON PURPOSE (not asked for): the Home box "money spent this month" (and the functions
+  behind it), the CSV download with its spending rows (Admin only), and the saving of low-stock events when someone
+  records stock used (the table low_stock_events and the activity-log line stay; the events are just not charted).
+  Remaining Statistics page: usage, purchases, average delivery time (both roles) and the supplier price comparison
+  charts and table (Admin only), plus the CSV button (Admin only). TESTS: tests of the removed charts deleted or
+  rewritten (tests/test_stats_dashboard.py; in Agent F's tests/test_review_agent_f.py: 3 address-matrix rows, 3 tests
+  and the checklist test now check the price comparison instead); new tests prove the 3 addresses are 404 and the
+  3 charts are not on the page for either role. ROLE_DIFFERENCES.md and its test lost the 3 rows and gained a
+  decision line. Checked in a browser (Admin: 5 charts and the table; Employee: 3 charts; no script errors). Suite:
+  420 pass, 2 skipped, 6 expected failures. | AGENT G (R3): README.md, GLOSSARY.md and PRESENTATION_NOTES.md may still
+  mention the low-stock events chart and the spending charts; please remove them. If the team also wants the spending
+  rows out of the CSV, or the low-stock event saving removed, say so. | PROBLEMS: none known.
 
