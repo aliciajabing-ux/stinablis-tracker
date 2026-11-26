@@ -210,7 +210,7 @@ SCREEN_MATRIX = {
     "/suggest/M1": (302, 200, 200),
     "/stats/": (302, 200, 200),
     "/stats/data/usage": (302, 200, 200),
-    "/stats/data/lead-times": (302, 200, 200),
+    "/stats/data/delivery-ranking": (302, 200, 200),           # no money: both roles
     "/stats/data/purchases": (302, 200, 200),                 # quantities only, no money: both roles
     "/stats/data/price-comparison": (302, 403, 200),          # money: Admin only
     "/stats/export.csv": (302, 403, 200),
@@ -529,7 +529,7 @@ def test_statistics_page_for_admin_has_the_download_and_no_spending_chart(admin,
 
 
 def test_chart_data_for_employee_has_no_money_words(employee):
-    for address in ["/stats/data/usage", "/stats/data/lead-times"]:
+    for address in ["/stats/data/usage", "/stats/data/delivery-ranking"]:
         text = employee.get(address).get_data(as_text=True)
         assert "MYR" not in text and "price" not in text.lower(), address
 
@@ -1009,7 +1009,7 @@ def test_sample_data_screens_open_for_both_roles(sample_database):
     for username, password in (("sample_admin", "sample-admin-pass"), ("sample_employee", "sample-employee-pass")):
         client = website.test_client()
         log_in(client, username, password)
-        for address in ["/", "/materials/", "/suppliers", "/stats/", "/stats/data/usage", "/stats/data/lead-times"]:
+        for address in ["/", "/materials/", "/suppliers", "/stats/", "/stats/data/usage", "/stats/data/delivery-ranking"]:
             assert client.get(address).status_code == 200, (username, address)
         for material_id in ids:
             assert client.get("/suggest/" + material_id).status_code == 200, (username, material_id)

@@ -53,7 +53,7 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 |---|---|---|---|
 | See the usage per material chart | Yes | Yes | Each bar shows its own unit (g, ml or pcs). |
 | See the purchases per material chart (no money) | Yes | Yes | Quantities only, so it is safe for Employees. |
-| See the average delivery time chart | Yes | Yes | Days only. |
+| See the delivery ranking of suppliers for a chosen material | Yes | Yes | Fastest supplier first, with the days and an estimated arrival date. No money in it. |
 | See the supplier price comparison charts | Yes | No | Admin only. Two bar charts (per kg or litre, and per piece) with the cheapest offer next to the price last paid. The Employee page does not even contain the word "MYR". |
 | Download the statistics spreadsheet (CSV) | Yes | No | Admin only. |
 

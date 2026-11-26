@@ -1,5 +1,5 @@
 # WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Notifications" list) and the Statistics screen
-#   (usage, purchases, average delivery time, the supplier price comparison, and the CSV download).
+#   (usage, purchases, the delivery ranking, the supplier price comparison, and the CSV download).
 # WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the price comparison and the CSV download are Admin only. All checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
@@ -98,7 +98,48 @@ def get_purchases_by_material(database, now=None):
     return get_quantity_by_period(database, "RECEIVED", "month", now)
 
 
-# Returns the average delivery time in days for each active supplier (no prices read at all).
+# Returns the materials that at least one active supplier sells, for the "choose a material" list (no prices read).
+def get_ranking_materials(database):
+    rows = database.execute(
+        "SELECT DISTINCT m.id, m.name, m.colour, m.unit FROM materials m "
+        "JOIN supplier_offers o ON o.material_id = m.id JOIN suppliers s ON s.id = o.supplier_id "
+        "WHERE m.is_active = 1 AND o.is_active = 1 AND s.is_active = 1 ORDER BY m.name, m.colour").fetchall()
+    return [{"id": r["id"], "label": " ".join(p for p in (r["name"], r["colour"]) if p) + " (" + r["unit"] + ")"} for r in rows]
+
+
+# Turns database rows (supplier, type, days) already sorted fastest first into ranked lines. Same days share a rank
+# (1, 1, 3). The arrival date is today plus the days, rounded up (an estimate).
+def build_ranking_rows(rows, today, is_average):
+    ranked, previous_days, previous_rank = [], None, 0
+    for position, row in enumerate(rows, start=1):
+        days = round(row["days"], 1) if is_average else int(row["days"])
+        rank = previous_rank if days == previous_days else position
+        previous_days, previous_rank = days, rank
+        arrival = today + timedelta(days=int(-(-days // 1)))
+        days_text = "{:g} day".format(days) + ("" if days == 1 else "s") + (" on average" if is_average else "")
+        ranked.append({"rank": rank, "supplier": row["name"], "type": row["supplier_type"].lower(),
+                       "days_text": days_text, "arrival": arrival.strftime("%d %b")})
+    return ranked
+
+
+# Returns the suppliers ranked from the fastest to the slowest delivery. With a material id: the fastest days each
+# active supplier offers for that material. With no id: the average over everything the supplier sells. No money.
+def get_delivery_ranking(database, material_id="", today=None):
+    today = today or malaysia_now().date()
+    if material_id:
+        rows = database.execute(
+            "SELECT s.name, s.supplier_type, MIN(o.lead_time_days) AS days FROM supplier_offers o "
+            "JOIN suppliers s ON s.id = o.supplier_id WHERE o.is_active = 1 AND s.is_active = 1 AND o.material_id = ? "
+            "GROUP BY s.id ORDER BY days, s.name", (material_id,)).fetchall()
+    else:
+        rows = database.execute(
+            "SELECT s.name, s.supplier_type, AVG(o.lead_time_days) AS days FROM supplier_offers o "
+            "JOIN suppliers s ON s.id = o.supplier_id WHERE o.is_active = 1 AND s.is_active = 1 "
+            "GROUP BY s.id ORDER BY days, s.name").fetchall()
+    return {"is_average": not material_id, "rows": build_ranking_rows(rows, today, not material_id)}
+
+
+# Returns the average delivery time in days for each active supplier (no prices read at all). Used by the CSV.
 def get_average_lead_times(database):
     rows = database.execute(
         "SELECT s.name, s.supplier_type, AVG(o.lead_time_days) AS average_days "
@@ -236,7 +277,8 @@ def show_dashboard():
 def statistics_page():
     admin_tools = is_admin(get_current_user())
     return render_template("stats.html", show_admin_tools=admin_tools,
-                           now_text=malaysia_now().strftime("%d %b %Y %H:%M"))
+                           now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
+                           ranking_materials=get_ranking_materials(get_db()))
 
 
 # Sends usage numbers (per week or month) to the bar chart.
@@ -261,11 +303,11 @@ def price_comparison_data():
     return jsonify(get_price_comparison_chart(get_db()))
 
 
-# Sends average delivery days per supplier to the chart.
-@stats_blueprint.route("/data/lead-times")
+# Sends the delivery ranking (fastest supplier first) for the chosen material, or for all materials.
+@stats_blueprint.route("/data/delivery-ranking")
 @login_required
-def lead_time_data():
-    return jsonify(get_average_lead_times(get_db()))
+def delivery_ranking_data():
+    return jsonify(get_delivery_ranking(get_db(), request.args.get("material", "")))
 
 
 # Returns text that is safe to open in a spreadsheet (a leading = + - @ could run as a formula).

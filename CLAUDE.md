@@ -229,7 +229,13 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
 
 F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Usage per material per week or per month (bar chart).
-    - Average lead time per supplier.
+    - Delivery ranking (decision 2026-11-26; it replaces the "average lead
+      time per supplier" bar chart): the suppliers ranked from the fastest
+      to the slowest delivery for a material the user chooses, or the
+      average over all materials. It shows the rank, the supplier, ONLINE or
+      LOCAL, the days, and the estimated arrival date (today + the days).
+      Suppliers with the same days share a rank. No money in it: Admin and
+      Employee both see it.
     - REMOVED on 2026-11-26 (team decision): the "low-stock events per month"
       line chart, the "spending per supplier this month" chart and the
       "spending per material" chart are no longer on the Statistics screen.
@@ -249,7 +255,7 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
       and in the pop-up text, never just a bare number.
     - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
-      spending per material).
+      spending per material, and the average delivery time per supplier).
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -1393,4 +1399,25 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   (ROLE_DIFFERENCES.md and test_role_differences.py) lost the table row; TESTS.md updated. Checked in a browser: no
   table, 5 charts for Admin, no script errors. | AGENT G (R3): if the notes or README mention the comparison table,
   please remove that. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team decision, requested by the team member) | DONE: "Average delivery time per supplier" (a bar chart) is
+  replaced by a DELIVERY RANKING. Guide F7 changed FIRST (and its CSV line). HOW IT WORKS: on the Statistics page the
+  user picks a material from a list ("All materials (average)" first, then every material that an active supplier
+  sells); the suppliers are listed fastest first with a rank number, the name, ONLINE or LOCAL, the days, and an
+  estimated arrival date (today in Malaysia time + the days, rounded up). The fastest get a "Fastest" word. Suppliers
+  with the same days share a rank (1, 1, 3) and are ordered A to Z. For one material it uses each supplier's FASTEST
+  active offer; for "All materials" it uses the average over everything the supplier sells (what the old chart
+  showed). Switched-off offers and suppliers are left out. NO MONEY in it, so Admin and Employee both see it (tests
+  prove the data has no price words). Code: get_ranking_materials, build_ranking_rows, get_delivery_ranking and the
+  address /stats/data/delivery-ranking?material=... in routes_stats.py; stats.html (select box, list built with plain
+  text, small layout styles using the theme's colour variables, no new colours). REMOVED: the chart, its address
+  /stats/data/lead-times (now 404), the lead-chart script. KEPT: get_average_lead_times, which the CSV still uses
+  ("Average delivery time" rows). Agent F's address matrix and 2 tests point to the new address (a test on a missing
+  address would have passed for the wrong reason); ROLE_DIFFERENCES.md and its test have the new row; TESTS.md updated.
+  Checked in a browser as Employee: the list, the choice of a material, ties, phone width 390 (no sideways scroll), no
+  "MYR" in the page, no script errors. Also fixed "1 days" to "1 day". Suite: 428 pass, 2 skipped, 6 expected failures.
+  | AGENT G (R3): README, GLOSSARY and PRESENTATION_NOTES may still say "average delivery time chart". | NOTE: the
+  sample data has one supplier for most materials, so most rankings show one line until offers from more suppliers are
+  added (Suppliers > Add material this supplier sells). F-13 (the old chart was cut off on a phone) is now moot,
+  because that chart no longer exists. | PROBLEMS: none known.
 

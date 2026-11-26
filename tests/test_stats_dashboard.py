@@ -144,7 +144,7 @@ def test_admin_can_download_csv(admin):
 def test_employee_statistics_page_has_no_money_or_download(employee):
     page = employee.get("/stats/").get_data(as_text=True)
     assert "MYR" not in page and "Spending" not in page and "export.csv" not in page
-    assert "Usage per material" in page and "Average delivery time" in page
+    assert "Usage per material" in page and "Delivery ranking" in page
 
 
 def test_admin_statistics_page_has_price_comparison_and_download(admin):
@@ -152,7 +152,7 @@ def test_admin_statistics_page_has_price_comparison_and_download(admin):
     assert "Supplier price comparison" in page and "/stats/export.csv" in page
 
 
-@pytest.mark.parametrize("address", ["/stats/data/usage", "/stats/data/lead-times"])
+@pytest.mark.parametrize("address", ["/stats/data/usage", "/stats/data/delivery-ranking", "/stats/data/delivery-ranking?material=M1"])
 def test_employee_chart_data_has_no_prices(employee, database_file, address):
     add_movement(database_file, "X1", "M1", "USED", 100, "2026-11-20 01:00:00")
     text = employee.get(address).get_data(as_text=True).lower()
@@ -370,8 +370,7 @@ def test_admin_statistics_page_has_every_procurement_panel(admin, database_file)
 
 def test_every_chart_names_its_unit_in_the_axis_title(employee, admin):
     employee_page = employee.get("/stats/").get_data(as_text=True)
-    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)",
-                  "Average days from ordering to arriving"):
+    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)", "Rank suppliers for"):
         assert words in employee_page, words
     admin_page = admin.get("/stats/").get_data(as_text=True)
     for words in ("MYR per kg or per litre", "MYR per piece"):
@@ -420,3 +419,89 @@ def test_price_comparison_chart_is_admin_only_and_not_on_the_employee_page(admin
     assert 'id="price-chart-weight"' in admin_page and 'id="price-chart-piece"' in admin_page
     employee_page = employee.get("/stats/").get_data(as_text=True)
     assert "price-chart" not in employee_page and "price-comparison" not in employee_page
+
+
+# ---------- Delivery ranking (guide F7, decision 2026-11-26) ----------
+
+# Adds one supplier offer for a material (lead time in days), switched on unless told otherwise.
+def add_offer(database_file, offer_id, supplier_id, material_id, lead_days, is_active=1):
+    connection = sqlite3.connect(database_file)
+    connection.execute(
+        "INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, price_per_pack_myr, lead_time_days, "
+        "is_active) VALUES (?, ?, ?, 1000, 'g', 50, ?, ?)", (offer_id, supplier_id, material_id, lead_days, is_active))
+    connection.commit()
+    connection.close()
+
+
+def test_delivery_ranking_for_one_material_is_fastest_first_with_an_arrival_date(database_file):
+    ranking = routes_stats.get_delivery_ranking(open_database(database_file), "M1", today=date(2026, 11, 23))
+    assert ranking["is_average"] is False
+    assert [(r["rank"], r["supplier"], r["days_text"], r["arrival"]) for r in ranking["rows"]] == [
+        (1, "Kuching Shop", "1 day", "24 Nov"), (2, "Web Store", "7 days", "30 Nov")]
+    assert ranking["rows"][0]["type"] == "local" and ranking["rows"][1]["type"] == "online"
+
+
+def test_delivery_ranking_ties_share_a_rank_and_are_ordered_a_to_z(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type) VALUES ('S9', 'Slow Shop', 'ONLINE')")
+    connection.commit()
+    connection.close()
+    add_offer(database_file, "O8", "S2", "M2", 3)                  # Web Store also 3 days for PETG, like Kuching Shop
+    add_offer(database_file, "O9", "S9", "M2", 5)
+    rows = routes_stats.get_delivery_ranking(open_database(database_file), "M2", today=date(2026, 11, 23))["rows"]
+    assert [(r["rank"], r["supplier"]) for r in rows] == [(1, "Kuching Shop"), (1, "Web Store"), (3, "Slow Shop")]
+
+
+def test_delivery_ranking_ignores_switched_off_offers_and_suppliers_and_uses_the_fastest_offer(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type, is_active) VALUES ('S8', 'Closed Shop', 'LOCAL', 0)")
+    connection.commit()
+    connection.close()
+    add_offer(database_file, "O7", "S8", "M1", 1)                  # closed supplier: left out
+    add_offer(database_file, "O6", "S2", "M1", 2, is_active=0)     # switched-off offer: left out
+    add_offer(database_file, "O5", "S2", "M1", 4)                  # Web Store has two offers: its fastest (4) counts
+    rows = routes_stats.get_delivery_ranking(open_database(database_file), "M1", today=date(2026, 11, 23))["rows"]
+    assert [(r["supplier"], r["days_text"]) for r in rows] == [("Kuching Shop", "1 day"), ("Web Store", "4 days")]
+
+
+def test_delivery_ranking_for_all_materials_is_the_average_and_an_unknown_material_is_empty(database_file):
+    ranking = routes_stats.get_delivery_ranking(open_database(database_file), "", today=date(2026, 11, 23))
+    assert ranking["is_average"] is True
+    assert [(r["supplier"], r["days_text"]) for r in ranking["rows"]] == [
+        ("Kuching Shop", "2 days on average"), ("Web Store", "7 days on average")]
+    assert routes_stats.get_delivery_ranking(open_database(database_file), "NOPE")["rows"] == []
+
+
+def test_delivery_days_are_written_in_the_singular_for_one_day(database_file):
+    add_offer(database_file, "O4", "S1", "M3", 1)                      # Kuching Shop: M1 1 day, M2 3 days, M3 1 day
+    average = routes_stats.get_delivery_ranking(open_database(database_file), "")["rows"]
+    assert average[0]["days_text"] == "1.7 days on average"
+    only_one_day = routes_stats.get_delivery_ranking(open_database(database_file), "M3")["rows"]
+    assert only_one_day[0]["days_text"] == "1 day"
+    connection = sqlite3.connect(database_file)
+    connection.execute("UPDATE supplier_offers SET lead_time_days = 1 WHERE id = 'O2'")
+    connection.commit()
+    connection.close()
+    assert routes_stats.get_delivery_ranking(open_database(database_file), "")["rows"][0]["days_text"] == "1 day on average"
+
+
+def test_the_material_list_has_only_materials_a_supplier_sells(database_file):
+    labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
+    assert labels == ["PETG Clear (g)", "PLA Basic White (g)"]           # ABS Grey has no offer
+
+
+def test_ranking_address_works_for_both_roles_and_has_no_money(admin, employee):
+    for browser in (admin, employee):
+        data = browser.get("/stats/data/delivery-ranking?material=M1").get_json()
+        assert data["rows"][0]["supplier"] == "Kuching Shop"
+    text = employee.get("/stats/data/delivery-ranking?material=M1").get_data(as_text=True).lower()
+    assert "myr" not in text and "price" not in text and "cost" not in text
+
+
+def test_the_page_offers_the_material_choice_and_the_old_delivery_chart_is_gone(admin, employee):
+    for browser in (admin, employee):
+        page = browser.get("/stats/").get_data(as_text=True)
+        assert 'id="ranking-material"' in page and "All materials (average)" in page
+        assert "PLA Basic White (g)" in page and "ABS Grey" not in page.split('id="ranking-material"')[1].split("</select>")[0]
+        assert "lead-chart" not in page and "Average delivery time per supplier" not in page
+        assert browser.get("/stats/data/lead-times").status_code == 404
