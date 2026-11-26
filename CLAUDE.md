@@ -957,3 +957,18 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
 2026-11-25 | Agent B (login & roles) | DONE, at the team's request (edits in files I do not own, Rule R2 waived by the team): added the csrf_token hidden field to the 4 forms in users_form.html, users_password.html and users_list.html, and "CSRF_ENABLED": False to create_app in tests/test_users.py and tests/test_sample_data.py. This closes both requests in my entry above. Full suite: 146 pass. | Agent F: add a test that a POST without the token is refused on the Users screen. | None.
 
 2026-11-25 | Agent H (interface and design) | DONE: new colour theme from the team's colour card (dark pages, hot-orange buttons, moss for OK). New file app/static/theme.css holds every colour in one :root list at the top (change a colour there, nowhere else). base.html no longer has inline CSS; it links theme.css. login.html got one extra line linking theme.css. The theme overrides the old inline colours of the other pages from the outside, so no other template or route was changed. Status words stay written (OK moss, LOW orange, OUT orange outline), buttons use dark text on orange for readability, keyboard focus is now visible. Checked in a browser: login, Home, Materials, Statistics. All 146 tests pass. | REQUESTS (Rule R3): Agent E: the Chart.js colours in app/templates/stats.html (blue/red bars, dark grey axis and legend text) are hard to read on the dark page; please use light text (#ECE9DF), grid lines #3a3933 and the palette (#EB4604, #F77E0D, #99A57D). Agents C/D/E and the Users owner: the old inline colours (#fff, #1a5fb4) can be deleted from your templates over time; theme.css wins either way. Not checked in a browser: Suppliers, suggestion, forms, Users pages. | None.
+
+2026-11-26 | Add material with its supplier (Agent C's screen; built at the team's request, with a small
+  refactor in Agent D's routes_suppliers.py) | The Admin-only "Add material" form now has an optional
+  "Who sells it?" part: choose "No supplier for now" (default), an existing active supplier, or "A new
+  supplier..." (name, ONLINE/LOCAL, address, phone, email, website, notes). When a supplier is chosen the
+  Admin also fills in what they charge: pack size, price per pack (MYR), smallest order, shipping (MYR) and
+  delivery days. The offer takes the material's unit. Material, supplier and offer are saved together (all
+  or nothing) and the activity log gets MATERIAL_ADDED, SUPPLIER_ADDED and OFFER_ADDED lines. A supplier
+  name that already exists is refused ("choose it from the list instead"). Employees still get 403 on the
+  whole form. Reused code instead of copying it: routes_suppliers.py now has read_offer_numbers,
+  insert_supplier and insert_offer, and its own "Add supplier" / "Add offer" screens use them (behaviour
+  unchanged; its 29 tests pass). 16 new tests in tests/test_materials.py; all 162 tests pass. Checked in a
+  phone-sized browser with the dark theme and CSRF switched on. | Agent F: add the form to the manual
+  checks in TESTS.md. Agent D: please read the small change in routes_suppliers.py. Team: "Edit material"
+  does not show suppliers (use the Suppliers page). | The Edit material form was not changed.

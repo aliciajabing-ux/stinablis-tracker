@@ -10,6 +10,11 @@
          background: #1a5fb4; color: #fff; font-size: 1rem; text-decoration: none; cursor: pointer; }
   .btn.plain { background: #fff; color: #1a5fb4; }
   .problems { background: #f5c2c2; color: #7a0000; padding: 10px; border-radius: 6px; }
+  fieldset { margin-top: 24px; border: 1px solid var(--line, #b8c4d6); border-radius: 6px; background: var(--eerie-black, #fff); color: var(--text, inherit); }
+  legend { font-weight: bold; padding: 0 6px; color: var(--text, inherit); }
+  textarea { padding: 10px; font-size: 1rem; width: 100%; max-width: 360px; box-sizing: border-box; }
+  .help { color: var(--moss, #444); margin: 4px 0 0; }
+  [hidden] { display: none; }
 </style>
 <h1>{{ 'Edit material' if material else 'Add material' }}</h1>
 <p>{% if material %}Change the details of this material. To change how much is in stock, use "Record used" or "Record received" instead.
@@ -44,6 +49,69 @@
 
   <label for="reorder_level">Reorder level (the material shows as LOW at or below this amount)</label>
   <input id="reorder_level" name="reorder_level" type="text" inputmode="decimal" required value="{{ form.reorder_level if form.reorder_level is not none else '' }}">
+
+  {% if not material %}
+  <fieldset>
+    <legend>Who sells it? (optional)</legend>
+    <p class="help">You can add the supplier now, or leave this as it is and add one later on the Suppliers page.
+       Prices are in MYR and are for one pack (for example one 1 kg spool).</p>
+
+    <label for="supplier_choice">Supplier</label>
+    <select id="supplier_choice" name="supplier_choice">
+      <option value="">No supplier for now</option>
+      {% for supplier in suppliers %}
+      <option value="{{ supplier['id'] }}" {{ 'selected' if form.supplier_choice == supplier['id'] }}>{{ supplier['name'] }} ({{ supplier['supplier_type'] }})</option>
+      {% endfor %}
+      <option value="new" {{ 'selected' if form.supplier_choice == 'new' }}>A new supplier...</option>
+    </select>
+
+    <div id="new-supplier-fields">
+      <label for="new_name">New supplier name</label>
+      <input id="new_name" name="new_name" type="text" maxlength="100" value="{{ form.new_name or '' }}">
+      <label for="new_supplier_type">Online or local shop</label>
+      <select id="new_supplier_type" name="new_supplier_type">
+        <option value="LOCAL" {{ 'selected' if form.new_supplier_type != 'ONLINE' }}>LOCAL (a shop we can visit)</option>
+        <option value="ONLINE" {{ 'selected' if form.new_supplier_type == 'ONLINE' }}>ONLINE (we order on a website)</option>
+      </select>
+      <label for="new_address">Address</label>
+      <input id="new_address" name="new_address" type="text" maxlength="200" value="{{ form.new_address or '' }}">
+      <label for="new_phone">Phone</label>
+      <input id="new_phone" name="new_phone" type="text" maxlength="30" value="{{ form.new_phone or '' }}">
+      <label for="new_email">Email</label>
+      <input id="new_email" name="new_email" type="text" maxlength="100" value="{{ form.new_email or '' }}">
+      <label for="new_website">Website</label>
+      <input id="new_website" name="new_website" type="text" maxlength="200" value="{{ form.new_website or '' }}">
+      <label for="new_notes">Notes</label>
+      <textarea id="new_notes" name="new_notes" rows="2" maxlength="500">{{ form.new_notes or '' }}</textarea>
+    </div>
+
+    <div id="offer-fields">
+      <p class="help"><strong>What they charge for this material</strong> (the pack size uses the unit chosen above)</p>
+      <label for="pack_size">Pack size (for example 1000 for a 1 kg spool in grams)</label>
+      <input id="pack_size" name="pack_size" type="text" inputmode="decimal" value="{{ form.pack_size or '' }}">
+      <label for="price_per_pack_myr">Price per pack (MYR)</label>
+      <input id="price_per_pack_myr" name="price_per_pack_myr" type="text" inputmode="decimal" value="{{ form.price_per_pack_myr or '' }}">
+      <label for="minimum_order_packs">Smallest order (number of packs)</label>
+      <input id="minimum_order_packs" name="minimum_order_packs" type="text" inputmode="numeric" value="{{ form.minimum_order_packs or '1' }}">
+      <label for="shipping_cost_myr">Shipping cost (MYR)</label>
+      <input id="shipping_cost_myr" name="shipping_cost_myr" type="text" inputmode="decimal" value="{{ form.shipping_cost_myr or '0' }}">
+      <label for="lead_time_days">Delivery time (days from ordering to arriving)</label>
+      <input id="lead_time_days" name="lead_time_days" type="text" inputmode="numeric" value="{{ form.lead_time_days or '' }}">
+    </div>
+  </fieldset>
+  <script>
+    // Shows the supplier boxes only when they are needed. Without JavaScript all boxes simply stay visible.
+    (function () {
+      var choice = document.getElementById("supplier_choice");
+      function update() {
+        document.getElementById("new-supplier-fields").hidden = (choice.value !== "new");
+        document.getElementById("offer-fields").hidden = (choice.value === "");
+      }
+      choice.addEventListener("change", update);
+      update();
+    })();
+  </script>
+  {% endif %}
 
   <button class="btn" type="submit">Save</button>
   <a class="btn plain" href="{{ url_for('materials.list_materials') }}">Cancel</a>
