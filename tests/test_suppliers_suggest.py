@@ -164,6 +164,23 @@ def test_low_material_screen_shows_status_word_and_estimate(admin):
     assert "MYR 72.00" in page
 
 
+# A lead time of 1 reads "1 day"; any other number reads "N days" (wording only).
+def test_lead_time_words_use_day_for_one_and_days_for_other_numbers(admin, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, "
+                       "price_per_pack_myr, minimum_order_packs, shipping_cost_myr, lead_time_days) "
+                       "VALUES ('O7', 'S3', 'M3', 1000, 'g', 60.00, 1, 5, 7)")
+    connection.commit()
+    connection.close()
+    one_day_page = admin.get("/suggest/M1").get_data(as_text=True)
+    seven_day_page = admin.get("/suggest/M3").get_data(as_text=True)
+    assert "<td>1 day</td>" in one_day_page and "1 days" not in one_day_page
+    assert "<td>7 days</td>" in seven_day_page
+    assert "within 1 day." in admin.get("/suggest/M3?days=1").get_data(as_text=True)
+    assert "within 1 days" not in admin.get("/suggest/M3?days=1").get_data(as_text=True)
+    assert "within 0 days." in admin.get("/suggest/M3?days=0").get_data(as_text=True)
+
+
 def test_out_material_screen_works(admin):
     assert "OUT" in admin.get("/suggest/M3").get_data(as_text=True)
 

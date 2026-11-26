@@ -1645,3 +1645,9 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   page tags (OK, LOW, OUT) were already bold, so nothing changed there. Checked in a browser: computed weight is 700 for
   the Home LOW and OUT and for the Materials OK, LOW and OUT tags. Only CSS, no page or test changed. | NONE. | None.
 
+
+2026-11-26 | Agent D (suppliers & suggestion) | DONE: wording fix on the Find supplier page. A lead time of 1 now reads
+  "1 day" (any other number reads "N days"), and the sentence "No supplier can deliver ... within N days" follows the same
+  rule. Only app/templates/suggest.html changed (two lines, wording only, no permission logic, Rule C7). supplier_detail.html
+  was left alone: its column header already says "(days)". 1 new test in tests/test_suppliers_suggest.py (1 day, 7 days, and
+  the "within 1 day" / "within 0 days" sentence). | None. | None.

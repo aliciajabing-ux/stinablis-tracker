@@ -18,7 +18,7 @@
 {% if material['status'] == 'OK' %}
   <p>This material is OK, so there is nothing to order right now.</p>
 {% elif not suggestions %}
-  <p>No supplier can deliver this material{% if days_allowed is not none %} within {{ days_allowed }} days{% endif %}. Try a longer time, or ask the Admin to add a supplier.</p>
+  <p>No supplier can deliver this material{% if days_allowed is not none %} within {{ days_allowed }} {{ 'day' if days_allowed == 1 else 'days' }}{% endif %}. Try a longer time, or ask the Admin to add a supplier.</p>
 {% else %}
 <div class="scroll"><table>
   <tr><th>Supplier</th><th>Type</th><th>Packs to order</th><th>Lead time</th><th>Estimated arrival</th>
@@ -28,7 +28,7 @@
     <td>{% if loop.first %}<strong>Best: </strong>{% endif %}{{ s['supplier_name'] }}</td>
     <td>{{ s['supplier_type'] }}</td>
     <td>{{ s['packs_to_order'] }} x {{ s['pack_size']|round(2) }} {{ s['pack_unit'] }}</td>
-    <td>{{ s['lead_time_days'] }} days</td>
+    <td>{{ s['lead_time_days'] }} {{ 'day' if s['lead_time_days'] == 1 else 'days' }}</td>
     <td>{{ s['arrival_date'].strftime('%d %b %Y') }} (estimate)</td>
     {% if show_prices %}<td>MYR {{ '%.2f' % s['estimated_cost_myr'] }} (estimate)</td>{% endif %}
     <td>{{ s['phone'] or '' }}<br>{{ s['email'] or '' }}<br>{{ s['website'] or '' }}</td>
