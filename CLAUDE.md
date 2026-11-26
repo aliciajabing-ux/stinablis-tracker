@@ -1346,3 +1346,16 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   direction (main-0rpyg5 into main-0rpyg5-v2k49y); now that GitHub already has both merged, finish it with a normal
   commit, then pull, and expect only the status log to clash.
 
+2026-11-26 | Agent E (brought in at the team's request from Agent H's unsaved edits) | DONE: the 3 unsaved edits found in the
+  team member's own folder (diff pasted by them) are now in Git on main-0rpyg5. (1) Materials list sorted OUT, LOW, OK:
+  already on the branch (same 2 lines), so nothing to add. (2) theme.css: the "More" menu word now comes after the
+  buttons (order: 2). (3) theme.css: the OUT word is now a clear red with light text. THIS USES 2 COLOURS THAT ARE NOT
+  IN THE 7-COLOUR PALETTE (#C62828 and #FFF4F0); I put them in the :root list as --out-red and --out-text (the file says
+  every colour lives there). Earlier the team said "do not change the palette" for the restyle, so please confirm
+  this red is wanted; reverting is one line (use hot orange again). (4) materials_list.html: the "Show only OK"
+  button is hidden (a Jinja comment; the address ?status=OK still works). Checked in a browser: the OUT red, the
+  hidden button and the "More" menu look right. Suite: 428 pass, 2 skipped, 6 expected failures. | NEXT: Agent H should
+  work on the branch main-0rpyg5 from now on (not main-0rpyg5-v2k49y), or the two branches drift apart again. | PROBLEMS:
+  Section 8 of the guide says "red = OUT"; the red now matches it, while the palette note in the theme file says 7
+  colours: team to decide which wins.
+

@@ -39,7 +39,8 @@
   <a href="{{ url_for('materials.list_materials', q=search_text) }}" class="{{ 'on' if not status_filter }}">Show all</a>
   <a href="{{ url_for('materials.list_materials', q=search_text, status='LOW') }}" class="{{ 'on' if status_filter == 'LOW' }}">Show only LOW</a>
   <a href="{{ url_for('materials.list_materials', q=search_text, status='OUT') }}" class="{{ 'on' if status_filter == 'OUT' }}">Show only OUT</a>
-  <a href="{{ url_for('materials.list_materials', q=search_text, status='OK') }}" class="{{ 'on' if status_filter == 'OK' }}">Show only OK</a>
+{# Agent H hid the "Show only OK" button (2026-11-26). The address ?status=OK still works. To bring it back, remove this comment mark:
+  <a href="{{ url_for('materials.list_materials', q=search_text, status='OK') }}" class="{{ 'on' if status_filter == 'OK' }}">Show only OK</a> #}
 </p>
 
 <div class="table-wrap">

@@ -16,6 +16,8 @@
   --orange-wheel: #F77E0D; /* hover, LOW, highlighted titles */
   --text: #ECE9DF;         /* main text (light, readable on dark); also the "light card" colour */
   --line: #3a3933;
+  --out-red: #C62828;      /* the OUT word (Agent H's choice 2026-11-26: a clear red; NOT one of the 7 palette colours) */
+  --out-text: #FFF4F0;     /* text on the OUT word */
   --font-body: "Space Grotesk", "Segoe UI", Arial, sans-serif;
   --font-mono: "Space Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   --radius: 18px;
@@ -111,7 +113,7 @@ body table .btn.row-main { background: var(--hot-orange) !important; color: var(
 body table .btn.row-main:hover { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; }
 .row-actions .btn { white-space: nowrap; min-height: 40px; }
 .row-more { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.row-more summary { list-style: none; cursor: pointer; padding: 8px 12px; min-height: 40px; box-sizing: border-box; border-radius: 10px;
+.row-more summary { order: 2; list-style: none; cursor: pointer; padding: 8px 12px; min-height: 40px; box-sizing: border-box; border-radius: 10px;
   font-family: var(--font-mono); font-size: .85rem; color: var(--moss); border: 2px solid transparent; display: flex; align-items: center; }
 .row-more summary::-webkit-details-marker { display: none; }
 .row-more summary::after { content: " \25BE"; }
@@ -132,7 +134,7 @@ body input::placeholder { color: #8b8a80; }
 body .tag { font-weight: bold; padding: 3px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: .85rem; }
 body .tag-OK  { background: var(--moss) !important; color: var(--smoky-black) !important; }
 body .tag-LOW { background: var(--orange-wheel) !important; color: var(--smoky-black) !important; }
-body .tag-OUT { background: var(--smoky-black) !important; color: var(--hot-orange) !important; border: 2px solid var(--hot-orange); }
+body .tag-OUT { background: var(--out-red) !important; color: var(--out-text) !important; border: 2px solid var(--out-red); }
 body .on { color: var(--moss) !important; }
 body .off { color: var(--hot-orange) !important; }
 
