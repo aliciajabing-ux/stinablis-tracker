@@ -239,7 +239,10 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
         * Spending per material, last 6 months, in MYR - ADMIN only.
         * Supplier price comparison per material: cheapest supplier offer
           next to the price last paid, per kg, per litre or per piece -
-          ADMIN only. Estimates: the offer price is before shipping.
+          ADMIN only. Shown as two bar charts (per kg or litre, and per
+          piece, because their prices are on very different scales) and as
+          a table with the same numbers. Estimates: the offer price is
+          before shipping.
     - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
       and in the pop-up text, never just a bare number.
     - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
@@ -1300,4 +1303,21 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   codes, mine checks what each role sees and says it in words). | PROBLEMS: the page covers screens that exist today;
   the activity log screen and the backup button are not built, so they are listed as "not built yet" and are not
   proven.
+
+2026-11-26 | Agent E | DONE: the supplier price comparison is now also a CHART (team asked to go back to the statistics we
+  had planned; the guide F7 line was updated first). New Admin-only data address /stats/data/price-comparison
+  (admin_required) and two bar charts in the Statistics page, above the existing table: "Materials priced per kg or
+  per litre" and "Materials priced per piece". They are separate because their prices are on very different scales
+  (MYR 60 per kg against MYR 0.09 per piece would hide the small bars). Each material shows two bars: the cheapest
+  supplier offer and the price last paid; the pop-up gives the supplier and the date (for example "Price last paid:
+  MYR 75.00 per kg (Kuching Shop, 05 Nov 2026)"). Materials with neither an offer nor a purchase are left out; an
+  offer with no purchase yet shows one bar. The table stays, as "the same numbers". Code: build_chart_point and
+  get_price_comparison_chart in routes_stats.py; stats.html. Roles: Employee gets 403 on the address and the
+  Employee page has no price chart (tests prove it); ROLE_DIFFERENCES.md and tests/test_role_differences.py have the
+  new row; Agent F's address matrix has the new address. Checked in a browser (Admin, 390 px): no script errors, no
+  sideways page scroll. Suite: 427 pass, 2 skipped, 6 expected failures. | STILL NOT BUILT from the plan: "Price paid
+  per unit over time" (a line chart; it needs several purchases of the same material to show a trend) and one chart
+  per unit for usage and purchases. F-13 (delivery-time chart cut off on a phone) is still open. | PROBLEMS: the same
+  as before: "price paid" is the typed total divided by the quantity, so shipping inside the total makes it look higher
+  than the offer.
 

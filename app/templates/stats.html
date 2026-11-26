@@ -55,7 +55,15 @@
 </div>
 <div class="panel">
   <h2>Supplier price comparison</h2>
-  <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.</p>
+  <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.
+    Point at a bar to see the supplier and the date.</p>
+  <h3>Materials priced per kg or per litre</h3>
+  <div class="chart-area"><canvas id="price-chart-weight" aria-label="Price comparison per kg or per litre bar chart"></canvas></div>
+  <p class="waiting" id="price-chart-weight-empty" hidden>No offers or purchases for these materials yet.</p>
+  <h3>Materials priced per piece</h3>
+  <div class="chart-area"><canvas id="price-chart-piece" aria-label="Price comparison per piece bar chart"></canvas></div>
+  <p class="waiting" id="price-chart-piece-empty" hidden>No offers or purchases for these materials yet.</p>
+  <h3>The same numbers as a table</h3>
   <div class="scroll">
     <table>
       <tr><th>Material</th><th>Cheapest supplier offer</th><th>Price last paid</th><th>Difference</th></tr>
@@ -78,7 +86,8 @@
     purchases: "{{ url_for('stats.purchases_data') }}",
     low: "{{ url_for('stats.low_stock_data') }}",
     lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools %},
-    materialSpending: "{{ url_for('stats.spending_by_material_data') }}"{% endif %}{% if show_admin_tools and spending_ready %},
+    materialSpending: "{{ url_for('stats.spending_by_material_data') }}",
+    priceComparison: "{{ url_for('stats.price_comparison_data') }}"{% endif %}{% if show_admin_tools and spending_ready %},
     spending: "{{ url_for('stats.spending_data') }}"{% endif %}
   };
   var charts = {};
@@ -175,6 +184,30 @@
   function formatMoneyShort(value) {
     return "MYR " + Number(value).toLocaleString("en-US", {maximumFractionDigits: 0});
   }
+  // Draws one price comparison chart (cheapest offer next to the price last paid) for a group of materials. Small prices per piece keep their cents on the axis.
+  function drawPriceChart(canvasId, noteId, group, axisText, centsOnAxis) {
+    showEmptyNote(noteId, group.labels.length === 0);
+    document.getElementById(canvasId).parentNode.style.height = Math.max(220, group.labels.length * 52 + 120) + "px";
+    drawChart(canvasId, {type: "bar",
+      data: {labels: group.labels, datasets: [
+        {label: "Cheapest supplier offer", data: group.offer, backgroundColor: PALETTE[2]},
+        {label: "Price last paid", data: group.paid, backgroundColor: PALETTE[0]}]},
+      options: {indexAxis: "y",
+                scales: {x: {beginAtZero: true, title: axisTitle(axisText),
+                             ticks: {maxTicksLimit: 6, callback: function (value) { return centsOnAxis ? formatMoney(value) : formatMoneyShort(value); }}},
+                         y: {ticks: {autoSkip: false}}},
+                plugins: {tooltip: {callbacks: {label: function (context) {
+                  var i = context.dataIndex;
+                  var text = context.dataset.label + ": " + formatMoney(context.parsed.x) + " " + group.words[i];
+                  if (context.datasetIndex === 0) { return text + " (" + group.offer_supplier[i] + ")"; }
+                  return text + " (" + group.paid_supplier[i] + ", " + group.paid_date[i] + ")";
+                }}}}}});
+  }
+  // Loads the price comparison numbers and draws both charts.
+  fetch(urls.priceComparison).then(function (r) { return r.json(); }).then(function (d) {
+    drawPriceChart("price-chart-weight", "price-chart-weight-empty", d.per_kg_litre, "MYR per kg or per litre", false);
+    drawPriceChart("price-chart-piece", "price-chart-piece-empty", d.per_piece, "MYR per piece", true);
+  });
   // Loads the money spent per material (last 6 months) and draws the sideways bar chart.
   fetch(urls.materialSpending).then(function (r) { return r.json(); }).then(function (d) {
     showEmptyNote("material-spending-empty", d.labels.length === 0);

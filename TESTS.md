@@ -121,6 +121,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Supplier price comparison: cheapest offer per kg / litre / piece against the price last paid; "more", "less" and "no offer" wording | F7 | Pass |
 | Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or comparison table | F7, Sec 4 | Pass |
 | CSV lists purchases and spending per material (Admin only) | F7 | Pass |
+| Price comparison charts: numbers per kg / litre and per piece, offer with no purchase kept, nothing for materials with neither; Admin only (Employee 403, no chart on the Employee page) | F7 | Pass |
 | Admin versus Employee table (ROLE_DIFFERENCES.md): 24 rows proven against the real website, and the page says the same as the proof | Sec 4, 13 | Pass |
 | Admin Home has the money box; Employee Home has no money box and no "MYR" anywhere | F2, Section 4, 14 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |

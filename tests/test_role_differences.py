@@ -122,6 +122,7 @@ ROLE_ROWS = [
     ("Statistics", "See the spending per material chart", True, False, opens("/stats/data/spending-by-material")),
     ("Statistics", "See the supplier price comparison table", True, False,
      page_has("/stats/", "Supplier price comparison")),
+    ("Statistics", "See the supplier price comparison charts", True, False, opens("/stats/data/price-comparison")),
     ("Statistics", "Download the statistics spreadsheet (CSV)", True, False, opens("/stats/export.csv")),
     ("Users", "Open the Users screen", True, False, opens("/users/")),
     ("Users", "Add a user, change a role, reset a password or switch an account on or off", True, False,

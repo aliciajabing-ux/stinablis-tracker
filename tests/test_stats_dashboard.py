@@ -404,3 +404,40 @@ def test_csv_lists_purchases_and_spending_per_material(admin, database_file):
     add_received_line(database_file, "A", "M1", 1000, yesterday, "S1", 70)
     text = admin.get("/stats/export.csv").get_data(as_text=True)
     assert "Purchased (received)" in text and "Spending per material (last 6 months)" in text
+
+
+def test_price_comparison_chart_numbers_per_kg_and_per_piece(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO materials (id, name, colour, unit, quantity_on_hand, reorder_level) "
+                       "VALUES ('M4', 'Screws', 'Steel', 'pcs', 100, 20)")
+    connection.execute("INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, price_per_pack_myr, "
+                       "lead_time_days) VALUES ('O4', 'S1', 'M4', 100, 'pcs', 9.0, 2)")           # MYR 0.09 per piece
+    connection.commit()
+    connection.close()
+    add_received_line(database_file, "A", "M1", 2000, "2026-11-05 02:00:00", "S1", 150)        # MYR 75 per kg
+    add_received_line(database_file, "B", "M4", 100, "2026-11-06 02:00:00", "S2", 12)          # MYR 0.12 per piece
+    chart = routes_stats.get_price_comparison_chart(open_database(database_file))
+    weight, piece = chart["per_kg_litre"], chart["per_piece"]
+    assert "PLA Basic White (per kg)" in weight["labels"]
+    i = weight["labels"].index("PLA Basic White (per kg)")
+    assert weight["offer"][i] == 60.0 and weight["offer_supplier"][i] == "Web Store"
+    assert weight["paid"][i] == 75.0 and weight["paid_supplier"][i] == "Kuching Shop" and weight["paid_date"][i] == "05 Nov 2026"
+    assert "ABS Grey (per kg)" not in weight["labels"]                                           # no offer and never bought
+    assert piece["labels"] == ["Screws Steel (per piece)"]
+    assert piece["offer"] == [0.09] and piece["paid"] == [0.12] and piece["words"] == ["per piece"]
+
+
+def test_price_comparison_chart_keeps_an_offer_with_no_purchase_yet(database_file):
+    chart = routes_stats.get_price_comparison_chart(open_database(database_file))
+    weight = chart["per_kg_litre"]
+    i = weight["labels"].index("PETG Clear (per kg)")
+    assert weight["offer"][i] == 90.0 and weight["paid"][i] is None and weight["paid_supplier"][i] == ""
+
+
+def test_price_comparison_chart_is_admin_only_and_not_on_the_employee_page(admin, employee):
+    assert admin.get("/stats/data/price-comparison").status_code == 200
+    assert employee.get("/stats/data/price-comparison").status_code == 403
+    admin_page = admin.get("/stats/").get_data(as_text=True)
+    assert 'id="price-chart-weight"' in admin_page and 'id="price-chart-piece"' in admin_page
+    employee_page = employee.get("/stats/").get_data(as_text=True)
+    assert "price-chart" not in employee_page and "price-comparison" not in employee_page

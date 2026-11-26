@@ -4,7 +4,8 @@
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
 # Procurement statistics (decision 2026-11-26) are built from the same "Record received" lines: purchases per
-# material (no money, both roles), spending per material and the supplier price comparison (Admin only).
+# material (no money, both roles), spending per material and the supplier price comparison, as a table and as
+# charts (Admin only).
 # A low-stock event = a "Record used" that drops a material from OK to LOW or OUT (saved in low_stock_events).
 
 import csv
@@ -224,6 +225,42 @@ def get_price_comparison(database):
     return [build_comparison_row(database, material) for material in materials]
 
 
+# Returns one material's numbers for the price comparison chart, or None when it has neither an offer nor a purchase.
+# Prices are MYR per kg, per litre or per piece (Admin only; estimates, the offer is before shipping).
+def build_chart_point(database, material):
+    scale, words = price_unit_words(material["unit"])
+    offer = find_cheapest_unit_offer(database, material["id"], material["unit"])
+    paid = find_last_paid(database, material["id"])
+    if offer is None and paid is None:
+        return None
+    name = " ".join(part for part in (material["name"], material["colour"]) if part)
+    return {"group": "per_piece" if material["unit"] == "pcs" else "per_kg_litre",
+            "label": name + " (" + words + ")", "words": words,
+            "offer": round(offer["price_per_unit"] * scale, 2) if offer else None,
+            "offer_supplier": offer["supplier_name"] if offer else "",
+            "paid": round(paid["total_cost_myr"] / paid["quantity"] * scale, 2) if paid else None,
+            "paid_supplier": (paid["supplier_name"] or "supplier not typed") if paid else "",
+            "paid_date": to_malaysia_time(paid["created_at"]).strftime("%d %b %Y") if paid else ""}
+
+
+# Returns the price comparison chart numbers in two groups: per kg or litre, and per piece (their prices are on very
+# different scales, so each group gets its own chart). Admin only.
+def get_price_comparison_chart(database):
+    keys = ("labels", "words", "offer", "offer_supplier", "paid", "paid_supplier", "paid_date")
+    groups = {"per_kg_litre": {key: [] for key in keys}, "per_piece": {key: [] for key in keys}}
+    materials = database.execute(
+        "SELECT id, name, colour, unit FROM materials WHERE is_active = 1 ORDER BY name, colour").fetchall()
+    for material in materials:
+        point = build_chart_point(database, material)
+        if point is None:
+            continue
+        group = groups[point["group"]]
+        group["labels"].append(point["label"])
+        for key in keys[1:]:
+            group[key].append(point[key])
+    return groups
+
+
 # Returns the Admin-only spending numbers for this month, or None if the team has not confirmed the method.
 def get_month_spending(database):
     if not SPENDING_METHOD_CONFIRMED:
@@ -278,6 +315,13 @@ def purchases_data():
 @admin_required
 def spending_by_material_data():
     return jsonify(get_spending_by_material(get_db()))
+
+
+# Sends the supplier price comparison numbers to the two price charts. Admin only.
+@stats_blueprint.route("/data/price-comparison")
+@admin_required
+def price_comparison_data():
+    return jsonify(get_price_comparison_chart(get_db()))
 
 
 # Sends low-stock events per month to the line chart (empty until the team confirms the counting rule).

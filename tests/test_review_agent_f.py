@@ -215,6 +215,7 @@ SCREEN_MATRIX = {
     "/stats/data/spending": (302, 403, 200),
     "/stats/data/purchases": (302, 200, 200),                 # quantities only, no money: both roles
     "/stats/data/spending-by-material": (302, 403, 200),      # money: Admin only
+    "/stats/data/price-comparison": (302, 403, 200),          # money: Admin only
     "/stats/export.csv": (302, 403, 200),
     "/users/": (302, 403, 200),
     "/users/add": (302, 403, 200),
