@@ -193,6 +193,12 @@ F3. MATERIALS SCREEN
       Show only LOW, Show only OUT. The "Show only OK" button was removed as
       clutter. Order of the list: OK first, then LOW, then OUT.
     - Add / edit / delete a material: ADMIN only.
+    - "Add material" has an optional "Who sells it?" part (2026-11-26): no
+      supplier, an existing supplier, or a new supplier, plus what they charge
+      (pack size, price per pack in MYR, smallest order, shipping, delivery
+      days). Material, supplier and offer are saved together or not at all.
+      Admin only (Employees get 403 on the whole form); the form does not
+      appear on "Edit material".
     - "Record used" and "Record received" buttons: everyone.
     - "Last bought" memory (decision 2026-11-24): each material row and the
       Record screens show who it was last bought from, how much, the date
@@ -1270,3 +1276,30 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   OUT, so for an OK item such as the nuts in the sample data Task 2 is still not a one-step job, and the
   Materials list has no "Find supplier" button. Should the comparison work for every item? Agent D owns the
   page and Agent C the Materials list. | CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Add material with its supplier (Agent C's screen; built at the team's request, with a small
+  refactor in Agent D's routes_suppliers.py) | The Admin-only "Add material" form now has an optional
+  "Who sells it?" part: choose "No supplier for now" (default), an existing active supplier, or "A new
+  supplier..." (name, ONLINE/LOCAL, address, phone, email, website, notes). When a supplier is chosen the
+  Admin also fills in what they charge: pack size, price per pack (MYR), smallest order, shipping (MYR) and
+  delivery days. The offer takes the material's unit. Material, supplier and offer are saved together (all
+  or nothing) and the activity log gets MATERIAL_ADDED, SUPPLIER_ADDED and OFFER_ADDED lines. A supplier
+  name that already exists is refused ("choose it from the list instead"). Employees still get 403 on the
+  whole form. Reused code instead of copying it: routes_suppliers.py now has read_offer_numbers,
+  insert_supplier and insert_offer, and its own "Add supplier" / "Add offer" screens use them (behaviour
+  unchanged; its 29 tests pass). 16 new tests in tests/test_materials.py; all 162 tests pass. Checked in a
+  phone-sized browser with the dark theme and CSRF switched on. | Agent F: add the form to the manual
+  checks in TESTS.md. Agent D: please read the small change in routes_suppliers.py. Team: "Edit material"
+  does not show suppliers (use the Suppliers page). | The Edit material form was not changed.
+
+2026-11-26 | Main Chat (merge of origin/main-iyvssn commit b51993b into main, at the team's request) | CHECKED
+  before merging: the "Add material with its supplier" change keeps the Admin-only rule (add_material is still
+  admin_required; Employees get 403), changes no table, schema.sql, sample data or permissions.py, and does not
+  touch CLAUDE.md.txt. Its small refactor in routes_suppliers.py (read_offer_numbers, insert_supplier,
+  insert_offer) keeps the Suppliers screens behaving the same. FIXED while merging: (1) the branch was built on an
+  older main and defined a second get_active_suppliers() in routes_materials.py with no argument, which would have
+  silently replaced main's get_active_suppliers(database) and crashed the Add material form; the extra one was
+  removed and the form now calls main's. (2) The imports, the new tests (both sides kept) and this log (both sides
+  kept) were merged by hand. Full suite: 421 passed, 2 skipped, 6 expected failures. | Agent F: add the form
+  to the manual checks (the branch entry above already asks). Agent D: please read the small change in
+  routes_suppliers.py. | The Edit material form still shows no supplier part. CLAUDE.md.txt was NOT touched.
