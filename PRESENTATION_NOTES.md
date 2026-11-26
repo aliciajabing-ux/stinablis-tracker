@@ -8,7 +8,7 @@ Facts below were checked against the code and by running the app on 2026-11-24. 
 are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
 Stinablis facts or real prices (rule R7).
 
-Last re-checked against code: 2026-11-26, after the group's final merge into `main` (462 automatic
+Last re-checked against code: 2026-11-26, after the group's final merge into `main` (458 automatic
 tests passed, 2 skipped, 6 "expected failures" that describe known bugs). That includes all feature, test
 and design branches. Re-check these notes if anything else is merged (see the status log in `CLAUDE.md`).
 
@@ -155,7 +155,7 @@ STOCK_USED activity row appeared.
 an Admin** sees and can fill them. This is enforced on the server by `can_record_purchase_cost` in
 `permissions.py`: an Employee can still record received stock, but without money, and if an Employee
 sends supplier or total anyway the server answers **403** and saves nothing. What the Admin types becomes
-the new "Last bought" line and the real number behind Home's "money spent" box. Employees can still
+the new "Last bought" line and the prices paid used by the Admin-only price comparison. Employees can still
 **see** "Last bought" and its money, according to `can_see_prices()`, but cannot change it.
 
 **Sample data check (2026-11-25):** the sample file's date format bug is fixed. An automatic test
@@ -300,7 +300,7 @@ Facts:
 - Record used and Record received, with a history row and an activity-log row for each change.
 - "Last bought" memory (who, how much, date, total paid; money only for people allowed to see prices).
 - Find supplier: ranked by estimated total cost, then lead time, with estimated arrival dates.
-- Home boxes and the Notifications list, money spent; a Statistics page with usage, purchases and a
+- Home with three boxes (total, LOW, OUT) and the Notifications list; a Statistics page with usage, purchases and a
   delivery ranking (Admin only: supplier price comparison and the CSV download); a Materials list with a
   search box and two sections (Filament & other materials, Hardware).
 - Roles (Admin and Employee), server-side permission checks, login lock, CSRF protection, the Admin
@@ -318,9 +318,8 @@ point for questions.
 
 ## Two-minute demo script
 
-1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent this
-   month. Money spent adds up the real totals an Admin typed on Record received; on the sample data it
-   may show a small number or MYR 0.00." (Do not claim a real figure.)
+1. Log in as the Admin. "Home shows three boxes: total materials, LOW and OUT, and below them the
+   Notifications list of items that need ordering." (The "money spent" box was removed on 2026-11-26.)
 2. (Optional, 15 seconds) Press **Users** to show the Admin-only screen for accounts.
 3. Point to **Notifications**. Press **Find supplier** on PLA Basic White. Read the ranked list,
    "Best" at the top, and the word "estimate".
@@ -353,7 +352,7 @@ point for questions.
 - **"Is the 2 hours to 30 minutes a week saving proven?"** No. The starting point is confirmed: Ryan said
   Stinablis spends 2 to 3 hours per week finding where materials were bought. The 30-minute target is our
   goal only. We have not measured it: Test 1 took 7:16 before the fixes, and Test 2 has not been timed yet.
-- **"How do you know it works?"** 462 automatic tests passed (2 skipped, 6 expected failures
+- **"How do you know it works?"** 458 automatic tests passed (2 skipped, 6 expected failures
   that describe known bugs; after the final merge, 2026-11-26), a manual checklist (`TESTS.md`), and a phone check.
 - **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
   secret token (CSRF protection), on top of the safe cookie settings.

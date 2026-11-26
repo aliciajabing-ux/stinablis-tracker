@@ -150,7 +150,7 @@ python -m pytest tests
 ```
 
 This takes about a minute. After the group's final merge (2026-11-26) it reported
-**462 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
+**458 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
 known bug; see the status log). The tests use a temporary database and never touch
 `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves. (Re-run it before the demo;
 the numbers change whenever someone adds a test.)
@@ -183,18 +183,19 @@ the numbers change whenever someone adds a test.)
 * **Plain-English error pages.** If you have no permission (403), a page is missing (404) or a form has
   expired (400), you see a short sentence in plain words and a **Back to Home** button, instead of a
   technical page. The browser still gets the real error number.
-* **Money spent and low-stock events now work.** On "Record received" **only an Admin** sees and can fill
+* **Prices paid and low-stock events now work.** On "Record received" **only an Admin** sees and can fill
   the two optional boxes "Bought from" and "Total paid (MYR)" (rule `can_record_purchase_cost`). An
   Employee can still record received stock, without the money; if an Employee types money anyway the
-  server answers 403 and saves nothing. Home's money box adds up the real totals for the current month,
-  and the Admin-only supplier price comparison on the Statistics page uses the prices paid. A low-stock
+  server answers 403 and saves nothing. The Admin-only supplier price comparison on the Statistics page
+  uses the prices paid. (Home no longer has a "money spent" box: the group removed it on 2026-11-26, so
+  Home shows three boxes: total, LOW and OUT.) A low-stock
   event is saved each time a "Record used" drops a material from OK to LOW or OUT (the Statistics page
   no longer draws a chart of them).
 
 ## Known problems (as of 2026-11-26; see the status log in `CLAUDE.md`)
 
 * Received lines saved without a total (always the case when an Employee records them) count as MYR 0
-  in the money numbers. Low-stock events
+  in the money numbers (price comparison and CSV). Low-stock events
   are counted from the day the feature was switched on, so older drops have no event.
 * A database built before 2026-11-24 may be missing the new columns and the new table (and may have
   old-format dates). Build the database again (step 3): close the app, delete `data\tracker.db`, and run
