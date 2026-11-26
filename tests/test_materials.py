@@ -237,7 +237,7 @@ def test_remove_keeps_the_row_and_history(admin, database_file):
 
 # ---------- Search and filter (F3) ----------
 
-# The Materials list shows OUT first, then LOW, then OK, and keeps names in A-Z order inside each group.
+# The Materials list shows OK first, then LOW, then OUT (Ryan's test, 2026-11-26), and keeps names in A-Z order inside each group.
 def test_materials_list_is_sorted_by_urgency(admin, database_file):
     connection = sqlite3.connect(database_file)
     connection.executemany(
@@ -248,8 +248,8 @@ def test_materials_list_is_sorted_by_urgency(admin, database_file):
     connection.commit()
     connection.close()
     page = admin.get("/materials/").get_data(as_text=True)
-    expected_order = ["ABS", "ZZZ Resin", "PETG", "AAA Nuts", "PLA Basic"]
-    positions = [page.index("<td>" + name) for name in expected_order]
+    expected_order = ["AAA Nuts", "PLA Basic", "PETG", "ABS", "ZZZ Resin"]     # OK first, then LOW, then OUT (Ryan's test, 2026-11-26)
+    positions = [page.index('data-label="Name">' + name) for name in expected_order]
     assert positions == sorted(positions)
 
 
@@ -358,3 +358,108 @@ def test_dropping_again_after_restocking_saves_a_second_event(employee, database
 def test_refused_used_saves_no_event(employee, database_file):
     employee.post("/materials/M1/record/used", data={"quantity": "5000"})      # more than in stock
     assert count_events(database_file) == 0
+
+
+# ---------- Add material with its supplier (Admin only, all optional) ----------
+
+MATERIAL_BOXES = {"name": "Nylon", "material_type": "Nylon", "colour": "Black", "unit": "g",
+                  "starting_quantity": "0", "reorder_level": "500"}
+OFFER_BOXES = {"pack_size": "1000", "price_per_pack_myr": "88.50", "minimum_order_packs": "2",
+               "shipping_cost_myr": "12", "lead_time_days": "3"}
+NEW_SUPPLIER_BOXES = {"supplier_choice": "new", "new_name": "Borneo Filament", "new_supplier_type": "ONLINE",
+                      "new_phone": "082-123456", "new_email": "sales@example.com"}
+
+
+# Counts the rows of one table in the temporary database.
+def count_rows(database_file, table_name):
+    return ask_database(database_file, f"SELECT COUNT(*) FROM {table_name}")
+
+
+def test_add_material_with_a_new_supplier_saves_everything(admin, database_file):
+    reply = admin.post("/materials/new", data={**MATERIAL_BOXES, **NEW_SUPPLIER_BOXES, **OFFER_BOXES})
+    assert reply.status_code == 302
+    assert ask_database(database_file, "SELECT supplier_type FROM suppliers WHERE name = 'Borneo Filament'") == "ONLINE"
+    assert ask_database(database_file, "SELECT phone FROM suppliers WHERE name = 'Borneo Filament'") == "082-123456"
+    offer = sqlite3.connect(database_file).execute(
+        "SELECT o.pack_unit, o.pack_size, o.price_per_pack_myr, o.minimum_order_packs, o.shipping_cost_myr, "
+        "o.lead_time_days FROM supplier_offers o JOIN materials m ON m.id = o.material_id "
+        "JOIN suppliers s ON s.id = o.supplier_id WHERE m.name = 'Nylon' AND s.name = 'Borneo Filament'").fetchone()
+    assert offer == ("g", 1000.0, 88.5, 2, 12.0, 3)          # the offer takes the material's unit
+    for action in ("MATERIAL_ADDED", "SUPPLIER_ADDED", "OFFER_ADDED"):
+        assert ask_database(database_file, "SELECT COUNT(*) FROM activity_log WHERE action = ?", (action,)) == 1
+
+
+def test_new_material_and_supplier_appear_in_find_supplier(admin, database_file):
+    admin.post("/materials/new", data={**MATERIAL_BOXES, **NEW_SUPPLIER_BOXES, **OFFER_BOXES})
+    material_id = ask_database(database_file, "SELECT id FROM materials WHERE name = 'Nylon'")
+    page = admin.get(f"/suggest/{material_id}").get_data(as_text=True)
+    assert "Borneo Filament" in page
+
+
+def test_add_material_with_an_existing_supplier_adds_only_an_offer(admin, database_file):
+    suppliers_before = count_rows(database_file, "suppliers")
+    admin.post("/materials/new", data={**MATERIAL_BOXES, "supplier_choice": "S1", **OFFER_BOXES})
+    assert count_rows(database_file, "suppliers") == suppliers_before
+    assert ask_database(database_file, "SELECT COUNT(*) FROM supplier_offers o JOIN materials m ON m.id = o.material_id "
+                                       "WHERE m.name = 'Nylon' AND o.supplier_id = 'S1'") == 1
+
+
+def test_no_supplier_chosen_ignores_the_supplier_boxes(admin, database_file):
+    admin.post("/materials/new", data={**MATERIAL_BOXES, "supplier_choice": "", "new_name": "Ignored", **OFFER_BOXES})
+    assert ask_database(database_file, "SELECT COUNT(*) FROM materials WHERE name = 'Nylon'") == 1
+    assert ask_database(database_file, "SELECT COUNT(*) FROM suppliers WHERE name = 'Ignored'") == 0
+    assert count_rows(database_file, "supplier_offers") == 1             # only the one from the fixture
+
+
+@pytest.mark.parametrize("changes,words", [
+    ({"price_per_pack_myr": "abc"}, "price as a number"),
+    ({"price_per_pack_myr": "-5"}, "price must be a number"),
+    ({"lead_time_days": ""}, "lead time in days as a number"),
+    ({"minimum_order_packs": "0"}, "minimum order must be a number"),
+    ({"new_name": ""}, "fill in the supplier name"),
+    ({"new_name": "Shop" * 40}, "too long"),
+    ({"new_supplier_type": "SPACE"}, "ONLINE or LOCAL"),
+    ({"new_name": "shop"}, "already exists"),        # the fixture already has a supplier called "Shop"
+])
+def test_bad_supplier_boxes_save_nothing_and_explain_in_plain_words(admin, database_file, changes, words):
+    materials_before = count_rows(database_file, "materials")
+    suppliers_before = count_rows(database_file, "suppliers")
+    reply = admin.post("/materials/new", data={**MATERIAL_BOXES, **NEW_SUPPLIER_BOXES, **OFFER_BOXES, **changes})
+    assert reply.status_code == 400 and words in reply.get_data(as_text=True)
+    assert count_rows(database_file, "materials") == materials_before
+    assert count_rows(database_file, "suppliers") == suppliers_before
+
+
+def test_problem_re_shows_the_typed_supplier_details(admin):
+    page = admin.post("/materials/new", data={**MATERIAL_BOXES, **NEW_SUPPLIER_BOXES, **OFFER_BOXES,
+                                              "price_per_pack_myr": "abc"}).get_data(as_text=True)
+    assert "Borneo Filament" in page and "082-123456" in page and "abc" in page
+
+
+def test_unknown_or_switched_off_supplier_is_refused(admin, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type, is_active) VALUES ('S9', 'Closed', 'LOCAL', 0)")
+    connection.commit()
+    connection.close()
+    for supplier_id in ("S9", "nobody"):
+        reply = admin.post("/materials/new", data={**MATERIAL_BOXES, "supplier_choice": supplier_id, **OFFER_BOXES})
+        assert reply.status_code == 400 and "choose a supplier from the list" in reply.get_data(as_text=True)
+    assert ask_database(database_file, "SELECT COUNT(*) FROM materials WHERE name = 'Nylon'") == 0
+
+
+def test_form_lists_active_suppliers_only(admin, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type, is_active) VALUES ('S9', 'Closed Shop', 'LOCAL', 0)")
+    connection.commit()
+    connection.close()
+    page = admin.get("/materials/new").get_data(as_text=True)
+    assert "Who sells it?" in page and "Shop (LOCAL)" in page and "Closed Shop" not in page
+
+
+def test_employee_cannot_add_a_material_or_supplier_this_way(employee, database_file):
+    suppliers_before = count_rows(database_file, "suppliers")
+    assert employee.get("/materials/new").status_code == 403
+    reply = employee.post("/materials/new", data={**MATERIAL_BOXES, **NEW_SUPPLIER_BOXES, **OFFER_BOXES})
+    assert reply.status_code == 403
+    assert count_rows(database_file, "suppliers") == suppliers_before
+    assert ask_database(database_file, "SELECT COUNT(*) FROM materials WHERE name = 'Nylon'") == 0
