@@ -115,7 +115,13 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | What we prove | Guide rule | Result |
 |---|---|---|
 | Home boxes show total, LOW and OUT counts, with the words LOW and OUT | F2, Section 8 | Pass |
-| "Needs attention" lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
+| "Notifications" (was "Needs attention") lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
+| Purchases per material: RECEIVED lines per month with the unit; no money in the data (both roles) | F7 | Pass |
+| Removed 2026-11-26: low-stock events, spending per supplier and spending per material charts; their addresses answer 404 and the page has none of them | F7 | Pass |
+| Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or price comparison | F7, Sec 4 | Pass |
+| CSV lists purchases and spending per material (Admin only) | F7 | Pass |
+| Price comparison charts: numbers per kg / litre and per piece, the newest purchase is the price last paid, offer with no purchase kept, nothing for materials with neither; Admin only (Employee 403, no chart on the Employee page). The table with the same numbers was removed 2026-11-26 | F7 | Pass |
+| Admin versus Employee table (ROLE_DIFFERENCES.md): 24 rows proven against the real website, and the page says the same as the proof | Sec 4, 13 | Pass |
 | Admin Home has the money box; Employee Home has no money box and no "MYR" anywhere | F2, Section 4, 14 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |
 | Not logged in is sent to login on every statistics address | Section 4 | Pass |
@@ -123,8 +129,11 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Employee chart data (usage, delivery time, low-stock) contains no price words or numbers | Section 4, 14 | Pass |
 | Usage chart adds USED rows only, by month and by week (week starts Monday) | F7 | Pass |
 | A movement at 17:00 UTC on 31 Oct counts in November (Malaysia time, UTC+8) | Section 15 | Pass |
-| Average delivery time per supplier ignores switched-off offers | F7 | Pass |
-| Spending and low-stock events show "Not set up yet" until the team confirms the method | Rule R4 | Pass |
+| Average delivery time per supplier (used by the CSV) ignores switched-off offers | F7 | Pass |
+| Statistics sidebar: Employee sees 3 items and no price, no download, no "MYR"; Admin sees 5 (price comparison and CSV too); only the first statistic is shown at the start; the script switches between them | F7, Sec 4 | Pass |
+| Delivery ranking: fastest first, ties share a rank (1, 1, 3), switched-off offers and suppliers left out, fastest offer counts, all-materials average, unknown material empty; material list; both roles, no money; the old chart and address are gone | F7 | Pass |
+| Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop). The chart that counted them was removed on 2026-11-26; the events are still saved | F5 | Pass |
+| Money spent = real "Total paid" from Record received, per supplier, Malaysia-time month | F2, F7 | Pass |
 | PROPOSED spending method (received stock x cheapest offer) and PROPOSED low-event method (drop from OK) calculate as written | R4 (switched off) | Pass |
 | Money prints as "MYR 72.00"; CSV cells cannot run as spreadsheet formulas | Section 5 | Pass |
 

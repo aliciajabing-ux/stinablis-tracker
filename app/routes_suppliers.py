@@ -150,7 +150,8 @@ def get_material_choices(database):
 def supplier_list():
     admin_view = can_manage_suppliers(get_current_user())
     query = "SELECT * FROM suppliers" + ("" if admin_view else " WHERE is_active = 1") + " ORDER BY name"
-    return render_template("suppliers.html", suppliers=get_db().execute(query).fetchall())
+    return render_template("suppliers.html", suppliers=get_db().execute(query).fetchall(),
+                           can_manage=admin_view)
 
 
 # Shows one supplier with contact details and the materials it sells.

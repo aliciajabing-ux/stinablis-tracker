@@ -237,6 +237,22 @@ def test_remove_keeps_the_row_and_history(admin, database_file):
 
 # ---------- Search and filter (F3) ----------
 
+# The Materials list shows OUT first, then LOW, then OK, and keeps names in A-Z order inside each group.
+def test_materials_list_is_sorted_by_urgency(admin, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.executemany(
+        "INSERT INTO materials (id, name, material_type, colour, unit, quantity_on_hand, reorder_level) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [("M4", "AAA Nuts", "Hardware", "Steel", "pcs", 900, 100),     # OK, first A-Z
+         ("M5", "ZZZ Resin", "Resin", "Grey", "ml", 0, 100)])           # OUT, last A-Z
+    connection.commit()
+    connection.close()
+    page = admin.get("/materials/").get_data(as_text=True)
+    expected_order = ["ABS", "ZZZ Resin", "PETG", "AAA Nuts", "PLA Basic"]
+    positions = [page.index("<td>" + name) for name in expected_order]
+    assert positions == sorted(positions)
+
+
 def test_search_and_status_filter(employee):
     page = employee.get("/materials/?q=petg").get_data(as_text=True)
     assert "PETG" in page and "PLA Basic" not in page
@@ -248,6 +264,100 @@ def test_search_and_status_filter(employee):
 
 def test_search_treats_percent_as_plain_letter(employee):
     assert "No materials found" in employee.get("/materials/?q=%25").get_data(as_text=True)
+
+
+# ---------- Record received: supplier and total paid (Admin only; feeds the "money spent" numbers) ----------
+
+def test_admin_received_saves_supplier_and_total_paid(admin, database_file):
+    reply = admin.post("/materials/M1/record/received",
+                       data={"quantity": "1000", "supplier_id": "S1", "total_cost": "75.50"})
+    assert reply.status_code == 302
+    row = ask_database(database_file, "SELECT supplier_id || '|' || total_cost_myr FROM stock_movements "
+                                      "WHERE movement_type = 'RECEIVED'")
+    assert row == "S1|75.5"
+    log = ask_database(database_file, "SELECT details FROM activity_log WHERE action = 'STOCK_RECEIVED'")
+    assert "Paid MYR 75.50 to Shop" in log
+
+
+def test_received_without_supplier_or_cost_still_works_for_both_roles(admin, employee, database_file):
+    assert admin.post("/materials/M1/record/received", data={"quantity": "10"}).status_code == 302
+    assert employee.post("/materials/M1/record/received", data={"quantity": "10"}).status_code == 302
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements WHERE total_cost_myr IS NOT NULL") == 0
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 820
+
+
+@pytest.mark.parametrize("form", [
+    {"quantity": "100", "supplier_id": "S1", "total_cost": "50"},
+    {"quantity": "100", "total_cost": "50"},
+    {"quantity": "100", "supplier_id": "S1"},
+])
+def test_employee_typing_money_is_refused_and_nothing_changes(employee, database_file, form):
+    assert employee.post("/materials/M1/record/received", data=form).status_code == 403
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 800
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements") == 0
+
+
+@pytest.mark.parametrize("form", [
+    {"quantity": "100", "total_cost": "50"},                                    # money but no supplier
+    {"quantity": "100", "supplier_id": "S1", "total_cost": "abc"},              # letters
+    {"quantity": "100", "supplier_id": "S1", "total_cost": "-5"},               # negative
+    {"quantity": "100", "supplier_id": "NOPE", "total_cost": "5"},              # unknown supplier
+])
+def test_admin_bad_money_input_is_rejected_and_changes_nothing(admin, database_file, form):
+    assert admin.post("/materials/M1/record/received", data=form).status_code == 400
+    assert ask_database(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M1'") == 800
+    assert ask_database(database_file, "SELECT COUNT(*) FROM stock_movements") == 0
+
+
+def test_money_boxes_show_for_admin_received_only(admin, employee, database_file):
+    admin.post("/materials/M1/record/used", data={"quantity": "100", "supplier_id": "S1", "total_cost": "9"})
+    assert ask_database(database_file, "SELECT total_cost_myr FROM stock_movements") is None
+    assert 'name="total_cost"' in admin.get("/materials/M1/record/received").get_data(as_text=True)
+    assert 'name="total_cost"' not in admin.get("/materials/M1/record/used").get_data(as_text=True)
+    assert 'name="total_cost"' not in employee.get("/materials/M1/record/received").get_data(as_text=True)
+
+
+# ---------- Low-stock events (feeds the Statistics line chart) ----------
+
+def count_events(database_file):
+    return ask_database(database_file, "SELECT COUNT(*) FROM low_stock_events")
+
+
+def test_used_that_drops_ok_to_low_saves_one_event(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "400"})      # 800 -> 400 (LOW, level 500)
+    assert count_events(database_file) == 1
+    row = ask_database(database_file, "SELECT material_id || '|' || status || '|' || quantity_at_event || '|' || "
+                                      "reorder_level_at_event FROM low_stock_events")
+    assert row == "M1|LOW|400.0|500.0"
+    linked = ask_database(database_file, "SELECT m.movement_type FROM low_stock_events e "
+                                         "JOIN stock_movements m ON m.id = e.movement_id")
+    assert linked == "USED"                       # the event points to the Record used line that caused it
+    assert ask_database(database_file, "SELECT COUNT(*) FROM activity_log WHERE action = 'LOW_STOCK_EVENT'") == 1
+
+
+def test_further_drops_while_low_do_not_save_more_events(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "400"})      # OK -> LOW (event)
+    employee.post("/materials/M1/record/used", data={"quantity": "100"})      # LOW -> LOW
+    employee.post("/materials/M1/record/used", data={"quantity": "300"})      # LOW -> OUT (not counted)
+    assert count_events(database_file) == 1
+
+
+def test_used_that_stays_ok_and_received_stock_save_no_event(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "100"})      # 700, still OK
+    employee.post("/materials/M2/record/received", data={"quantity": "1000"})
+    assert count_events(database_file) == 0
+
+
+def test_dropping_again_after_restocking_saves_a_second_event(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "400"})
+    employee.post("/materials/M1/record/received", data={"quantity": "1000"})  # back to 1400 (OK)
+    employee.post("/materials/M1/record/used", data={"quantity": "1000"})      # OK -> LOW again
+    assert count_events(database_file) == 2
+
+
+def test_refused_used_saves_no_event(employee, database_file):
+    employee.post("/materials/M1/record/used", data={"quantity": "5000"})      # more than in stock
+    assert count_events(database_file) == 0
 
 
 # ---------- Add material with its supplier (Admin only, all optional) ----------

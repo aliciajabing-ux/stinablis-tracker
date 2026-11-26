@@ -1,51 +1,151 @@
-{# WHAT THIS FILE DOES: The Statistics page: usage, low-stock, delivery-time and (Admin only) spending charts.
-   WHO CAN USE IT: Both. Spending and the download button are only drawn for Admin (the guide keeps these Admin only); the server also blocks Employees. #}
+{# WHAT THIS FILE DOES: The Statistics page: usage and purchases charts, the delivery ranking and (Admin only) the supplier price
+   comparison. Every chart names its unit (g, ml, pcs, days) or MYR in the axis title and pop-up. (The low-stock events,
+   spending per supplier and spending per material charts were removed on 2026-11-26.)
+   WHO CAN USE IT: Both. Everything with money (price comparison) and the download button is only drawn for
+   Admin (the guide keeps these Admin only); the server also blocks Employees.
+   The sidebar shows one statistic at a time (decision 2026-11-26), so nobody scrolls down the page. #}
 {% extends "base.html" %}
 {% block title %}Statistics - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
-  .panel { background:#fff; border-radius:6px; padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
+  /* Layout only: the colours and shapes come from app/static/theme.css. */
+  .panel { padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
   .chart-area { position:relative; width:100%; height:300px; }
-  .button, .panel select { padding:12px 18px; font-size:1rem; border-radius:6px; }
-  .button { display:inline-block; background:#1a5fb4; color:#fff; text-decoration:none; }
-  .waiting { background:#fff7e0; padding:10px; border-radius:6px; }
+  .button, .panel select { padding:12px 18px; font-size:1rem; }
+  .button { display:inline-block; text-decoration:none; }
+  .note { font-size:.9rem; }
+  /* The sidebar: one statistic is shown at a time, so nobody scrolls down the page. Colours come from the theme (var(--...)). */
+  .stats-layout { display:grid; grid-template-columns:210px minmax(0, 1fr); gap:20px; align-items:start; }
+  .stats-nav { position:sticky; top:16px; display:flex; flex-direction:column; gap:4px; }
+  .stats-nav-title { margin:0 0 6px; color:var(--moss); font-family:var(--font-mono); font-size:.85rem; }
+  .stats-nav a { display:flex; align-items:center; min-height:44px; box-sizing:border-box; padding:8px 14px; border-radius:10px;
+                 color:var(--text); text-decoration:none; font-family:var(--font-mono); font-size:.9rem; }
+  .stats-nav a:hover, .stats-nav a:focus { background:var(--eerie-light); }
+  .stats-nav a.active { background:var(--orange-wheel); color:var(--smoky-black); font-weight:700; }
+  .stats-nav a.stats-export { margin-top:10px; border:2px solid var(--text); }
+  .stats-nav a.stats-export:hover { background:var(--text); color:var(--smoky-black); }
+  .stats-main { min-width:0; }
+  @media (max-width: 720px) {
+    .stats-layout { display:block; }
+    .stats-nav { position:sticky; top:0; z-index:5; flex-direction:row; overflow-x:auto; gap:6px; padding:8px 0; margin-bottom:12px;
+                 background:var(--eerie-black); }
+    .stats-nav-title { display:none; }
+    .stats-nav a { flex:0 0 auto; white-space:nowrap; }
+    .stats-nav a.stats-export { margin-top:0; }
+  }
+  /* The delivery ranking: colours come from the theme's colour list (var(--...)). */
+  .ranking { list-style:none; margin:16px 0 0; padding:0; }
+  .ranking li { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .ranking li:last-child { border-bottom:0; }
+  .rank-number { flex:0 0 auto; min-width:2.3rem; height:2.3rem; box-sizing:border-box; border-radius:50%; display:inline-flex;
+                 align-items:center; justify-content:center; font-weight:700; border:2px solid var(--moss); }
+  .ranking li.first .rank-number { background:var(--orange-wheel); color:var(--smoky-black); border-color:var(--orange-wheel); }
+  .rank-name { flex:1 1 220px; font-weight:700; }
+  .rank-fastest { font-family:var(--font-mono); font-size:.85rem; color:var(--orange-wheel); font-weight:700; }
+  .rank-meta { flex:0 1 auto; color:var(--moss); }
 </style>
 <h1>Statistics</h1>
-<p>Simple charts of how materials are used. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
-<div class="panel">
+<p>Simple charts of how materials are used and bought. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
+<div class="stats-layout">
+<nav class="stats-nav" aria-label="Statistics menu">
+  <p class="stats-nav-title">Choose a statistic</p>
+  <a id="nav-usage" href="#usage" class="active" aria-current="true">Usage per material</a>
+  <a id="nav-purchases" href="#purchases">Purchases per material</a>
+  <a id="nav-ranking" href="#ranking">Delivery ranking</a>
+  {% if show_admin_tools %}<a id="nav-price" href="#price">Supplier price comparison</a>
+  <a class="stats-export" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a>{% endif %}
+</nav>
+<div class="stats-main">
+<div class="panel" id="panel-usage">
   <h2>Usage per material</h2>
-  <p>How much was used in each week or month.</p>
+  <p>How much was used in each week or month. Each bar shows its own unit (g, ml or pcs): point at a bar to read it.</p>
   <label for="period">Show by: </label>
   <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
 </div>
-<div class="panel">
-  <h2>Low-stock events per month</h2>
-  {% if low_events_ready %}<div class="chart-area"><canvas id="low-chart" aria-label="Low-stock events line chart"></canvas></div>
-  {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how a low-stock event is counted.</p>{% endif %}
+<div class="panel" id="panel-purchases" hidden>
+  <h2>Purchases per material</h2>
+  <p>How much stock was received (recorded with "Record received") in each of the last 6 months. Each bar shows its own unit (g, ml or pcs).</p>
+  <div class="chart-area"><canvas id="purchases-chart" aria-label="Purchases per material bar chart"></canvas></div>
+  <p class="waiting" id="purchases-empty" hidden>No stock was received in the last 6 months.</p>
 </div>
-<div class="panel">
-  <h2>Average delivery time per supplier</h2>
-  <p>Days from ordering to arriving. This is an average over what each supplier sells.</p>
-  <div class="chart-area"><canvas id="lead-chart" aria-label="Average delivery days bar chart"></canvas></div>
+<div class="panel" id="panel-ranking" hidden>
+  <h2>Delivery ranking</h2>
+  <p>Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. The days are what each supplier
+    says; the arrival date is today plus those days (an estimate).</p>
+  <label for="ranking-material">Rank suppliers for: </label>
+  <select id="ranking-material">
+    <option value="">All materials (average)</option>
+    {% for material in ranking_materials %}<option value="{{ material.id }}">{{ material.label }}</option>{% endfor %}
+  </select>
+  <ol class="ranking" id="ranking-list" aria-live="polite"></ol>
+  <p class="waiting" id="ranking-empty" hidden>No supplier sells this yet.</p>
 </div>
 {% if show_admin_tools %}
-<div class="panel">
-  <h2>Spending per supplier this month</h2>
-  {% if spending_ready %}<div class="chart-area"><canvas id="spending-chart" aria-label="Spending per supplier chart"></canvas></div>
-  {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how money spent is counted.</p>{% endif %}
+<div class="panel" id="panel-price" hidden>
+  <h2>Supplier price comparison</h2>
+  <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.
+    Point at a bar to see the supplier and the date.</p>
+  <h3>Materials priced per kg or per litre</h3>
+  <div class="chart-area"><canvas id="price-chart-weight" aria-label="Price comparison per kg or per litre bar chart"></canvas></div>
+  <p class="waiting" id="price-chart-weight-empty" hidden>No offers or purchases for these materials yet.</p>
+  <h3>Materials priced per piece</h3>
+  <div class="chart-area"><canvas id="price-chart-piece" aria-label="Price comparison per piece bar chart"></canvas></div>
+  <p class="waiting" id="price-chart-piece-empty" hidden>No offers or purchases for these materials yet.</p>
+  <p class="note">These are estimates. The offer price is before shipping. The price paid is the total typed on "Record received"
+    (which may include shipping) divided by the quantity, so it can look higher.</p>
 </div>
-<p><a class="button" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a></p>
 {% endif %}
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
   var urls = {
     usage: "{{ url_for('stats.usage_data') }}",
-    low: "{{ url_for('stats.low_stock_data') }}",
-    lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools and spending_ready %},
-    spending: "{{ url_for('stats.spending_data') }}"{% endif %}
+    purchases: "{{ url_for('stats.purchases_data') }}",
+    ranking: "{{ url_for('stats.delivery_ranking_data') }}"{% if show_admin_tools %},
+    priceComparison: "{{ url_for('stats.price_comparison_data') }}"{% endif %}
   };
   var charts = {};
+  // Chart colours (team palette on the dark theme). Words (legend, labels, tooltips) always stay, never colour alone.
+  var TEXT_COLOUR = "#ECE9DF";       // axis labels, legend text, titles
+  var GRID_COLOUR = "#3a3933";       // grid lines
+  var PALETTE = ["#EB4604", "#F77E0D", "#99A57D", "#ECE9DF", "#6f7a5a"];   // hot orange, orange wheel, moss, light, dark moss
+  if (typeof Chart !== "undefined") {
+    Chart.defaults.color = TEXT_COLOUR;
+    Chart.defaults.font.family = '"Space Grotesk", "Segoe UI", Arial, sans-serif';   // same font as the page
+    Chart.defaults.borderColor = GRID_COLOUR;
+    Chart.defaults.scale.grid.color = GRID_COLOUR;
+    Chart.defaults.scale.ticks.color = TEXT_COLOUR;
+    Chart.defaults.scale.title.color = TEXT_COLOUR;
+    Chart.defaults.plugins.legend.labels.color = TEXT_COLOUR;
+    Chart.defaults.plugins.title.color = TEXT_COLOUR;
+  }
+  // Gives each bar group a palette colour (the colours repeat after five materials; the legend and tooltip name each one).
+  function colourDatasets(chartData) {
+    chartData.datasets.forEach(function (dataset, index) {
+      dataset.backgroundColor = PALETTE[index % PALETTE.length];
+    });
+    return chartData;
+  }
+  // Returns a number written the way people read it, for example 1,250.5.
+  function formatNumber(value) {
+    return Number(value).toLocaleString("en-US", {maximumFractionDigits: 2});
+  }
+  // Returns the settings for an axis title (the words printed beside an axis, such as "Quantity (g, ml or pcs)").
+  function axisTitle(text) {
+    return {display: true, text: text};
+  }
+  // Returns the pop-up line for a quantity bar, for example "PLA Basic White: 250 g" (each material carries its own unit).
+  function quantityTooltip(context) {
+    var dataset = context.dataset;
+    return (dataset.name || dataset.label) + ": " + formatNumber(context.parsed.y) + " " + (dataset.unit || "");
+  }
+  // Returns the chart settings for the usage and purchases bar charts (axis titles and the unit in the pop-up).
+  function quantityOptions(yText, xText) {
+    return {scales: {y: {beginAtZero: true, title: axisTitle(yText)}, x: {title: axisTitle(xText)}},
+            plugins: {tooltip: {callbacks: {label: quantityTooltip}}}};
+  }
   // Draws (or redraws) one chart inside the canvas with the given id.
   function drawChart(canvasId, config) {
     var canvas = document.getElementById(canvasId);
@@ -54,32 +154,116 @@
     config.options = Object.assign({responsive: true, maintainAspectRatio: false}, config.options || {});
     charts[canvasId] = new Chart(canvas, config);
   }
+  // Shows or hides the "nothing to show" sentence under a chart.
+  function showEmptyNote(noteId, isEmpty) {
+    var note = document.getElementById(noteId);
+    if (note) { note.hidden = !isEmpty; }
+  }
   // Loads the usage numbers for the chosen period and draws the bar chart.
   function loadUsage() {
     var period = document.getElementById("period").value;
+    var periodWords = period === "week" ? "Week (starting Monday)" : "Month";
     fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("usage-chart", {type: "bar", data: d});
+      drawChart("usage-chart", {type: "bar", data: colourDatasets(d),
+                                options: quantityOptions("Quantity used (g, ml or pcs)", periodWords)});
     });
   }
   document.getElementById("period").addEventListener("change", loadUsage);
   loadUsage();
-  fetch(urls.lead).then(function (r) { return r.json(); }).then(function (d) {
-    drawChart("lead-chart", {type: "bar", options: {indexAxis: "y"},
-      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: "#1a5fb4"}]}});
+  fetch(urls.purchases).then(function (r) { return r.json(); }).then(function (d) {
+    showEmptyNote("purchases-empty", d.datasets.length === 0);
+    drawChart("purchases-chart", {type: "bar", data: colourDatasets(d),
+                                  options: quantityOptions("Quantity received (g, ml or pcs)", "Month")});
   });
-  if (document.getElementById("low-chart")) {
-    fetch(urls.low).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("low-chart", {type: "line",
-        data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: "#e66100"}]}});
+  // Draws the delivery ranking: one line per supplier, fastest first (the words come from the server, so they are set as plain text).
+  function showRanking(ranking) {
+    var list = document.getElementById("ranking-list");
+    list.innerHTML = "";
+    document.getElementById("ranking-empty").hidden = ranking.rows.length > 0;
+    ranking.rows.forEach(function (row) {
+      var item = document.createElement("li");
+      if (row.rank === 1) { item.className = "first"; }
+      var number = document.createElement("span");
+      number.className = "rank-number";
+      number.textContent = row.rank;
+      var name = document.createElement("span");
+      name.className = "rank-name";
+      name.textContent = row.supplier + " (" + row.type + ")";
+      var meta = document.createElement("span");
+      meta.className = "rank-meta";
+      meta.textContent = row.days_text + ", arrives about " + row.arrival;
+      item.appendChild(number);
+      item.appendChild(name);
+      if (row.rank === 1) {
+        var fastest = document.createElement("span");
+        fastest.className = "rank-fastest";
+        fastest.textContent = "Fastest";
+        item.appendChild(fastest);
+      }
+      item.appendChild(meta);
+      list.appendChild(item);
     });
   }
-  {% if show_admin_tools and spending_ready %}
-  if (urls.spending) {
-    fetch(urls.spending).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("spending-chart", {type: "bar",
-        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: "#26a269"}]}});
-    });
+  // Loads the ranking for the chosen material (or all materials) and shows it.
+  function loadRanking() {
+    var material = document.getElementById("ranking-material").value;
+    fetch(urls.ranking + "?material=" + encodeURIComponent(material)).then(function (r) { return r.json(); }).then(showRanking);
   }
+  document.getElementById("ranking-material").addEventListener("change", loadRanking);
+  loadRanking();
+  {% if show_admin_tools %}
+  // Returns money written the same way as the rest of the app, for example MYR 1,234.50.
+  function formatMoney(value) {
+    return "MYR " + Number(value).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  // Returns a short money label for an axis, for example MYR 1,200 (no cents, so the axis stays tidy).
+  function formatMoneyShort(value) {
+    return "MYR " + Number(value).toLocaleString("en-US", {maximumFractionDigits: 0});
+  }
+  // Draws one price comparison chart (cheapest offer next to the price last paid) for a group of materials. Small prices per piece keep their cents on the axis.
+  function drawPriceChart(canvasId, noteId, group, axisText, centsOnAxis) {
+    showEmptyNote(noteId, group.labels.length === 0);
+    document.getElementById(canvasId).parentNode.style.height = Math.max(220, group.labels.length * 52 + 120) + "px";
+    drawChart(canvasId, {type: "bar",
+      data: {labels: group.labels, datasets: [
+        {label: "Cheapest supplier offer", data: group.offer, backgroundColor: PALETTE[2]},
+        {label: "Price last paid", data: group.paid, backgroundColor: PALETTE[0]}]},
+      options: {indexAxis: "y",
+                scales: {x: {beginAtZero: true, title: axisTitle(axisText),
+                             ticks: {maxTicksLimit: 6, callback: function (value) { return centsOnAxis ? formatMoney(value) : formatMoneyShort(value); }}},
+                         y: {ticks: {autoSkip: false}}},
+                plugins: {tooltip: {callbacks: {label: function (context) {
+                  var i = context.dataIndex;
+                  var text = context.dataset.label + ": " + formatMoney(context.parsed.x) + " " + group.words[i];
+                  if (context.datasetIndex === 0) { return text + " (" + group.offer_supplier[i] + ")"; }
+                  return text + " (" + group.paid_supplier[i] + ", " + group.paid_date[i] + ")";
+                }}}}}});
+  }
+  // Loads the price comparison numbers and draws both charts.
+  fetch(urls.priceComparison).then(function (r) { return r.json(); }).then(function (d) {
+    drawPriceChart("price-chart-weight", "price-chart-weight-empty", d.per_kg_litre, "MYR per kg or per litre", false);
+    drawPriceChart("price-chart-piece", "price-chart-piece-empty", d.per_piece, "MYR per piece", true);
+  });
   {% endif %}
+  // The sidebar: show one statistic at a time (the address keeps the choice, for example /stats/#purchases).
+  var STATISTIC_NAMES = ["usage", "purchases", "ranking"{% if show_admin_tools %}, "price"{% endif %}];
+  // Shows the statistic with this name, hides the others, and marks it in the sidebar. An unknown name shows the first one.
+  function showStatistic(name) {
+    if (STATISTIC_NAMES.indexOf(name) === -1) { name = STATISTIC_NAMES[0]; }
+    STATISTIC_NAMES.forEach(function (statisticName) {
+      var link = document.getElementById("nav-" + statisticName);
+      document.getElementById("panel-" + statisticName).hidden = statisticName !== name;
+      link.className = statisticName === name ? "active" : "";
+      if (statisticName === name) { link.setAttribute("aria-current", "true"); } else { link.removeAttribute("aria-current"); }
+    });
+    // A chart drawn while its panel was hidden has no size yet, so every chart measures itself again.
+    Object.keys(charts).forEach(function (chartId) { charts[chartId].resize(); });
+  }
+  // Reads the choice from the address (the part after #) and shows it.
+  function showStatisticFromAddress() {
+    showStatistic(window.location.hash.replace("#", ""));
+  }
+  window.addEventListener("hashchange", showStatisticFromAddress);
+  showStatisticFromAddress();
 </script>
 {% endblock %}

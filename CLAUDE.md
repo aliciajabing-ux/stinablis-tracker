@@ -58,6 +58,10 @@ Web application (a website that only staff can log into) that:
   That information comes from our interview with the founder.
 - [CONFIRM WITH FOUNDER] List of materials they currently use.
 - [CONFIRM WITH FOUNDER] Which suppliers are online and which are local.
+- [CONFIRM WITH FOUNDER] Whether staff also need to track small hardware
+  pieces counted in pcs (for example screws, springs, magnets, fidget
+  clickers, keychain rings). Until the founder answers, such items appear
+  ONLY in the sample/demo data, clearly named as samples (Rule R4).
 
 
 ---------------------------------------------------------------------
@@ -173,8 +177,8 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
         * Estimated money spent this month (Admin and Employee, view only)
-    - A "Needs attention" list: the low and out-of-stock materials, with
-      a button to see the suggested supplier.
+    - A "Notifications" list (called "Needs attention" until 2026-11-26): the
+      low and out-of-stock materials, with a button to see the suggested supplier.
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
@@ -183,6 +187,12 @@ F3. MATERIALS SCREEN
     - Search box and filter buttons (for example "show only LOW").
     - Add / edit / delete a material: ADMIN only.
     - "Record used" and "Record received" buttons: everyone.
+    - "Last bought" memory (decision 2026-11-24): each material row and the
+      Record screens show who it was last bought from, how much, the date
+      and (if typed) the total paid in MYR. It is read from the newest
+      RECEIVED line that names a supplier or a cost. The money part follows
+      can_see_prices() (Admin and Employee, view only). Changing prices
+      stays Admin only and the server still answers 403 to anyone else.
 
 F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
     - One row per supplier: name, type (ONLINE or LOCAL), address,
@@ -219,10 +229,40 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
 
 F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Usage per material per week or per month (bar chart).
-    - Number of low-stock events per month (line chart).
-    - Spending per supplier (pie or bar chart) - ADMIN only.
-    - Average lead time per supplier.
-    - Export to spreadsheet (CSV) - ADMIN only.
+    - Delivery ranking (decision 2026-11-26; it replaces the "average lead
+      time per supplier" bar chart): the suppliers ranked from the fastest
+      to the slowest delivery for a material the user chooses, or the
+      average over all materials. It shows the rank, the supplier, ONLINE or
+      LOCAL, the days, and the estimated arrival date (today + the days).
+      Suppliers with the same days share a rank. No money in it: Admin and
+      Employee both see it.
+    - REMOVED on 2026-11-26 (team decision): the "low-stock events per month"
+      line chart, the "spending per supplier this month" chart and the
+      "spending per material" chart are no longer on the Statistics screen.
+      (The Home box "money spent this month" stays. Low-stock events are still
+      saved in the database, they are just not charted.)
+    - Procurement statistics (decision 2026-11-26), all built from the
+      "Record received" lines:
+        * Purchases per material per month, with the unit (g, ml, pcs) -
+          Admin and Employee (no money in it).
+        * Supplier price comparison per material: cheapest supplier offer
+          next to the price last paid, per kg, per litre or per piece -
+          ADMIN only. Shown as two bar charts (per kg or litre, and per
+          piece, because their prices are on very different scales). The
+          table with the same numbers was removed on 2026-11-26 (team
+          decision: it repeated the charts). Estimates: the offer price is
+          before shipping.
+    - Statistics sidebar (decision 2026-11-26): a menu on the left lists the
+      statistics (usage, purchases, delivery ranking, and for the Admin the
+      supplier price comparison). Clicking one shows only that statistic, so
+      nobody has to scroll down the page. The chosen one is marked, and the
+      address keeps it (for example /stats/#purchases) so a refresh or a
+      bookmark opens the same one. The Admin also finds the CSV download in
+      the sidebar. On a phone the menu is a row of buttons across the top.
+    - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
+      and in the pop-up text, never just a bare number.
+    - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
+      spending per material, and the average delivery time per supplier).
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -306,6 +346,11 @@ All of these numbers are ESTIMATES. The screen must say so.
 - Use colours with words too: green = OK, orange = LOW, red = OUT.
   (Do not rely on colour alone; always write the word.)
 - Maximum 3 clicks to any common task.
+- Buttons and links are at least about 44 px tall so a thumb can tap them.
+- Status words are explained once in plain English on the Materials screen:
+  OK = enough, LOW = at or below the reorder level, OUT = none left.
+- Error pages (no permission, page not found, expired form) use plain words
+  and a button back to Home.
 - Mobile-friendly: it should work on a phone or tablet at the printer.
 - Every form shows a short help sentence under the title.
 - Error messages in plain language. Bad: "Error 422 invalid payload".
@@ -447,7 +492,8 @@ C12. Use Git: small commits with clear messages, for example
 ---------------------------------------------------------------------
 Every member must be able to explain, in plain words:
   1. The problem (Section 1) and why it wastes time.
-  2. The three user roles and what each can do.
+  2. The two user roles (Admin and Employee) and what each can do. The table is
+     ROLE_DIFFERENCES.md; the test tests/test_role_differences.py proves it.
   3. One feature end-to-end: for example, "what happens when someone
      clicks Record used?" (Screen -> Server checks permission -> Stock
      number goes down -> Row is written to the history -> If low, the
@@ -488,7 +534,7 @@ GLOSSARY.md must explain every technical word we use, for example:
 [ ] Two suppliers for one material: the one with the shorter lead time
     and lower total cost is listed first.
 [ ] Employee account: can see prices, cannot add or change a supplier.
-[ ] Admin account: sees prices and the spending chart.
+[ ] Admin account: sees prices and the supplier price comparison charts.
 [ ] Estimated arrival date is correct for the lead time (today + days).
 [ ] Malaysia time (UTC+8) shows correctly on every date.
 
@@ -746,6 +792,61 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   CSV export and the spending chart are still Admin only (decision covered
   seeing prices, not exports). Agents A, C, D, E have no log entries yet.
 
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: "money spent" now works.
+  Decision: money spent = the real "Total paid" typed on "Record received", counted per supplier per
+  Malaysia-time month (not a guess from offers). Changes: app/schema.sql (stock_movements gets supplier_id
+  and total_cost_myr, both empty for USED/ADJUSTED), app/routes_materials.py + materials_record.html (Record
+  received has optional "Bought from" list and "Total paid (MYR)"; money needs a supplier; bad input is
+  refused; the activity log line says who was paid), app/routes_stats.py (SPENDING_METHOD_CONFIRMED = True;
+  spending adds up the real totals), sample_data/stock_movements.csv (new columns), tests (117 pass).
+  Home money box: Admin and Employee. Spending chart and CSV: still Admin only. | Low-stock events chart is
+  still off (needs the table from Agents A/C). Team: an existing data/tracker.db needs two lines run once:
+  ALTER TABLE stock_movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id);
+  ALTER TABLE stock_movements ADD COLUMN total_cost_myr REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0);
+  (or delete it and run setup_database.py again for sample data). | Old received lines have no total, so they
+  count as MYR 0 until someone types one. Committed and pushed.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: low-stock events chart works.
+  Team decision: a low-stock event = one "Record used" that drops a material from OK to LOW or OUT; further
+  drops while it stays LOW or OUT do not count again. Changes: app/schema.sql (new table low_stock_events: id,
+  material_id, status_after, quantity_after, reorder_level at that moment, created_at), app/routes_materials.py
+  (Record used writes the event row in the same save as the stock change), app/routes_stats.py
+  (LOW_EVENTS_METHOD_CONFIRMED = True; the chart counts rows per Malaysia-time month; the old "replay history"
+  guess is removed), tests (122 pass). Both roles can see the chart (no money in it). | Team: an existing
+  data/tracker.db needs this once (the table is new): run the CREATE TABLE low_stock_events block from
+  app/schema.sql, or delete the file and run setup_database.py again. | Drops that happened before today have
+  no event rows, so the chart starts counting from now. Committed and pushed.
+
+2026-11-24 | Team decision (recorded by Agent E) | Spending chart and CSV download stay ADMIN ONLY.
+  Employees still SEE prices and the Home money box (view only). Section 5 F7 already says this, so no screen
+  or code change. Existing tests prove it (Employee gets 403 on /stats/export.csv and /stats/data/spending;
+  the Statistics page has no chart or download for Employees). | Next: Agent F test that Employees get 403
+  when typing the supplier and offer edit addresses. | None.
+
+2026-11-24 | Agent F work (done by Agent E at the team's request) | DONE: Employee 403 proof for supplier and
+  offer edit addresses. tests/test_suppliers_suggest.py: the old test sent a half-empty form, so a form check
+  could have stopped it too. New tests send COMPLETE valid forms as an Employee to /suppliers/new,
+  /suppliers/S1/edit, /suppliers/S1/offers/new and /offers/O1/edit: all give 403 and the suppliers, offers and
+  activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
+  Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
+  in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
+
+2026-11-24 | Agent E | DONE: chart colours for the dark theme (only app/templates/stats.html; no change to how
+  any page works). Chart.js text (axis labels, legend, titles) is now #ECE9DF and grid lines #3a3933. Bars and
+  the line use only the palette: usage bars cycle #EB4604, #F77E0D, #99A57D, #ECE9DF, #6f7a5a; delivery time =
+  moss; low-stock line = orange wheel (with round points); spending = hot orange. Legends, axis words and
+  tooltips are unchanged, so colour is never the only clue. Checked in a browser (Admin, Employee, phone width
+  390): text readable, no sideways scroll, charts draw. Full suite on this branch: 128 pass. | Nothing needed
+  from Agent H (theme.css and base.html untouched). | (1) The usage chart can show up to 8 materials but the
+  palette has 5 colours, so colours repeat after the fifth; the legend and the pop-up name when you point at a
+  bar tell them apart. If the team wants 8 clear colours, Agent H must add more palette colours (Rule R3).
+  (2) The dark theme (app/static/theme.css) is NOT on this branch (main-0rpyg5); it is on main-iyvssn. The 146
+  tests also belong to that branch. This branch and main-iyvssn both changed the money-spent columns,
+  low_stock_events, routes_materials.py, routes_stats.py, schema.sql and tests, so merging them will conflict
+  and needs the team to pick one version. (3) On a phone, the long supplier names on the delivery-time chart
+  are cut off on the left (existing behaviour, not caused by this change).
+
+
 2026-11-24 | Agent G (documentation & presentation) | DONE: README.md (short "how to run it":
   venv, pip install, setup_database, set-password, STINABLIS_SECRET_KEY, start, roles and log-in,
   tests, known problems), GLOSSARY.md (about 100 entries, grouped, incl. 403/CSRF/session/cookie/
@@ -958,6 +1059,395 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
 
 2026-11-25 | Agent H (interface and design) | DONE: new colour theme from the team's colour card (dark pages, hot-orange buttons, moss for OK). New file app/static/theme.css holds every colour in one :root list at the top (change a colour there, nowhere else). base.html no longer has inline CSS; it links theme.css. login.html got one extra line linking theme.css. The theme overrides the old inline colours of the other pages from the outside, so no other template or route was changed. Status words stay written (OK moss, LOW orange, OUT orange outline), buttons use dark text on orange for readability, keyboard focus is now visible. Checked in a browser: login, Home, Materials, Statistics. All 146 tests pass. | REQUESTS (Rule R3): Agent E: the Chart.js colours in app/templates/stats.html (blue/red bars, dark grey axis and legend text) are hard to read on the dark page; please use light text (#ECE9DF), grid lines #3a3933 and the palette (#EB4604, #F77E0D, #99A57D). Agents C/D/E and the Users owner: the old inline colours (#fff, #1a5fb4) can be deleted from your templates over time; theme.css wins either way. Not checked in a browser: Suppliers, suggestion, forms, Users pages. | None.
 
+2026-11-24 | Agent E (merge done at the team's request; touches Agent A, B and C files) | DONE: merged
+  main-iyvssn (dark theme, CSRF, Users screen, Agent A's schema) into main-0rpyg5. Team decisions: keep
+  Agent A's database design, and ONLY THE ADMIN types supplier and total paid on "Record received". The 3
+  text clashes (schema.sql, stock_movements.csv, this log) were settled by taking Agent A's schema and
+  sample data and keeping both sets of log entries. Then changed my code to fit: (1) low_stock_events rows
+  now use Agent A's columns (status, quantity_at_event, reorder_level_at_event, movement_id = the USED
+  line that caused it) and each event also writes one activity-log line (LOW_STOCK_EVENT); (2) new rule
+  can_record_purchase_cost in app/permissions.py (Admin only, Rule C7); the money boxes are drawn only for
+  Admin, and an Employee who types supplier or total anyway gets 403 and nothing is saved; (3) tests
+  updated (Employee money = 403, events link to their USED line). Employee "received" lines have no total,
+  so they count as MYR 0 in money spent. Full suite: 169 pass. Also tried with CSRF switched on: Admin
+  save works, Employee with money 403, Employee without money works, Record used writes the event.
+  | Team: existing databases need "python app/setup_database.py upgrade" once (Agent A's command; it adds
+  the two columns and the new table safely). The two ALTER lines in my 2026-11-24 entries are replaced by
+  that command. | Old note: "Employees may type the total" in my earlier entries is no longer true.
+
+
+2026-11-25 | Mark (Agent G) | Reviewed Spoolman and FilaOps on GitHub to borrow practical ideas without copying code: Spoolman shows how to display remaining material clearly, while FilaOps shows how low-stock alerts and reorder planning prevent print jobs from stopping. Where our app helps Stinablis more is tracking filaments, resins, composites, and everyday hardware pieces like screws, springs, magnets, fidget clickers, and keychain rings in one simple web app with supplier cost and delivery-time comparisons. | GLOSSARY.md, PRESENTATION_NOTES.md, and this open-source log are committed and pushed on branch main-o7f8p8. Ready to rebase and re-check the docs once Main Chat! merges the other branches. | sample_data/stock_movements.csv date format and requirements.txt still belong to other/unassigned files under Rule R3.
+
+2026-11-25 | Agent G (documentation & presentation) | Post-merge sync of README.md, GLOSSARY.md and PRESENTATION_NOTES.md against origin/main-iyvssn. I merged that branch into main-o7f8p8 here (code merged cleanly; README, GLOSSARY and CLAUDE.md conflicted). I kept Agent G's README and GLOSSARY, took the integration branch's CLAUDE.md and re-added the 2026-11-25 Mark entry. Verified on the merged code: 146 pass (about 60 seconds); CSRF tokens on all 11 POST forms; Users screen (F8) built; requirements.txt exists; sample dates fixed and covered by tests/test_sample_data.py. Updated the three files (setup step uses requirements.txt, 146 tests, CSRF and Users described as built, date-bug warning removed, a "Why this fits Stinablis" section, and a version 2 answer for questions). VERSION 2 IDEAS (Section 17, not built, not promised): printable labels for racks and shelves; humidity and dry-box alerts for moisture-sensitive filaments in Sarawak's climate; linking material stock to job quoting. | Re-check the three files again after the branches below are merged: the "Not set up yet" money and low-stock-event statements, the Agent F review and the supplier-edit 403 test statements will change. | PROBLEMS: three remote branches were NOT in origin/main-iyvssn when I checked: main-0rpyg5 (money spent from Record received, low-stock events, Employee 403 tests on supplier and offer edit addresses, a decision that spending chart and CSV stay Admin only), main-tq6ebi (Agent D can_manage_suppliers fix) and claude/modest-albattani-0zgw7k (Agent F review tests and bugs F-1 to F-10). origin/main is still at bc665d4. Main Chat!: please confirm where the final merge lives. README now says the money box and low-stock chart are "Not set up yet" because that matches the merged code I tested. The hardware pieces list (screws, springs, magnets, fidget clickers, keychain rings) is still unconfirmed by the founder (Section 16 Q1); the docs say so. Guide text still stale (not mine, R3): Section 6 price_per_unit/shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: "money spent" now works.
+  Decision: money spent = the real "Total paid" typed on "Record received", counted per supplier per
+  Malaysia-time month (not a guess from offers). Changes: app/schema.sql (stock_movements gets supplier_id
+  and total_cost_myr, both empty for USED/ADJUSTED), app/routes_materials.py + materials_record.html (Record
+  received has optional "Bought from" list and "Total paid (MYR)"; money needs a supplier; bad input is
+  refused; the activity log line says who was paid), app/routes_stats.py (SPENDING_METHOD_CONFIRMED = True;
+  spending adds up the real totals), sample_data/stock_movements.csv (new columns), tests (117 pass).
+  Home money box: Admin and Employee. Spending chart and CSV: still Admin only. | Low-stock events chart is
+  still off (needs the table from Agents A/C). Team: an existing data/tracker.db needs two lines run once:
+  ALTER TABLE stock_movements ADD COLUMN supplier_id TEXT REFERENCES suppliers(id);
+  ALTER TABLE stock_movements ADD COLUMN total_cost_myr REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0);
+  (or delete it and run setup_database.py again for sample data). | Old received lines have no total, so they
+  count as MYR 0 until someone types one. Committed and pushed.
+
+2026-11-24 | Agent E (with the team's request to also edit A and C files) | DONE: low-stock events chart works.
+  Team decision: a low-stock event = one "Record used" that drops a material from OK to LOW or OUT; further
+  drops while it stays LOW or OUT do not count again. Changes: app/schema.sql (new table low_stock_events: id,
+  material_id, status_after, quantity_after, reorder_level at that moment, created_at), app/routes_materials.py
+  (Record used writes the event row in the same save as the stock change), app/routes_stats.py
+  (LOW_EVENTS_METHOD_CONFIRMED = True; the chart counts rows per Malaysia-time month; the old "replay history"
+  guess is removed), tests (122 pass). Both roles can see the chart (no money in it). | Team: an existing
+  data/tracker.db needs this once (the table is new): run the CREATE TABLE low_stock_events block from
+  app/schema.sql, or delete the file and run setup_database.py again. | Drops that happened before today have
+  no event rows, so the chart starts counting from now. Committed and pushed.
+
+2026-11-24 | Team decision (recorded by Agent E) | Spending chart and CSV download stay ADMIN ONLY.
+  Employees still SEE prices and the Home money box (view only). Section 5 F7 already says this, so no screen
+  or code change. Existing tests prove it (Employee gets 403 on /stats/export.csv and /stats/data/spending;
+  the Statistics page has no chart or download for Employees). | Next: Agent F test that Employees get 403
+  when typing the supplier and offer edit addresses. | None.
+
+2026-11-24 | Agent F work (done by Agent E at the team's request) | DONE: Employee 403 proof for supplier and
+  offer edit addresses. tests/test_suppliers_suggest.py: the old test sent a half-empty form, so a form check
+  could have stopped it too. New tests send COMPLETE valid forms as an Employee to /suppliers/new,
+  /suppliers/S1/edit, /suppliers/S1/offers/new and /offers/O1/edit: all give 403 and the suppliers, offers and
+  activity log stay exactly the same. The same forms work for the Admin (proves the test is real), and an
+  Employee cannot change a price (MYR 72 stays 72). Full suite: 128 pass. | Security checklist items 1 and 2
+  in Section 14 can be ticked. Agent F: the rest of the list is yours. | None.
+
+2026-11-24 | Agent F (testing & review) | Wrote tests/test_review_agent_f.py (about 200 checks). Whole suite:
+  298 passed, 12 expected-failures (xfail = a test that describes a known bug; it turns into an
+  error when the bug is fixed, so then remove the xfail mark). COVERED: employee gets exactly 403 on
+  every supplier/offer add, edit, switch-off address (GET and POST, valid data, other methods) and
+  changes nothing; visitor is sent to login; every address as Admin / Employee / visitor; account
+  lock on the 5th wrong password and unlock after 15 minutes; password_hash is never a plain
+  password; Admin and Employee actions write activity_log (and refused actions write none); number
+  fields reject letters and silly values, text fields reject very long input; CSV export and
+  spending data Admin only; every Section 15 item (800 g -> use 400 -> LOW -> use 400 -> OUT,
+  cheaper+faster supplier first, arrival = today + lead time, Malaysia time UTC+8); every rule of
+  Sections 4 and 7; Rules C2, C5, C6, C9. | NEXT: owners fix the bugs below, then remove the xfail marks.
+  | PROBLEMS (not fixed by me, Rule R3):
+  F-1 (CONFIRMED) No CSRF tokens on any form. Owner: Agent B (+ all form pages).
+  F-2 (CONFIRMED) No Admin screen to add users, reset passwords, disable or unlock accounts (F8);
+      the only way is "python app/auth.py set-password". Owner: team decision (F8 has no owner).
+  F-3 No Admin screen shows the activity log (F9). Owner: team decision.
+  F-4 No one-click database backup for Admin (Section 14). Owner: team decision.
+  F-5 Spending chart and low-stock-events chart are switched off in routes_stats.py
+      (SPENDING_METHOD_CONFIRMED, LOW_EVENTS_METHOD_CONFIRMED = False), waiting for the founder.
+      Owner: Agent E. So the "Admin sees spending chart" check cannot be tested yet.
+  F-6 requirements.txt, GLOSSARY.md and app/models.py (Section 10) do not exist. Owner: Agent G / A.
+      Agent A's files DO exist (app/schema.sql, app/setup_database.py, sample_data/) and Agent C's
+      files DO exist (routes_materials.py, alerts.py, templates), but neither agent wrote a log entry.
+  F-7 BUG: in routes_materials.py read_number() deletes every comma, so typing "1,5,5" records 155 g,
+      and it accepts non-English digits. Reject commas that are not thousands separators. Owner: Agent C.
+  F-8 Rule C3: the two inner "checked_view" functions in permissions.py (lines ~60 and ~70) have no
+      comment line. Owner: Agent B.
+  F-9 BUG: sample_data/*.csv dates look like 2026-11-18T06:30:00Z, but the app reads
+      "YYYY-MM-DD HH:MM:SS". With the sample data, /stats/data/usage crashes (server error).
+      Owner: Agent A (change the sample dates or the import).
+  F-10 (CONFIRMED) Sample users have no password until "python app/auth.py set-password sample_admin"
+      and "... sample_employee" are run; until then nobody can log in (tested: safe, no guessable password).
+  STILL UNTESTED: the real browser screens on a phone, CSV content with the spending chart (switched
+  off, see F-5), email alerts (not built), and a real two-person race on the same stock record.
+
+2026-11-24 | Agent E (merge done at the team's request) | DONE: PR #1 had a merge conflict again because
+  main had moved on (other branches, including an older copy of mine, were merged into main). Merged
+  origin/main into main-0rpyg5. 2 clashes: app/schema.sql (main still had my OLD column names
+  status_after / quantity_after; kept Agent A's design: status, quantity_at_event, reorder_level_at_event,
+  movement_id, matching the code and the setup_database.py upgrade) and this log (kept every entry from
+  both sides). Everything else merged without edits. Full suite: 368 pass, 2 skipped, 6 expected failures
+  (all in Agent F's review file, none about money or low-stock events). | Team: anyone who built a database
+  from main's old schema needs a fresh one (delete data/tracker.db, run setup_database.py) because the
+  low_stock_events column names changed; the upgrade command will NOT rename them. | Agent C / Agent F:
+  F-7 (read_number turns "1,5,5" into 155) also affects the new "Total paid" box.
+
+
+2026-11-24 | Main Chat (plan, done at the team's request across Agent A, C and B files) | DECISION: adapt
+  three improvements from the ShopGuard idea list into Version 1. (a) Hardware pieces (unit pcs) next to
+  g and ml items in the SAMPLE data only: screws, springs, magnets, fidget clickers and keychain rings,
+  all named "SAMPLE ..." and listed under a hardware supplier; the real Stinablis item list is still
+  [CONFIRM WITH FOUNDER] (Section 2, Section 16 Q1; Rule R4). (b) "Last bought" memory on the Materials
+  list and the Record used / Record received screens (see Section 5 F3), using can_see_prices() for the
+  money and leaving every edit check as it was (can_manage_*, admin_required, 403). (c) A plain-English
+  pass: a one-line OK / LOW / OUT explanation, a LOW / OUT hint on the Record screens, tap-friendly
+  buttons, and plain error pages with a Home button (Section 8). Sections 2, 5 and 8 updated FIRST. |
+  Then: sample_data CSVs, app/routes_materials.py + materials_list.html + materials_record.html (Agent C),
+  app/__init__.py + one new template error_page.html (Agent B), new tests. | CROSS-AGENT REQUESTS (R3,
+  edits made at the team's request, please review): AGENT A: sample_data/materials.csv,
+  supplier_offers.csv, stock_movements.csv and SAMPLE_DATA_README.txt got new sample rows (dates kept in
+  "YYYY-MM-DD HH:MM:SS"). AGENT C: new helper in routes_materials.py for the last-bought line. AGENT B:
+  error pages in app/__init__.py. AGENT H: base.html and app/static/ NOT touched; the shared look and the
+  44 px tap size on every screen are still yours (the new tap-size lines are only inside the Agent C
+  templates). AGENT F: please add Employee-sees-last-bought tests to your review list.
+  | CLAUDE.md.txt was NOT recreated or committed.
+
+2026-11-25 | Agent G (documentation & presentation) | FINAL DOC SYNC against origin/main-o7f8p8 at 10f78ab (branches main-0rpyg5, main-tq6ebi and Agent F's review are now merged). Full suite on that commit: 379 passed, 2 skipped, 6 xfailed (about 68 seconds). Updated README.md, GLOSSARY.md and PRESENTATION_NOTES.md: new test count; "Last bought" memory (money follows can_see_prices, edits still 403); sample hardware in pcs marked as SAMPLE and to confirm with the founder (R4); OK / LOW / OUT explained in plain English; 44 px tap size; plain-English 403/404/400 pages with "Back to Home"; money spent and low-stock events now described as working (they were "Not set up yet"); Version 1 built list kept apart from Version 2 ideas. | Re-check once more only if more branches are merged. Team: confirm the hardware list and the real suppliers with the founder (Section 16). | PROBLEMS: (1) The "SupplyTrail" pitch figures (supplier search from about 2 hours a week towards about 30 minutes a week) were not found anywhere in the repo, so PRESENTATION_NOTES.md labels them as the team's goal and an estimate, not measured and not confirmed by the founder (R4); Mark: please confirm the source. (2) Six tests are xfail (known bugs from Agent F's review); owners should fix them and remove the marks. (3) Still stale in the guide (R3, not mine): Section 6 price_per_unit / shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link. (4) No activity-log screen (F9) or backup button yet.
+
+2026-11-24 | Agent E | CHECKED: "Usage per material shows sample bars at Jun 2026" is NOT a bug. The chart always
+  shows the last 6 months, oldest on the left: Jun, Jul, Aug, Sep, Oct, Nov 2026. "Jun 2026" is only the FIRST
+  (leftmost) label and has no data. The sample usage (18 to 22 Nov 2026) is in the LAST slot, "Nov 2026", at
+  the right edge. Proof: built a database from the real sample_data and read /stats/data/usage: month data is
+  [0, 0, 0, 0, 0, 500/500/260/170] with labels Jun..Nov 2026; week view puts all of it in "Week of 16 Nov";
+  low-stock events and spending also use Malaysia time and land in Nov 2026 (spending MYR 76.00, one bar).
+  Took a browser screenshot: bars are at the right, under "Nov 2026". Checked for off-by-months, date format
+  and UTC versus Malaysia time: none found (a movement at 31 Oct 16:00 UTC correctly counts as 1 Nov in
+  Malaysia). Added 2 tests in tests/test_stats_dashboard.py (sample-style dates land in November by month and
+  by week; month edges use Malaysia time). No code change. The chart recolour in stats.html was already
+  committed (658fdd2) and merged with PR #1. Full suite passes. | If a screen still shows bars under
+  Jun 2026, the database holds other (older) movements; check data/tracker.db. | None.
+
+2026-11-24 | Agent E (restyle done at the team's request, touching Agent H's files app/static/theme.css and
+  app/templates/base.html, plus login.html and my home.html and stats.html) | DONE: new look from the team's
+  design reference (rounded outlined cards with a solid offset shadow, light and dark cards side by side,
+  section titles in highlighted tags, mono-font buttons and links, one header row, hero with a small drawing
+  on Home). THE COLOUR PALETTE IS UNCHANGED: only the 7 colours already in theme.css :root are used, no new ones.
+  What changed: theme.css rewritten (same variables, new shapes, fonts Space Grotesk and Space Mono from Google
+  Fonts with safe fallbacks if offline); base.html is now one header row (logo, menu, user and Log out) and the
+  current page is marked in the menu (aria-current); home.html has a hero (welcome, two buttons, an inline
+  drawing) and the four boxes as a light/dark checkerboard; login.html loads the fonts; stats.html charts use the
+  same font. Row buttons inside tables are outlined and smaller; on a phone tables scroll sideways inside their own
+  box (the page itself never does). Nothing a page DOES changed: same links (url_for), the Log out form is still
+  a POST with the csrf_token, the Users link keeps its can_manage_users check, no role logic added. Checked in a
+  browser (login, Home, Materials, Suppliers, Statistics, phone width 390): readable, no sideways page scroll.
+  Full suite passes. | Agent H: please review the new theme.css and keep it as the base. Pages not
+  checked in a browser: supplier detail, suggestion, material add/edit/record forms, Users screens; they use
+  the same classes so should follow, but please look. | (1) The fonts come from fonts.googleapis.com and
+  fonts.gstatic.com; if the team wants no outside requests, remove the 3 font lines in base.html and
+  login.html (the page then uses Segoe UI or Arial). (2) The Home drawing is plain decoration (aria-hidden).
+
+2026-11-26 | Agent E | DONE, at the team's request: the Home list "Needs attention" is now called "Notifications"
+  (heading, and the empty text now says "No notifications. All materials are OK."). Only the words changed:
+  the list still shows LOW and OUT materials (OUT first) with a Find supplier button. Files: app/templates/
+  home.html, comments in app/routes_stats.py, TESTS.md, and 1 new test in tests/test_stats_dashboard.py.
+  Full suite passes. | AGENT G (R3): GLOSSARY.md line "Needs attention" and PRESENTATION_NOTES.md (about lines
+  117 and 259) still use the old name; please change them to "Notifications". Agent F: the comment in
+  tests/test_review_agent_f.py line 586 still says "Needs attention" (comment only). | None.
+
+
+
+2026-11-24 | Agent F (testing & review) | Founder-side phone test (iPhone-size screen, real site on the
+  Mac over Wi-Fi) done by the team member; I added what they found. Only reads; no app code touched.
+  | NEXT: owners fix below, then re-test on the phone. | PROBLEMS (Rule R3):
+  F-11 Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
+      columns (tables sit in an overflow-x box). Text size and buttons are fine. Idea: fewer columns
+      or stacked rows on narrow screens. Owner: Agent C (materials_list.html), Agent D
+      (suppliers.html, supplier_detail.html). Section 8 asks for mobile-friendly.
+  F-12 Phone numbers (and emails) are plain text, not tappable. Use tel: and mailto: links in
+      suggest.html, suppliers.html, supplier_detail.html. Owner: Agent D.
+  F-13 Statistics: the "Average delivery time per supplier" chart is cut off on the left side on a
+      phone (the usage chart is fine). Probably long supplier names squeezing the chart. Owner: Agent E
+      (stats.html / its Chart.js settings, id lead-chart).
+  F-9 UPDATE: confirmed on the phone. "Record used" gives an internal server error for materials
+      that have sample history (M001, M003, M004), because the dates in sample_data/stock_movements.csv
+      are like 2026-11-18T06:30:00Z. Local fix that worked for the tester: on macOS run
+      sed -i '' -E 's/T([0-9:]{8})Z/ \1/' sample_data/stock_movements.csv, delete data/tracker.db,
+      run setup_database.py again, then set-password for both sample users. Owner: Agent A (fix the
+      sample file or the import). Agent C could also make the pages read both date styles.
+  NOT A BUG: "Record used" shows the number keypad on a phone with no letters (it uses
+      inputmode="decimal" on purpose). Good for typing quantities.
+  Also noted: the dev server needed --host 0.0.0.0 and a port other than 5000 (macOS AirPlay) to open
+      from a phone; macOS system Python 3.9 has no hashlib.scrypt, so auth.py crashes there
+      (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
+
+2026-11-25 | Agent G (documentation & presentation) | DOC SYNC after the final merge into main (commit 6024c83; I re-ran the suite: 384 passed, 2 skipped, 6 xfailed). Updated README.md, PRESENTATION_NOTES.md and one GLOSSARY.md entry: test count and commit; "Bought from" and "Total paid" on Record received are Admin only (can_record_purchase_cost; an Employee who sends them gets 403), while Employees still see "Last bought" under can_see_prices(); the shared dark theme (app/static/theme.css) is mentioned; the phone test findings F-11 and F-12 are stated honestly. | Before the demo: check in a browser that the top menu links (sized in theme.css by padding plus a small minimum height) are about 44 px tall like the other controls (Agent H). | PROBLEMS (R3, not mine): F-11 to F-13 from the phone test are still open (sideways-scrolling tables, phone numbers not tappable, delivery-time chart cut off); the merge repeated some older status-log entries in this file; the SupplyTrail figures still have no source (see the previous Agent G entry).
+
+2026-11-26 | Agent E | CATCH-UP: things done since my last entries that were not written down yet. (1) The guide:
+  Section 5 F2 now says "Notifications" (it still said "Needs attention"; the guide must change first, so
+  that line is fixed now). (2) Pull request #1 (money spent, low-stock events, Employee 403 tests, chart
+  colours, merge of the dark theme) was opened on 2026-11-24, had a second merge conflict when main moved
+  (only app/schema.sql and this log; kept Agent A's low_stock_events columns and every log entry), and was
+  MERGED into main. (3) Pull request #2 (the "Needs attention" to "Notifications" rename on Home) is open; main
+  had moved again, so I merged origin/main into main-0rpyg5 first: one clash, only this log (kept both sides).
+  Suite on the branch: 385 pass, 2 skipped, 6 expected failures (all Agent F review items). (4) Another
+  session pushed one commit to main-0rpyg5 (branch main-0rpyg5-v2k49y): 4 lines in app/static/theme.css that
+  style the "Last bought" notes (.memo) for the dark theme. Agent H's file; I only merged it in (fast-forward)
+  and the tests still pass. (5) Restyle detail missing from my 2026-11-24 restyle entry: on phones (screen
+  720 px or narrower) theme.css sets "table { min-width: 880px }", so tables keep a readable width and scroll
+  sideways INSIDE their own box (the page itself never scrolls sideways). This is a main cause of F-11
+  (Materials and Suppliers need sideways scrolling on a phone). The better fix is stacked rows on narrow
+  screens; that is a page change for Agent C (materials_list.html) and Agent D (suppliers.html,
+  supplier_detail.html), plus Agent H for the shared CSS (R3). | NEXT: F-13 is mine and still OPEN: the
+  "Average delivery time per supplier" chart is cut off on the left on a phone because the long supplier
+  names squeeze the chart; I plan to shorten or wrap the labels in stats.html (lead-chart) and check it at
+  390 px. I will not start it until the team says go. Agent G: still to change "Needs attention" to
+  "Notifications" in GLOSSARY.md and PRESENTATION_NOTES.md. | PROBLEMS: (a) the merges left repeated and
+  out-of-date-order entries in this log (for example my "money spent" and "low-stock events" entries appear
+  twice, once near the start of my entries and once after the Agent F review). I did not delete anything
+  (Rule R5); the team or Agent G should decide how to tidy it. (b) Older entries of mine still say "Not
+  committed yet" or describe the Admin-and-Employee money boxes; the 2026-11-24 merge entry (Admin only) is the
+  one that is current.
+
+2026-11-26 | Agent E | DONE: procurement statistics and units and prices on every chart (team decision 2026-11-26; the guide
+  F7 text was updated first). NOTE ON HOW IT WAS BUILT: when I came back to the working folder it already held
+  uncommitted work on my files from another session: the guide F7 text, the data functions and three data addresses
+  in app/routes_stats.py (purchases, spending per material, price comparison rows), the CSV rows, and 3 small test
+  edits. I did not overwrite it; I read it, kept it and finished the rest. WHAT IS NEW ON THE PAGE
+  (app/templates/stats.html, routes_stats.py): (1) "Purchases per material" (stock received per month, each bar with
+  its unit g, ml or pcs; both roles, no money). (2) "Spending per material" (MYR over the last 6 months, one row per
+  material, the chart gets taller with more materials; Admin only). (3) "Supplier price comparison" table (cheapest
+  offer per kg, per litre or per piece next to the price last paid, with "paid X% more" or "X% less"; Admin only; a
+  note says these are estimates because the offer is before shipping and the paid total may include it). UNITS AND
+  PRICES: every chart now has axis titles (Quantity used (g, ml or pcs), Quantity received, Number of events with
+  whole numbers, Average days from ordering to arriving, MYR spent) and pop-ups that read "PLA Basic White: 250 g",
+  "6 days", "2 events", "MYR 76.00 (1 purchase)"; money axes read MYR 100, MYR 200. The usage data now also carries
+  "name" and "unit" per bar group. The old inline colours in stats.html were removed (theme.css decides). Employee
+  page source still contains no "MYR", "Spending" or comparison table (tests prove it); the 3 new data addresses are
+  in Agent F's address matrix. Checked in a browser as Admin, Employee and at 390 px with extra purchase data: no
+  script errors, no sideways page scroll. Suite: 422 pass, 2 skipped, 6 expected failures. | NEXT: Agent G: add the
+  new charts to PRESENTATION_NOTES.md and GLOSSARY.md if wanted. F-13 (delivery-time chart cut off on a phone) is
+  still OPEN and not touched. | PROBLEMS: (1) the usage and purchases charts put g, ml and pcs on one axis, so a
+  pcs bar (for example 20 pcs) looks tiny next to a 3,000 g bar; the pop-up gives the exact unit and number. A
+  chart per unit would fix it (team decision). (2) "Price paid" on the comparison is the typed total divided by the
+  quantity, so shipping inside the total makes it look higher than the offer. (3) The price comparison is a table,
+  not a chart.
+
+2026-11-26 | Agent E (new files at the team's request; no agent owns them) | DONE: a tracked record of the difference
+  between the Admin and Employee profiles for the presentation. New file ROLE_DIFFERENCES.md (30-second summary, six
+  tables by screen with Admin / Employee Yes or No and a plain note, what is the same for both roles, a dated
+  decisions table, what is not built yet, and how to keep it true) and new test tests/test_role_differences.py: 24
+  rows, each tried as a real logged-in Admin and Employee on a temporary database, plus 2 checks that the page says
+  exactly what the proof says (a wrong Yes/No cell, a missing row or an unproven extra row makes the test fail; I
+  tried all three). Guide Section 13 item 2 now says "two roles" and points to the file. | HOW TO KEEP IT TRUE: when
+  a permission changes: guide first, then the row in ROLE_ROWS, then the page, then a line in its decisions table.
+  | REQUESTS (R3): Agent G: link ROLE_DIFFERENCES.md from PRESENTATION_NOTES.md (topic 2, the roles) and README.md,
+  and add a GLOSSARY.md line if wanted; the notes and README still say "three roles" in places. Agent F: you may
+  fold test_role_differences.py into your list; it overlaps your SCREEN_MATRIX on purpose (yours checks status
+  codes, mine checks what each role sees and says it in words). | PROBLEMS: the page covers screens that exist today;
+  the activity log screen and the backup button are not built, so they are listed as "not built yet" and are not
+  proven.
+
+2026-11-26 | Agent E | DONE: the supplier price comparison is now also a CHART (team asked to go back to the statistics we
+  had planned; the guide F7 line was updated first). New Admin-only data address /stats/data/price-comparison
+  (admin_required) and two bar charts in the Statistics page, above the existing table: "Materials priced per kg or
+  per litre" and "Materials priced per piece". They are separate because their prices are on very different scales
+  (MYR 60 per kg against MYR 0.09 per piece would hide the small bars). Each material shows two bars: the cheapest
+  supplier offer and the price last paid; the pop-up gives the supplier and the date (for example "Price last paid:
+  MYR 75.00 per kg (Kuching Shop, 05 Nov 2026)"). Materials with neither an offer nor a purchase are left out; an
+  offer with no purchase yet shows one bar. The table stays, as "the same numbers". Code: build_chart_point and
+  get_price_comparison_chart in routes_stats.py; stats.html. Roles: Employee gets 403 on the address and the
+  Employee page has no price chart (tests prove it); ROLE_DIFFERENCES.md and tests/test_role_differences.py have the
+  new row; Agent F's address matrix has the new address. Checked in a browser (Admin, 390 px): no script errors, no
+  sideways page scroll. Suite: 427 pass, 2 skipped, 6 expected failures. | STILL NOT BUILT from the plan: "Price paid
+  per unit over time" (a line chart; it needs several purchases of the same material to show a trend) and one chart
+  per unit for usage and purchases. F-13 (delivery-time chart cut off on a phone) is still open. | PROBLEMS: the same
+  as before: "price paid" is the typed total divided by the quantity, so shipping inside the total makes it look higher
+  than the offer.
+
+2026-11-26 | Team decision (recorded by Agent E) | The statistics list for the Statistics page is COMPLETE. The supplier
+  price comparison chart was the last one wanted. NOT being built (dropped, not postponed): "price paid per unit over
+  time" and "one chart per unit for usage and purchases". Section 5 F7 already matches what is built, so no guide
+  change. | Only open item on this page: F-13 (the delivery-time chart is cut off on a phone), which is a fix, not a
+  new statistic. | None.
+
+
+2026-11-26 | Agent H (interface and design; done at the team's request, touching Agent C's materials_list.html) | DONE: (1) "Last bought" note on the Record used page and the Materials list was unreadable (light-blue box with light text); app/static/theme.css now draws it as a dark card (Record used page) and soft moss text (Materials list). (2) Materials rows: "Record used" is the one filled button, "Record received" is outlined, Edit and Remove are under a "More" menu (Admin only; Employees see just the two record buttons). Changed app/templates/materials_list.html (markup only, same links, same POST form with csrf_token, same confirm box, no role logic) and theme.css (.row-actions, .row-more, .btn.danger). Checked in a browser as Admin and Employee at desktop width; whole suite 385 pass, 2 skipped, 6 expected failures. Also did a UI/UX review of login, Home, Materials, Suppliers, Statistics (Admin, desktop only). | NEXT (not done): empty "Low-stock events" chart shows a -1 to 1 axis, needs a minimum of 0 and an "No low-stock events yet" message (Agent E, stats.html); Materials table on a phone still scrolls sideways, so the buttons are off-screen (F-11), consider stacked cards under 720px; show the colour in material names on the list (two "PLA Basic" rows); move "Needs attention" higher on Home; Suppliers needs a search box and an ONLINE/LOCAL badge; Employee view, forms, Find supplier and Users pages were not reviewed. | NOTES: team members tried small local tweaks that are NOT in Git yet: OUT status pill as filled red with light text (needs a red outside the colour card, Agent H to confirm), the "Show only OK" filter button commented out in materials_list.html, and the order of "More" after Remove (CSS "order: 2" on ".row-more summary"). Commit them or drop them. The merged branch is main-0rpyg5-v2k49y; main-0rpyg5 has the "Last bought" fix only.
+
+2026-11-26 | Agent H (done at the team's request, touching Agent C's routes_materials.py and tests/test_materials.py) | DONE: the Materials list is now sorted by urgency: OUT first, then LOW, then OK, with names A-Z inside each group (app/routes_materials.py, list_materials: two lines after the status is added; the status is worked out in Python, so the sort is too). New test test_materials_list_is_sorted_by_urgency in tests/test_materials.py: it adds materials so that A-Z order and urgency order differ, and checks the page lists them OUT, OUT, LOW, OK, OK (it fails without the sort, checked). Full suite: 386 pass, 2 skipped, 6 expected failures. | CORRECTION: the Home list (now called "Notifications") already shows OUT first, then LOW, names A-Z inside each group (app/alerts.py, get_materials_needing_attention; OK materials are not in that list), so it needed no change; the earlier note that it was not sorted was wrong. Filter and search still work on the sorted list (the sort runs before the filter).
+
+2026-11-26 | Agent E (merge done at the team's request) | DONE: Agent H's work (branch main-0rpyg5-v2k49y on GitHub) is now
+  merged into main-0rpyg5 together with the Statistics work, so one branch has both. What came in from Agent H: the
+  Materials list shows ONE main button per row with Edit and Remove under "More" (materials_list.html, 2 lines in
+  routes_materials.py), the Materials list is sorted OUT, LOW, OK (with a test in tests/test_materials.py), theme.css
+  styles for them, and the Agent H status-log entries. The only text clash was this log (kept every entry from both
+  sides). Checked in a browser (Admin): Materials page with the "More" menu and the Statistics page with all 8 charts
+  together, no script errors, no sideways page scroll. Suite: 428 pass, 2 skipped, 6 expected failures. | NOT INCLUDED:
+  anything Agent H has only on the team member's own computer. On 2026-11-26 their folder was on the branch
+  main-0rpyg5-v2k49y in the middle of an unfinished merge, with 3 files edited but not saved to Git (routes_materials.py,
+  theme.css, materials_list.html). Those edits are not on GitHub, so they are not here. Agent H: commit and push them (or
+  send the diff) and they can be merged in the same way. | PROBLEMS: the unfinished merge in that folder is the OLD
+  direction (main-0rpyg5 into main-0rpyg5-v2k49y); now that GitHub already has both merged, finish it with a normal
+  commit, then pull, and expect only the status log to clash.
+
+2026-11-26 | Agent E (brought in at the team's request from Agent H's unsaved edits) | DONE: the 3 unsaved edits found in the
+  team member's own folder (diff pasted by them) are now in Git on main-0rpyg5. (1) Materials list sorted OUT, LOW, OK:
+  already on the branch (same 2 lines), so nothing to add. (2) theme.css: the "More" menu word now comes after the
+  buttons (order: 2). (3) theme.css: the OUT word is now a clear red with light text. THIS USES 2 COLOURS THAT ARE NOT
+  IN THE 7-COLOUR PALETTE (#C62828 and #FFF4F0); I put them in the :root list as --out-red and --out-text (the file says
+  every colour lives there). Earlier the team said "do not change the palette" for the restyle, so please confirm
+  this red is wanted; reverting is one line (use hot orange again). (4) materials_list.html: the "Show only OK"
+  button is hidden (a Jinja comment; the address ?status=OK still works). Checked in a browser: the OUT red, the
+  hidden button and the "More" menu look right. Suite: 428 pass, 2 skipped, 6 expected failures. | NEXT: Agent H should
+  work on the branch main-0rpyg5 from now on (not main-0rpyg5-v2k49y), or the two branches drift apart again. | PROBLEMS:
+  Section 8 of the guide says "red = OUT"; the red now matches it, while the palette note in the theme file says 7
+  colours: team to decide which wins.
+
+2026-11-26 | Team decision + work (done by Agent E at the team's request; touches Agent F's tests) | REMOVED from the
+  Statistics page, as chosen by the team member: (1) "Low-stock events per month" (line chart), (2) "Spending per
+  supplier this month", (3) "Spending per material". Guide F7 and Section 15 (the line "Admin account: sees prices and
+  the spending chart" now says the price comparison charts) were changed FIRST. WHAT WAS REMOVED: the three panels and
+  their script in stats.html, the three data addresses (/stats/data/low-stock, /stats/data/spending,
+  /stats/data/spending-by-material; they now answer 404 for everybody), the LOW_EVENTS_METHOD_CONFIRMED flag, the two
+  unused functions count_low_stock_events and get_low_stock_chart, and the template flags spending_ready and
+  low_events_ready. WHAT WAS KEPT ON PURPOSE (not asked for): the Home box "money spent this month" (and the functions
+  behind it), the CSV download with its spending rows (Admin only), and the saving of low-stock events when someone
+  records stock used (the table low_stock_events and the activity-log line stay; the events are just not charted).
+  Remaining Statistics page: usage, purchases, average delivery time (both roles) and the supplier price comparison
+  charts and table (Admin only), plus the CSV button (Admin only). TESTS: tests of the removed charts deleted or
+  rewritten (tests/test_stats_dashboard.py; in Agent F's tests/test_review_agent_f.py: 3 address-matrix rows, 3 tests
+  and the checklist test now check the price comparison instead); new tests prove the 3 addresses are 404 and the
+  3 charts are not on the page for either role. ROLE_DIFFERENCES.md and its test lost the 3 rows and gained a
+  decision line. Checked in a browser (Admin: 5 charts and the table; Employee: 3 charts; no script errors). Suite:
+  420 pass, 2 skipped, 6 expected failures. | AGENT G (R3): README.md, GLOSSARY.md and PRESENTATION_NOTES.md may still
+  mention the low-stock events chart and the spending charts; please remove them. If the team also wants the spending
+  rows out of the CSV, or the low-stock event saving removed, say so. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team decision: the table repeated the charts) | DONE: removed "The same numbers as a table" from the
+  Supplier price comparison. Guide F7 changed FIRST. Removed: the table in stats.html (the estimates note stays under
+  the two charts) and an unused style line; in routes_stats.py the table code (build_comparison_row,
+  get_price_comparison and the comparison_rows value sent to the page). The two price charts, their data address
+  (/stats/data/price-comparison, Admin only) and the pop-ups (supplier and date) are unchanged. NOTE: the words
+  "Paid 25% more than the cheapest offer" lived only in the table, so they are gone; the charts show the two prices
+  and the pop-up gives the supplier and date. (If the team wants the percentage back, it can go into the pop-up.)
+  TESTS: the table test became a chart test (the price last paid comes from the NEWEST purchase); the role record
+  (ROLE_DIFFERENCES.md and test_role_differences.py) lost the table row; TESTS.md updated. Checked in a browser: no
+  table, 5 charts for Admin, no script errors. | AGENT G (R3): if the notes or README mention the comparison table,
+  please remove that. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team decision, requested by the team member) | DONE: "Average delivery time per supplier" (a bar chart) is
+  replaced by a DELIVERY RANKING. Guide F7 changed FIRST (and its CSV line). HOW IT WORKS: on the Statistics page the
+  user picks a material from a list ("All materials (average)" first, then every material that an active supplier
+  sells); the suppliers are listed fastest first with a rank number, the name, ONLINE or LOCAL, the days, and an
+  estimated arrival date (today in Malaysia time + the days, rounded up). The fastest get a "Fastest" word. Suppliers
+  with the same days share a rank (1, 1, 3) and are ordered A to Z. For one material it uses each supplier's FASTEST
+  active offer; for "All materials" it uses the average over everything the supplier sells (what the old chart
+  showed). Switched-off offers and suppliers are left out. NO MONEY in it, so Admin and Employee both see it (tests
+  prove the data has no price words). Code: get_ranking_materials, build_ranking_rows, get_delivery_ranking and the
+  address /stats/data/delivery-ranking?material=... in routes_stats.py; stats.html (select box, list built with plain
+  text, small layout styles using the theme's colour variables, no new colours). REMOVED: the chart, its address
+  /stats/data/lead-times (now 404), the lead-chart script. KEPT: get_average_lead_times, which the CSV still uses
+  ("Average delivery time" rows). Agent F's address matrix and 2 tests point to the new address (a test on a missing
+  address would have passed for the wrong reason); ROLE_DIFFERENCES.md and its test have the new row; TESTS.md updated.
+  Checked in a browser as Employee: the list, the choice of a material, ties, phone width 390 (no sideways scroll), no
+  "MYR" in the page, no script errors. Also fixed "1 days" to "1 day". Suite: 428 pass, 2 skipped, 6 expected failures.
+  | AGENT G (R3): README, GLOSSARY and PRESENTATION_NOTES may still say "average delivery time chart". | NOTE: the
+  sample data has one supplier for most materials, so most rankings show one line until offers from more suppliers are
+  added (Suppliers > Add material this supplier sells). F-13 (the old chart was cut off on a phone) is now moot,
+  because that chart no longer exists. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team request) | DONE: a SIDEBAR on the Statistics page, so nobody scrolls down to find a chart. Guide F7 changed
+  FIRST. HOW IT WORKS: a menu on the left lists the statistics (Usage per material, Purchases per material, Delivery
+  ranking and, for the Admin only, Supplier price comparison and "Download spreadsheet (CSV)"). Clicking an item shows
+  ONLY that statistic and hides the others; the chosen item is marked (orange, aria-current). The address keeps the
+  choice (/stats/#purchases), so a refresh, a bookmark or a shared link opens the same one; an unknown name shows the
+  first. The menu stays in view while scrolling (sticky). On a phone (720 px or narrower) it becomes a row of buttons
+  across the top that scrolls sideways inside itself (the page does not). Every item is at least 44 px tall (Section 8).
+  Files: app/templates/stats.html only (layout styles use the theme's colour variables, no new colours; panels got ids,
+  only the first is visible at the start; the old CSV button at the bottom moved into the sidebar; a short script
+  showStatistic/showStatisticFromAddress; charts measure themselves again when their panel is shown, because Chart.js
+  cannot size a chart inside a hidden panel). ROLES: an Employee's page has no price item, no price panel, no download
+  link, no "MYR" and the script does not even know "price" (typing /stats/#price shows the first statistic); tests
+  prove it. Checked in a browser: Admin and Employee, every item, deep link, reload, bad name, phone width 390 (no
+  sideways page scroll), all charts correctly sized after switching, no script errors. 4 new tests; ROLE_DIFFERENCES.md
+  and TESTS.md mention the sidebar. | NOTE: the page now needs its script to show anything past the first statistic;
+  it needed Chart.js (from the internet) for the charts anyway. | AGENT G (R3): mention the sidebar in the notes if
+  wanted. | PROBLEMS: none known. On a phone the usage chart's long legend still takes a lot of height (older issue, not
+  caused by the sidebar).
+
+
 2026-11-26 | Add material with its supplier (Agent C's screen; built at the team's request, with a small
   refactor in Agent D's routes_suppliers.py) | The Admin-only "Add material" form now has an optional
   "Who sells it?" part: choose "No supplier for now" (default), an existing active supplier, or "A new
@@ -972,3 +1462,16 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   phone-sized browser with the dark theme and CSRF switched on. | Agent F: add the form to the manual
   checks in TESTS.md. Agent D: please read the small change in routes_suppliers.py. Team: "Edit material"
   does not show suppliers (use the Suppliers page). | The Edit material form was not changed.
+
+2026-11-26 | Merge of main-0rpyg5 into main-iyvssn (done at the team's request) | The team's desktop was on
+  branch main-0rpyg5 (about 50 commits: Statistics changes, Agent H's Materials changes, "Record received"
+  supplier and cost, low-stock events, review tests), which did not have the "Who sells it?" part of
+  Add material. Merged main-0rpyg5 into main-iyvssn so both are in one place. Three conflicts, all
+  additive, kept both sides: the import lines in app/routes_materials.py, the two blocks of tests in
+  tests/test_materials.py, and this STATUS LOG. One real clash after the merge: both sides had a function
+  called get_active_suppliers (mine took no argument, theirs takes the database). Removed mine and the Add
+  material form now uses theirs. All 448 tests pass (2 skipped and 6 expected failures were already marked
+  on main-0rpyg5). Tried in a browser with CSRF on: add a material with a new supplier, then Home,
+  Materials, Suppliers, Statistics and Users all open. | Team: use branch main-iyvssn from now on (git
+  checkout main-iyvssn, git pull), or merge it into main-0rpyg5 so there is only one line of work.
+  | Anyone still committing to main-0rpyg5 will need to merge main-iyvssn.

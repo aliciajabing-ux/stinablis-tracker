@@ -1,23 +1,40 @@
-{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Needs attention" list.
+{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Notifications" list.
    WHO CAN USE IT: Both. The money box is drawn for Admin and Employee (the server decides, not this page). #}
 {% extends "base.html" %}
 {% block title %}Home - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:16px; }
-  .tile { background:#fff; border-radius:6px; padding:16px; border-left:8px solid #1a5fb4; min-width:0; }
-  .tile.low { border-left-color:#e66100; } .tile.out { border-left-color:#a51d2d; }
-  .tile .number { font-size:2rem; font-weight:bold; overflow-wrap:anywhere; }
-  .low .word { color:#b34700; font-weight:bold; } .out .word { color:#a51d2d; font-weight:bold; }
-  .attention { background:#fff; border-radius:6px; padding:16px; }
+  /* Layout only: the colours and shapes come from app/static/theme.css. */
+  .tiles { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin-bottom:24px; }
+  .tile .number { font-size:2rem; overflow-wrap:anywhere; }
+  .attention { padding:20px 24px; margin-bottom:8px; }
   .attention ul { list-style:none; margin:0; padding:0; }
   .attention li { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
-                  padding:10px 0; border-bottom:1px solid #ddd; }
-  .button { display:inline-block; padding:12px 18px; font-size:1rem; background:#1a5fb4; color:#fff;
-            border-radius:6px; text-decoration:none; }
+                  padding:12px 0; border-bottom:1px solid; }
+  .button { display:inline-block; padding:12px 18px; font-size:1rem; text-decoration:none; }
+  @media (max-width: 520px) { .tiles { grid-template-columns:minmax(0, 1fr); } }
 </style>
-<h1>Welcome, {{ current_user['username'] }}</h1>
-<p>A quick look at your stock today. Numbers are for active materials only.</p>
+<section class="hero">
+  <div class="hero-text">
+    <h1>Welcome, {{ current_user['username'] }}</h1>
+    <p>A quick look at your stock today. Numbers are for active materials only.</p>
+    <div class="hero-buttons">
+      <a class="button" href="{{ url_for('materials.list_materials') }}">Open materials</a>
+      <a class="btn plain" href="{{ url_for('stats.statistics_page') }}">See statistics</a>
+    </div>
+  </div>
+  <svg class="hero-art" viewBox="0 0 240 200" aria-hidden="true" focusable="false">
+    <ellipse class="art-ring" cx="120" cy="100" rx="108" ry="40" transform="rotate(-18 120 100)"/>
+    <ellipse class="art-ring" cx="120" cy="100" rx="86" ry="30" transform="rotate(-18 120 100)"/>
+    <circle class="art-spool" cx="120" cy="100" r="46"/>
+    <circle class="art-core" cx="120" cy="100" r="30"/>
+    <circle class="art-hole" cx="120" cy="100" r="13"/>
+    <path class="art-star" d="M30 150c2 11 8 17 19 19-11 2-17 8-19 19-2-11-8-17-19-19 11-2 17-8 19-19z"/>
+    <path class="art-star-light" d="M205 28c1 7 5 11 12 12-7 1-11 5-12 12-1-7-5-11-12-12 7-1 11-5 12-12z"/>
+    <circle class="art-dot" cx="196" cy="162" r="6"/>
+    <circle class="art-dot" cx="44" cy="46" r="4"/>
+  </svg>
+</section>
 <div class="tiles">
   <div class="tile"><div class="number">{{ counts['TOTAL'] }}</div>Total materials</div>
   <div class="tile low"><div class="number">{{ counts['LOW'] }}</div><span class="word">LOW</span> on stock</div>
@@ -31,7 +48,7 @@
   {% endif %}
 </div>
 <div class="attention">
-  <h2>Needs attention</h2>
+  <h2>Notifications</h2>
   <p>Materials that are LOW or OUT. Press "Find supplier" to see who can deliver.</p>
   <ul>
     {% for material in attention %}
@@ -41,9 +58,8 @@
         (reorder at {{ material['reorder_level']|round(2) }} {{ material['unit'] }})</span>
       <a class="button" href="{{ url_for('suppliers.suggest_supplier', material_id=material['id']) }}">Find supplier</a>
     </li>
-    {% else %}<li>Nothing needs attention. All materials are OK.</li>
+    {% else %}<li>No notifications. All materials are OK.</li>
     {% endfor %}
   </ul>
 </div>
-<p><a class="button" href="{{ url_for('stats.statistics_page') }}">See statistics</a></p>
 {% endblock %}
