@@ -232,7 +232,18 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
     - Number of low-stock events per month (line chart).
     - Spending per supplier (pie or bar chart) - ADMIN only.
     - Average lead time per supplier.
-    - Export to spreadsheet (CSV) - ADMIN only.
+    - Procurement statistics (decision 2026-11-26), all built from the
+      "Record received" lines:
+        * Purchases per material per month, with the unit (g, ml, pcs) -
+          Admin and Employee (no money in it).
+        * Spending per material, last 6 months, in MYR - ADMIN only.
+        * Supplier price comparison per material: cheapest supplier offer
+          next to the price last paid, per kg, per litre or per piece -
+          ADMIN only. Estimates: the offer price is before shipping.
+    - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
+      and in the pop-up text, never just a bare number.
+    - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
+      spending per material).
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -462,7 +473,8 @@ C12. Use Git: small commits with clear messages, for example
 ---------------------------------------------------------------------
 Every member must be able to explain, in plain words:
   1. The problem (Section 1) and why it wastes time.
-  2. The three user roles and what each can do.
+  2. The two user roles (Admin and Employee) and what each can do. The table is
+     ROLE_DIFFERENCES.md; the test tests/test_role_differences.py proves it.
   3. One feature end-to-end: for example, "what happens when someone
      clicks Record used?" (Screen -> Server checks permission -> Stock
      number goes down -> Row is written to the history -> If low, the
@@ -1249,4 +1261,43 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   (Rule R5); the team or Agent G should decide how to tidy it. (b) Older entries of mine still say "Not
   committed yet" or describe the Admin-and-Employee money boxes; the 2026-11-24 merge entry (Admin only) is the
   one that is current.
+
+2026-11-26 | Agent E | DONE: procurement statistics and units and prices on every chart (team decision 2026-11-26; the guide
+  F7 text was updated first). NOTE ON HOW IT WAS BUILT: when I came back to the working folder it already held
+  uncommitted work on my files from another session: the guide F7 text, the data functions and three data addresses
+  in app/routes_stats.py (purchases, spending per material, price comparison rows), the CSV rows, and 3 small test
+  edits. I did not overwrite it; I read it, kept it and finished the rest. WHAT IS NEW ON THE PAGE
+  (app/templates/stats.html, routes_stats.py): (1) "Purchases per material" (stock received per month, each bar with
+  its unit g, ml or pcs; both roles, no money). (2) "Spending per material" (MYR over the last 6 months, one row per
+  material, the chart gets taller with more materials; Admin only). (3) "Supplier price comparison" table (cheapest
+  offer per kg, per litre or per piece next to the price last paid, with "paid X% more" or "X% less"; Admin only; a
+  note says these are estimates because the offer is before shipping and the paid total may include it). UNITS AND
+  PRICES: every chart now has axis titles (Quantity used (g, ml or pcs), Quantity received, Number of events with
+  whole numbers, Average days from ordering to arriving, MYR spent) and pop-ups that read "PLA Basic White: 250 g",
+  "6 days", "2 events", "MYR 76.00 (1 purchase)"; money axes read MYR 100, MYR 200. The usage data now also carries
+  "name" and "unit" per bar group. The old inline colours in stats.html were removed (theme.css decides). Employee
+  page source still contains no "MYR", "Spending" or comparison table (tests prove it); the 3 new data addresses are
+  in Agent F's address matrix. Checked in a browser as Admin, Employee and at 390 px with extra purchase data: no
+  script errors, no sideways page scroll. Suite: 422 pass, 2 skipped, 6 expected failures. | NEXT: Agent G: add the
+  new charts to PRESENTATION_NOTES.md and GLOSSARY.md if wanted. F-13 (delivery-time chart cut off on a phone) is
+  still OPEN and not touched. | PROBLEMS: (1) the usage and purchases charts put g, ml and pcs on one axis, so a
+  pcs bar (for example 20 pcs) looks tiny next to a 3,000 g bar; the pop-up gives the exact unit and number. A
+  chart per unit would fix it (team decision). (2) "Price paid" on the comparison is the typed total divided by the
+  quantity, so shipping inside the total makes it look higher than the offer. (3) The price comparison is a table,
+  not a chart.
+
+2026-11-26 | Agent E (new files at the team's request; no agent owns them) | DONE: a tracked record of the difference
+  between the Admin and Employee profiles for the presentation. New file ROLE_DIFFERENCES.md (30-second summary, six
+  tables by screen with Admin / Employee Yes or No and a plain note, what is the same for both roles, a dated
+  decisions table, what is not built yet, and how to keep it true) and new test tests/test_role_differences.py: 24
+  rows, each tried as a real logged-in Admin and Employee on a temporary database, plus 2 checks that the page says
+  exactly what the proof says (a wrong Yes/No cell, a missing row or an unproven extra row makes the test fail; I
+  tried all three). Guide Section 13 item 2 now says "two roles" and points to the file. | HOW TO KEEP IT TRUE: when
+  a permission changes: guide first, then the row in ROLE_ROWS, then the page, then a line in its decisions table.
+  | REQUESTS (R3): Agent G: link ROLE_DIFFERENCES.md from PRESENTATION_NOTES.md (topic 2, the roles) and README.md,
+  and add a GLOSSARY.md line if wanted; the notes and README still say "three roles" in places. Agent F: you may
+  fold test_role_differences.py into your list; it overlaps your SCREEN_MATRIX on purpose (yours checks status
+  codes, mine checks what each role sees and says it in words). | PROBLEMS: the page covers screens that exist today;
+  the activity log screen and the backup button are not built, so they are listed as "not built yet" and are not
+  proven.
 

@@ -7,7 +7,7 @@
 import os
 import sqlite3
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -168,7 +168,8 @@ def test_usage_by_month_adds_used_rows_only(database_file):
     add_movement(database_file, "C", "M1", "RECEIVED", 999, "2026-11-12 02:00:00")
     chart = routes_stats.get_usage_by_period(open_database(database_file), "month", NOW)
     assert chart["labels"][-1] == "Nov 2026" and len(chart["labels"]) == 6
-    assert chart["datasets"] == [{"label": "PLA Basic White (g)", "data": [0, 0, 0, 0, 0, 250]}]
+    assert chart["datasets"] == [{"label": "PLA Basic White (g)", "name": "PLA Basic White", "unit": "g",
+                                  "data": [0, 0, 0, 0, 0, 250]}]
 
 
 def test_usage_by_week_starts_on_monday(database_file):
@@ -307,3 +308,99 @@ def test_money_text_format():
 def test_csv_cells_cannot_run_as_formulas():
     assert routes_stats.make_cell_safe("=1+1") == "'=1+1"
     assert routes_stats.make_cell_safe("PLA") == "PLA"
+
+
+# ---------- Procurement statistics (guide F7, decision 2026-11-26) ----------
+
+# Adds one "Record received" line for any material, with an optional supplier and total paid (time is UTC text).
+def add_received_line(database_file, line_id, material_id, quantity, utc_text, supplier_id=None, total_cost=None):
+    connection = sqlite3.connect(database_file)
+    connection.execute(
+        "INSERT INTO stock_movements (id, material_id, movement_type, quantity, user_id, created_at, supplier_id, "
+        "total_cost_myr) VALUES (?, ?, 'RECEIVED', ?, 'U1', ?, ?, ?)",
+        (line_id, material_id, quantity, utc_text, supplier_id, total_cost))
+    connection.commit()
+    connection.close()
+
+
+def test_purchases_per_material_add_received_lines_per_month_with_units(database_file):
+    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
+    add_received_line(database_file, "B", "M1", 500, "2026-11-20 02:00:00")
+    add_received_line(database_file, "C", "M2", 300, "2026-10-10 02:00:00")
+    add_movement(database_file, "D", "M1", "USED", 400, "2026-11-06 02:00:00")          # used is not a purchase
+    chart = routes_stats.get_purchases_by_material(open_database(database_file), NOW)
+    assert chart["labels"][-2:] == ["Oct 2026", "Nov 2026"] and len(chart["labels"]) == 6
+    by_label = {dataset["label"]: dataset for dataset in chart["datasets"]}
+    assert by_label["PLA Basic White (g)"]["data"] == [0, 0, 0, 0, 0, 1500]
+    assert by_label["PLA Basic White (g)"]["unit"] == "g" and by_label["PLA Basic White (g)"]["name"] == "PLA Basic White"
+    assert by_label["PETG Clear (g)"]["data"] == [0, 0, 0, 0, 300, 0]
+    assert "70" not in str(chart) and "cost" not in str(chart).lower()                   # no money inside
+
+
+def test_spending_per_material_adds_totals_of_the_last_six_months(database_file):
+    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 100)
+    add_received_line(database_file, "B", "M1", 1000, "2026-11-20 02:00:00", "S2", 50)
+    add_received_line(database_file, "C", "M2", 1000, "2026-10-10 02:00:00", "S1", 90)
+    add_received_line(database_file, "D", "M1", 1000, "2026-05-01 02:00:00", "S1", 999)    # older than 6 months
+    add_received_line(database_file, "E", "M2", 1000, "2026-11-07 02:00:00")               # no total typed: skipped
+    chart = routes_stats.get_spending_by_material(open_database(database_file), NOW)
+    assert chart["labels"] == ["PLA Basic White (g)", "PETG Clear (g)"]
+    assert chart["amounts"] == [150.0, 90.0] and chart["purchases"] == [2, 1]
+
+
+def test_price_comparison_cheapest_offer_against_the_price_last_paid(database_file):
+    add_received_line(database_file, "A", "M1", 1000, "2026-11-01 02:00:00", "S1", 90)      # older line: ignored
+    add_received_line(database_file, "B", "M1", 2000, "2026-11-05 02:00:00", "S1", 150)     # newest: MYR 75 per kg
+    add_received_line(database_file, "C", "M2", 1000, "2026-11-06 02:00:00", "S1", 72)      # MYR 72 against offer 90
+    rows = {row["material"]: row for row in routes_stats.get_price_comparison(open_database(database_file))}
+    white = rows["PLA Basic White"]
+    assert white["offer_text"] == "MYR 60.00 per kg (Web Store)"
+    assert white["paid_text"].startswith("MYR 75.00 per kg (Kuching Shop, 05 Nov 2026)")
+    assert white["difference_text"] == "Paid 25% more than the cheapest offer"
+    assert rows["PETG Clear"]["difference_text"] == "Paid 20% less than the cheapest offer"
+    assert rows["ABS Grey"]["offer_text"] == "No offer" and rows["ABS Grey"]["paid_text"] == "Not bought yet"
+
+
+def test_procurement_data_addresses_follow_the_roles(admin, employee):
+    assert admin.get("/stats/data/purchases").status_code == 200
+    assert employee.get("/stats/data/purchases").status_code == 200                           # no money in it
+    assert admin.get("/stats/data/spending-by-material").status_code == 200
+    assert employee.get("/stats/data/spending-by-material").status_code == 403                # money: Admin only
+
+
+def test_employee_purchases_data_has_no_money_keys(employee, database_file):
+    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
+    text = employee.get("/stats/data/purchases").get_data(as_text=True).lower()
+    assert "cost" not in text and "myr" not in text and "amount" not in text
+
+
+def test_employee_statistics_page_has_purchases_but_no_money_panels(employee):
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert "Purchases per material" in page and "Quantity received (g, ml or pcs)" in page
+    for money_word in ("MYR", "Spending", "Supplier price comparison", "per kg"):
+        assert money_word not in page, money_word
+
+
+def test_admin_statistics_page_has_every_procurement_panel(admin, database_file):
+    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
+    page = admin.get("/stats/").get_data(as_text=True)
+    for words in ("Purchases per material", "Spending per material", "Supplier price comparison",
+                  "Cheapest supplier offer", "per kg", "These are estimates"):
+        assert words in page, words
+
+
+def test_every_chart_names_its_unit_in_the_axis_title(employee, admin):
+    employee_page = employee.get("/stats/").get_data(as_text=True)
+    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)", "Number of events",
+                  "Average days from ordering to arriving"):
+        assert words in employee_page, words
+    admin_page = admin.get("/stats/").get_data(as_text=True)
+    for words in ("MYR spent this month", "MYR spent in the last 6 months"):
+        assert words in admin_page, words
+
+
+def test_csv_lists_purchases_and_spending_per_material(admin, database_file):
+    yesterday = (routes_stats.utc_now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")   # always inside the last 6 months
+    add_received_line(database_file, "A", "M1", 1000, yesterday, "S1", 70)
+    text = admin.get("/stats/export.csv").get_data(as_text=True)
+    assert "Purchased (received)" in text and "Spending per material (last 6 months)" in text

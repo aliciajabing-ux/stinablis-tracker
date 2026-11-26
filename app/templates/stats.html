@@ -1,26 +1,37 @@
-{# WHAT THIS FILE DOES: The Statistics page: usage, low-stock, delivery-time and (Admin only) spending charts.
-   WHO CAN USE IT: Both. Spending and the download button are only drawn for Admin (the guide keeps these Admin only); the server also blocks Employees. #}
+{# WHAT THIS FILE DOES: The Statistics page: usage, purchases, low-stock, delivery-time charts and (Admin only) the spending
+   charts and the supplier price comparison. Every chart names its unit (g, ml, pcs, days) or MYR in the axis title and pop-up.
+   WHO CAN USE IT: Both. Everything with money (spending charts, price comparison) and the download button is only drawn for
+   Admin (the guide keeps these Admin only); the server also blocks Employees. #}
 {% extends "base.html" %}
 {% block title %}Statistics - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
-  .panel { background:#fff; border-radius:6px; padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
+  /* Layout only: the colours and shapes come from app/static/theme.css. */
+  .panel { padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
   .chart-area { position:relative; width:100%; height:300px; }
-  .button, .panel select { padding:12px 18px; font-size:1rem; border-radius:6px; }
-  .button { display:inline-block; background:#1a5fb4; color:#fff; text-decoration:none; }
-  .waiting { background:#fff7e0; padding:10px; border-radius:6px; }
+  .button, .panel select { padding:12px 18px; font-size:1rem; }
+  .button { display:inline-block; text-decoration:none; }
+  .scroll { overflow-x:auto; }
+  .note { font-size:.9rem; }
 </style>
 <h1>Statistics</h1>
-<p>Simple charts of how materials are used. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
+<p>Simple charts of how materials are used and bought. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
 <div class="panel">
   <h2>Usage per material</h2>
-  <p>How much was used in each week or month.</p>
+  <p>How much was used in each week or month. Each bar shows its own unit (g, ml or pcs): point at a bar to read it.</p>
   <label for="period">Show by: </label>
   <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
 </div>
 <div class="panel">
+  <h2>Purchases per material</h2>
+  <p>How much stock was received (recorded with "Record received") in each of the last 6 months. Each bar shows its own unit (g, ml or pcs).</p>
+  <div class="chart-area"><canvas id="purchases-chart" aria-label="Purchases per material bar chart"></canvas></div>
+  <p class="waiting" id="purchases-empty" hidden>No stock was received in the last 6 months.</p>
+</div>
+<div class="panel">
   <h2>Low-stock events per month</h2>
+  <p>How many times a material dropped from OK to LOW or OUT.</p>
   {% if low_events_ready %}<div class="chart-area"><canvas id="low-chart" aria-label="Low-stock events line chart"></canvas></div>
   {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how a low-stock event is counted.</p>{% endif %}
 </div>
@@ -32,8 +43,31 @@
 {% if show_admin_tools %}
 <div class="panel">
   <h2>Spending per supplier this month</h2>
+  <p>Money paid this month, from the totals typed on "Record received". Amounts are in MYR.</p>
   {% if spending_ready %}<div class="chart-area"><canvas id="spending-chart" aria-label="Spending per supplier chart"></canvas></div>
   {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how money spent is counted.</p>{% endif %}
+</div>
+<div class="panel">
+  <h2>Spending per material</h2>
+  <p>Money paid for each material over the last 6 months, in MYR. Only "Record received" lines with a total paid are counted.</p>
+  <div class="chart-area"><canvas id="material-spending-chart" aria-label="Spending per material bar chart"></canvas></div>
+  <p class="waiting" id="material-spending-empty" hidden>No purchase with a total paid was recorded in the last 6 months.</p>
+</div>
+<div class="panel">
+  <h2>Supplier price comparison</h2>
+  <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.</p>
+  <div class="scroll">
+    <table>
+      <tr><th>Material</th><th>Cheapest supplier offer</th><th>Price last paid</th><th>Difference</th></tr>
+      {% for row in comparison_rows %}
+      <tr><td>{{ row.material }}</td><td>{{ row.offer_text }}</td><td>{{ row.paid_text }}</td><td>{{ row.difference_text }}</td></tr>
+      {% else %}
+      <tr><td colspan="4">No materials yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <p class="note">These are estimates. The offer price is before shipping. The price paid is the total typed on "Record received"
+    (which may include shipping) divided by the quantity, so it can look higher.</p>
 </div>
 <p><a class="button" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a></p>
 {% endif %}
@@ -41,8 +75,10 @@
 <script>
   var urls = {
     usage: "{{ url_for('stats.usage_data') }}",
+    purchases: "{{ url_for('stats.purchases_data') }}",
     low: "{{ url_for('stats.low_stock_data') }}",
-    lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools and spending_ready %},
+    lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools %},
+    materialSpending: "{{ url_for('stats.spending_by_material_data') }}"{% endif %}{% if show_admin_tools and spending_ready %},
     spending: "{{ url_for('stats.spending_data') }}"{% endif %}
   };
   var charts = {};
@@ -60,12 +96,30 @@
     Chart.defaults.plugins.legend.labels.color = TEXT_COLOUR;
     Chart.defaults.plugins.title.color = TEXT_COLOUR;
   }
-  // Gives each bar group of the usage chart a palette colour (the colours repeat after five materials; the legend and tooltip name each one).
-  function colourUsageDatasets(chartData) {
+  // Gives each bar group a palette colour (the colours repeat after five materials; the legend and tooltip name each one).
+  function colourDatasets(chartData) {
     chartData.datasets.forEach(function (dataset, index) {
       dataset.backgroundColor = PALETTE[index % PALETTE.length];
     });
     return chartData;
+  }
+  // Returns a number written the way people read it, for example 1,250.5.
+  function formatNumber(value) {
+    return Number(value).toLocaleString("en-US", {maximumFractionDigits: 2});
+  }
+  // Returns the settings for an axis title (the words printed beside an axis, such as "Quantity (g, ml or pcs)").
+  function axisTitle(text) {
+    return {display: true, text: text};
+  }
+  // Returns the pop-up line for a quantity bar, for example "PLA Basic White: 250 g" (each material carries its own unit).
+  function quantityTooltip(context) {
+    var dataset = context.dataset;
+    return (dataset.name || dataset.label) + ": " + formatNumber(context.parsed.y) + " " + (dataset.unit || "");
+  }
+  // Returns the chart settings for the usage and purchases bar charts (axis titles and the unit in the pop-up).
+  function quantityOptions(yText, xText) {
+    return {scales: {y: {beginAtZero: true, title: axisTitle(yText)}, x: {title: axisTitle(xText)}},
+            plugins: {tooltip: {callbacks: {label: quantityTooltip}}}};
   }
   // Draws (or redraws) one chart inside the canvas with the given id.
   function drawChart(canvasId, config) {
@@ -75,31 +129,78 @@
     config.options = Object.assign({responsive: true, maintainAspectRatio: false}, config.options || {});
     charts[canvasId] = new Chart(canvas, config);
   }
+  // Shows or hides the "nothing to show" sentence under a chart.
+  function showEmptyNote(noteId, isEmpty) {
+    var note = document.getElementById(noteId);
+    if (note) { note.hidden = !isEmpty; }
+  }
   // Loads the usage numbers for the chosen period and draws the bar chart.
   function loadUsage() {
     var period = document.getElementById("period").value;
+    var periodWords = period === "week" ? "Week (starting Monday)" : "Month";
     fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("usage-chart", {type: "bar", data: colourUsageDatasets(d)});
+      drawChart("usage-chart", {type: "bar", data: colourDatasets(d),
+                                options: quantityOptions("Quantity used (g, ml or pcs)", periodWords)});
     });
   }
   document.getElementById("period").addEventListener("change", loadUsage);
   loadUsage();
+  fetch(urls.purchases).then(function (r) { return r.json(); }).then(function (d) {
+    showEmptyNote("purchases-empty", d.datasets.length === 0);
+    drawChart("purchases-chart", {type: "bar", data: colourDatasets(d),
+                                  options: quantityOptions("Quantity received (g, ml or pcs)", "Month")});
+  });
   fetch(urls.lead).then(function (r) { return r.json(); }).then(function (d) {
-    drawChart("lead-chart", {type: "bar", options: {indexAxis: "y"},
-      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: PALETTE[2]}]}});
+    drawChart("lead-chart", {type: "bar",
+      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: PALETTE[2]}]},
+      options: {indexAxis: "y", scales: {x: {beginAtZero: true, title: axisTitle("Average days from ordering to arriving")}},
+                plugins: {tooltip: {callbacks: {label: function (context) { return formatNumber(context.parsed.x) + " days"; }}}}}});
   });
   if (document.getElementById("low-chart")) {
     fetch(urls.low).then(function (r) { return r.json(); }).then(function (d) {
       drawChart("low-chart", {type: "line",
         data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: PALETTE[1],
-          backgroundColor: PALETTE[1], pointBackgroundColor: PALETTE[1], pointRadius: 4}]}});
+          backgroundColor: PALETTE[1], pointBackgroundColor: PALETTE[1], pointRadius: 4}]},
+        options: {scales: {y: {beginAtZero: true, suggestedMax: 1, ticks: {precision: 0}, title: axisTitle("Number of events")},
+                           x: {title: axisTitle("Month")}},
+                  plugins: {tooltip: {callbacks: {label: function (context) { return context.parsed.y + (context.parsed.y === 1 ? " event" : " events"); }}}}}});
     });
   }
+  {% if show_admin_tools %}
+  // Returns money written the same way as the rest of the app, for example MYR 1,234.50.
+  function formatMoney(value) {
+    return "MYR " + Number(value).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  }
+  // Returns a short money label for an axis, for example MYR 1,200 (no cents, so the axis stays tidy).
+  function formatMoneyShort(value) {
+    return "MYR " + Number(value).toLocaleString("en-US", {maximumFractionDigits: 0});
+  }
+  // Loads the money spent per material (last 6 months) and draws the sideways bar chart.
+  fetch(urls.materialSpending).then(function (r) { return r.json(); }).then(function (d) {
+    showEmptyNote("material-spending-empty", d.labels.length === 0);
+    // Give every material its own row: the chart gets taller when there are many materials.
+    document.getElementById("material-spending-chart").parentNode.style.height = Math.max(300, d.labels.length * 30 + 110) + "px";
+    drawChart("material-spending-chart", {type: "bar",
+      data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: PALETTE[1]}]},
+      options: {indexAxis: "y",
+                scales: {x: {beginAtZero: true, title: axisTitle("MYR spent in the last 6 months"),
+                             ticks: {maxTicksLimit: 6, callback: function (value) { return formatMoneyShort(value); }}},
+                         y: {ticks: {autoSkip: false}}},
+                plugins: {tooltip: {callbacks: {label: function (context) {
+                  var count = d.purchases[context.dataIndex];
+                  return formatMoney(context.parsed.x) + " (" + count + (count === 1 ? " purchase)" : " purchases)");
+                }}}}}});
+  });
+  {% endif %}
   {% if show_admin_tools and spending_ready %}
   if (urls.spending) {
     fetch(urls.spending).then(function (r) { return r.json(); }).then(function (d) {
       drawChart("spending-chart", {type: "bar",
-        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: PALETTE[0]}]}});
+        data: {labels: d.labels, datasets: [{label: "MYR spent", data: d.amounts, backgroundColor: PALETTE[0]}]},
+        options: {scales: {y: {beginAtZero: true, title: axisTitle("MYR spent this month"),
+                               ticks: {callback: function (value) { return formatMoneyShort(value); }}},
+                           x: {title: axisTitle("Supplier")}},
+                  plugins: {tooltip: {callbacks: {label: function (context) { return formatMoney(context.parsed.y); }}}}}});
     });
   }
   {% endif %}

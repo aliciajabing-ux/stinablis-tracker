@@ -116,6 +116,12 @@ Tests use a temporary database, never the real `data/tracker.db`.
 |---|---|---|
 | Home boxes show total, LOW and OUT counts, with the words LOW and OUT | F2, Section 8 | Pass |
 | "Notifications" (was "Needs attention") lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
+| Purchases per material: RECEIVED lines per month with the unit; no money in the data (both roles) | F7 | Pass |
+| Spending per material: totals of the last 6 months, older lines and lines without a total left out (Admin only, Employee 403) | F7 | Pass |
+| Supplier price comparison: cheapest offer per kg / litre / piece against the price last paid; "more", "less" and "no offer" wording | F7 | Pass |
+| Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or comparison table | F7, Sec 4 | Pass |
+| CSV lists purchases and spending per material (Admin only) | F7 | Pass |
+| Admin versus Employee table (ROLE_DIFFERENCES.md): 24 rows proven against the real website, and the page says the same as the proof | Sec 4, 13 | Pass |
 | Admin Home has the money box; Employee Home has no money box and no "MYR" anywhere | F2, Section 4, 14 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |
 | Not logged in is sent to login on every statistics address | Section 4 | Pass |

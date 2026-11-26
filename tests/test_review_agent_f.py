@@ -213,6 +213,8 @@ SCREEN_MATRIX = {
     "/stats/data/low-stock": (302, 200, 200),
     "/stats/data/lead-times": (302, 200, 200),
     "/stats/data/spending": (302, 403, 200),
+    "/stats/data/purchases": (302, 200, 200),                 # quantities only, no money: both roles
+    "/stats/data/spending-by-material": (302, 403, 200),      # money: Admin only
     "/stats/export.csv": (302, 403, 200),
     "/users/": (302, 403, 200),
     "/users/add": (302, 403, 200),
