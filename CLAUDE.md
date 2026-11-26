@@ -629,3 +629,14 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Also noted: the dev server needed --host 0.0.0.0 and a port other than 5000 (macOS AirPlay) to open
       from a phone; macOS system Python 3.9 has no hashlib.scrypt, so auth.py crashes there
       (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
+
+2026-11-26 | Agent F (testing & review) | Housekeeping entry so every change is recorded. (1) Merged the
+  GitHub branch main-nux7zb into claude/modest-albattani-0zgw7k at the team's request. It only adds
+  CLAUDE.md.txt (Agent B's notes from 2026-11-23/24); no conflicts, 298 passed, 12 expected failures.
+  Agent B says CLAUDE.md.txt duplicates other text: the team decides whether to keep it. (2) Pushed
+  the Agent F tests and log entries to the branch. (3) How to open the site (no code changed): the
+  site only works while "python -m flask --app app run --port 5001" is running in Terminal; on a
+  phone add "--host 0.0.0.0" and open http://<Mac address>:5001 (ipconfig getifaddr en0). Port 5000 can
+  be taken by macOS AirPlay Receiver. | NEXT: owners fix F-1 to F-13; team decides F-2, F-3, F-4;
+  Agent G writes README how-to-run, GLOSSARY.md and requirements.txt. | None new. No app code was
+  changed by Agent F at any time; only tests/test_review_agent_f.py and this log.
