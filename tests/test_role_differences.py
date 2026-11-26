@@ -94,8 +94,7 @@ RECEIVED_WITH_MONEY = {"quantity": "10", "supplier_id": "S1", "total_cost": "12.
 
 # (area, what, Admin can?, Employee can?, probe). The "what" words must be in ROLE_DIFFERENCES.md too.
 ROLE_ROWS = [
-    ("Home", "See the Home dashboard with the four number boxes", True, True, page_has("/", "Total materials")),
-    ("Home", "See the money spent this month box (view only)", True, True, page_has("/", "Estimated money spent")),
+    ("Home", "See the Home dashboard with the three number boxes", True, True, page_has("/", "Total materials")),
     ("Home", "See the Notifications list with Find supplier buttons", True, True, page_has("/", "Find supplier")),
     ("Materials", "See the materials list and stock levels", True, True, page_has("/materials/", "PLA Basic")),
     ("Materials", "Record stock used", True, True, opens("/materials/M1/record/used")),

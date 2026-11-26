@@ -707,10 +707,10 @@ def test_section4_employee_sees_basic_statistics(employee):
     assert employee.get("/stats/data/usage").get_json()["labels"]
 
 
-def test_section4_employee_can_see_supplier_prices_shipping_and_money_box(employee):
+def test_section4_employee_can_see_supplier_prices_and_shipping(employee):
+    # The Home "money spent" box was removed on 2026-11-26; prices and shipping on the supplier page stay visible.
     page = employee.get("/suppliers/S2").get_data(as_text=True)
     assert "70.00" in page and "5.00" in page
-    assert "Estimated money spent" in employee.get("/").get_data(as_text=True)
 
 
 def test_section4_employee_can_see_supplier_phone_and_email_to_order(employee):

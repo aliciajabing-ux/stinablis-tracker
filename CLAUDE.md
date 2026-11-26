@@ -40,8 +40,9 @@ Web application (a website that only staff can log into) that:
   3. Warns people when a material is running low.
   4. Suggests the best supplier to order from, and shows how long it
      will take to arrive.
-  5. Shows simple statistics (charts and numbers) so the boss can see
-     what is used, what is running low, and how much is spent.
+  5. Shows simple statistics (charts and a ranking) so the boss can see
+     what is used, what is bought, which supplier delivers fastest, and
+     how supplier prices compare.
   6. Limits what each type of user can see and change.
 
 
@@ -135,8 +136,9 @@ ROLE 2: EMPLOYEE (general staff, for example operators at the printers)
   - Record stock received (for example "received 2 spools today").
   - See low-stock warnings.
   - See the basic statistics for their daily work.
-  - SEE supplier prices, shipping costs and money totals (team decision
-    2026-11-24). Seeing is not changing.
+  - SEE supplier prices, shipping costs and the total paid on the "Last
+    bought" note (team decision 2026-11-24; the Home "money spent" box
+    was removed on 2026-11-26). Seeing is not changing.
   Cannot:
   - Change supplier prices (costs).
   - Add, change, or delete suppliers.
@@ -155,8 +157,10 @@ PERMISSION RULE (very important)
   data leak.
 
 SENSITIVE DATA (must never reach an employee account)
-- (Supplier prices and cost totals: employees may now SEE these, since
-  2026-11-24. They must still never be able to CHANGE them.)
+- (Supplier prices, shipping costs and the "Last bought" total paid:
+  employees may now SEE these, since 2026-11-24. They must still never be
+  able to CHANGE them. The price comparison charts and the CSV download
+  stay Admin only.)
 - User passwords (stored in scrambled form only; never shown).
 - Admin account details.
 
@@ -172,11 +176,12 @@ F1. LOGIN SCREEN
     - After 5 wrong passwords, lock the account for 15 minutes.
 
 F2. HOME / DASHBOARD (the first screen after login)
-    - Four big boxes at the top:
+    - Three big boxes at the top:
         * Total number of materials
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
-        * Estimated money spent this month (Admin and Employee, view only)
+      (The fourth box, "estimated money spent this month", was REMOVED on
+      2026-11-26: the team said it is not relevant any more.)
     - A "Notifications" list (called "Needs attention" until 2026-11-26): the
       low and out-of-stock materials, with a button to see the suggested supplier.
 
@@ -1456,6 +1461,37 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   wanted. | PROBLEMS: none known. On a phone the usage chart's long legend still takes a lot of height (older issue, not
   caused by the sidebar).
 
+2026-11-26 | Agent E (team decision: "it is not relevant any more"; touches Agent H's theme.css and Agent F's tests) | DONE: the
+  Home box "Estimated money spent this month" is REMOVED. Guide F2 changed FIRST (now three boxes). WHAT CHANGED:
+  home.html (the box and its text), routes_stats.py (show_dashboard no longer works out any money; the function
+  format_money and the can_see_prices import, which nothing else used, are gone), theme.css (the light/dark pattern of
+  the boxes is now light, dark, light: "odd boxes light" instead of "boxes 1 and 4"), the boxes are now one row of
+  three on a screen wider than 640 px and one column below that. TESTS: the 3 tests of the money box became one
+  test that proves Home has exactly three boxes and no money box and no "MYR" for either role; the format_money test
+  and the "real money on Home" test were deleted; in Agent F's file one test lost its Home line (it still proves
+  Employees see supplier prices and shipping). ROLE_DIFFERENCES.md and its test lost the money-box row ("three number
+  boxes" now) and gained a decision line; TESTS.md updated. Checked in a browser: Admin, Employee and phone width 390
+  (3 boxes, no "MYR" on Home, no sideways scroll, no script errors). | KEPT (not asked for): the money functions behind
+  the CSV (get_month_spending, get_spending_by_supplier, SPENDING_METHOD_CONFIRMED), because the Admin CSV still
+  has "Spending this month" and "Spending per material" rows; the "Last bought" money on Materials; supplier prices.
+  | PROBLEMS / TEAM TO DECIDE: (1) Section 1 of the guide still says the statistics show "how much is spent"; after the
+  team's removals that is only in the CSV and the price comparison, so the sentence may need rewording. (2) Section 4
+  still says Employees see "money totals"; that now only means supplier prices, shipping and the "Last bought" total.
+  (3) If the CSV spending rows should go too, say so. | AGENT G (R3): README, GLOSSARY and PRESENTATION_NOTES may still
+  describe the money box on Home.
+
+2026-11-26 | Agent E (team asked for this wording) | DONE: the two guide sentences that the team's removals made out of date were
+  reworded (the guide, so nobody has to ask; no code changed). SECTION 1, item 5: was "Shows simple statistics (charts
+  and numbers) so the boss can see what is used, what is running low, and how much is spent." Now: "Shows simple
+  statistics (charts and a ranking) so the boss can see what is used, what is bought, which supplier delivers
+  fastest, and how supplier prices compare." (What is running low is shown by the Home Notifications, item 3.)
+  SECTION 4, Employee "Can": was "SEE supplier prices, shipping costs and money totals". Now: "SEE supplier prices,
+  shipping costs and the total paid on the 'Last bought' note (team decision 2026-11-24; the Home 'money spent' box
+  was removed on 2026-11-26)." SECTION 4, Sensitive data: was "Supplier prices and cost totals". Now: "Supplier prices,
+  shipping costs and the 'Last bought' total paid ... The price comparison charts and the CSV download stay Admin
+  only." Older log entries that say "money totals" (and the dated decision line in ROLE_DIFFERENCES.md) are history and were not changed. | AGENT G (R3): PRESENTATION_NOTES.md (about line 200) still says Employees see "money totals"; please use the new wording. | None.
+
+
 2026-11-26 | Main Chat (team decision after the real user test with Ryan, done at the team's request across
   Agent C, E, H and F files) | USER TEST: Ryan from Stinablis (Jacob was not available) tested the app
   with a timer. Result: 7:16 baseline time; he got stuck on steps 1 and 2. His words: "Will use but need
@@ -1557,3 +1593,13 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   quote; see the two Main Chat entries above) back into README.md and PRESENTATION_NOTES.md, which were
   kept at the main-0rpyg5 versions. The data addresses of main's Stock page are not present. | The two
   Main Chat entries above still describe main's Stock page, Noti and soft OUT; this entry overrides them.
+
+2026-11-26 | Agent E (landing the leftovers of pull request #2, at the team's request) | DONE: PR #2 was merged by the team
+  member at 15:54, but two commits pushed to main-0rpyg5 afterwards did not go with it: (1) the removal of the Home box
+  "Estimated money spent this month" (three boxes now) and (2) the guide rewording in Sections 1 and 4. I merged
+  origin/main into main-0rpyg5 (it had moved on: search-first Materials list, optional supplier and offer details on the
+  Add material form, Ryan's pre-test feedback work and tests). Only this status log clashed (kept every entry from both
+  sides); every file merged without edits. The Home box is still gone and the three-box light/dark pattern is still in
+  theme.css. Suite on the combined code: 450 pass, 2 skipped, 6 expected failures. A new pull request carries these
+  commits into main. | NONE. | None.
+
