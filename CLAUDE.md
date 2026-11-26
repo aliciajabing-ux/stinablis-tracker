@@ -1708,3 +1708,15 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   smaller so long material names show in full. No data, address, permission or script change. Checked in a browser at width 390 (Employee) with the
   longest material name: the box is inside the panel, the whole name is readable, no sideways page scroll. Full suite passes. | NOT DONE: the "Show by"
   box of Usage per material gets the same cap (it was never too wide). | None.
+
+2026-11-26 | Agent A / D (sample data; done at the team's request) | DONE: realistic sample suppliers across all materials. Added 16 suppliers
+  to sample_data/suppliers.csv (S006 to S021: 9 LOCAL in Kuching/Sarawak and 7 ONLINE in West Malaysia, using the shop names from the team's
+  list) and 146 offers to sample_data/supplier_offers.csv (163 offers in total). EVERY one of the 39 materials (M001 to M039) now has 2 or more active
+  offers, including all 14 LOW and OUT items, so the Find supplier page can compare suppliers for each of them. pack_unit matches the material's unit on
+  every row; is_active uses yes/no; local shops use 1 to 2 days and MYR 0 shipping, online shops 6 to 7 days and MYR 18 to 25 shipping (as in
+  SAMPLE_DATA_README.txt). S021 "Shopee - BudgetFil" is a BAD BATCH demo: its notes say so and all its offers are switched off (the supplier row stays
+  active so it still shows in the list). materials.csv was not changed. SAMPLE_DATA_README.txt counts and wording updated. Suite: 458 pass at that
+  time (now 460 with later tests). | Team: all contact details and ALL prices are invented placeholders, not real quotes (Rule R7); replace them with
+  the founder's answers (Section 16, questions 1 to 3). A database made before this needs deleting and "python app/setup_database.py" again. | NOTE: one
+  teammate-confirmed phone test (same day) showed the pages work on a real phone over Wi-Fi (flask run --host 0.0.0.0). The branch sample-suppliers-kuching
+  was merged and then deleted. | None.
