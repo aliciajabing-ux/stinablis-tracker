@@ -272,3 +272,9 @@ def test_every_sample_purchase_supplier_is_the_same_supplier_that_sells_that_mat
         "SELECT t.id FROM stock_movements t JOIN supplier_offers o ON o.material_id = t.material_id AND o.is_active = 1 "
         "WHERE t.supplier_id IS NOT NULL AND t.supplier_id <> o.supplier_id")
     assert mismatches == []
+
+
+def test_materials_page_has_the_option_2_layout_pieces_and_no_old_text(sample_database_file):
+    page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
+    assert 'class="m-name"' in page and "OPTION 2 LAYOUT v2" in page and "table-layout: fixed" in page
+    assert "Not bought through this app yet" not in page
