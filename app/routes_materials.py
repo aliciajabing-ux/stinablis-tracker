@@ -187,6 +187,8 @@ def list_materials():
         "SELECT * FROM materials WHERE is_active = 1 AND (name LIKE ? ESCAPE '\\' OR material_type LIKE ? ESCAPE '\\' "
         "OR colour LIKE ? ESCAPE '\\') ORDER BY name, colour", (pattern, pattern, pattern)).fetchall()
     materials = [add_status(row) for row in rows]
+    urgency_order = {STATUS_OUT: 0, STATUS_LOW: 1, STATUS_OK: 2}
+    materials.sort(key=lambda material: urgency_order[material["status"]])
     if status_filter in (STATUS_OK, STATUS_LOW, STATUS_OUT):
         materials = [m for m in materials if m["status"] == status_filter]
     show_money = can_see_prices(get_current_user())

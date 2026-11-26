@@ -105,6 +105,23 @@ body table td button.btn:not(.plain), body table .btn:not(.plain), body table .b
 body table td button.btn:not(.plain):hover, body table .btn:not(.plain):hover, body table .btn:hover, body table .button:hover { background: var(--text) !important; color: var(--smoky-black) !important; }
 body td { vertical-align: middle; }
 
+/* Materials rows: "Record used" is the one filled button, "Record received" is outlined, Edit and Remove hide under "More". */
+.row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+body table .btn.row-main { background: var(--hot-orange) !important; color: var(--smoky-black) !important; border-color: var(--hot-orange) !important; font-weight: bold; }
+body table .btn.row-main:hover { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; }
+.row-actions .btn { white-space: nowrap; min-height: 40px; }
+.row-more { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.row-more summary { list-style: none; cursor: pointer; padding: 8px 12px; min-height: 40px; box-sizing: border-box; border-radius: 10px;
+  font-family: var(--font-mono); font-size: .85rem; color: var(--moss); border: 2px solid transparent; display: flex; align-items: center; }
+.row-more summary::-webkit-details-marker { display: none; }
+.row-more summary::after { content: " \25BE"; }
+.row-more summary:hover, .row-more[open] summary { color: var(--text); border-color: var(--line); }
+.row-more-menu { display: flex; align-items: center; gap: 6px; flex-basis: 100%; }
+.row-more-menu form { margin: 0; }
+.row-more-menu .btn { text-align: center; box-sizing: border-box; }
+body table .btn.danger { border-color: var(--hot-orange) !important; color: var(--hot-orange) !important; }
+body table .btn.danger:hover { background: var(--hot-orange) !important; color: var(--smoky-black) !important; }
+
 /* ---- Forms ---- */
 body label { color: var(--text); }
 body input, body select, body textarea {
@@ -159,3 +176,8 @@ body .box button:hover, body .content button[type=submit]:hover { background: va
   /* Tables keep a readable width and scroll sideways inside their own box (the page itself never scrolls sideways). */
   body table { min-width: 880px; }
 }
+
+/* Materials: keep the Name column readable even when a row's "More" menu is open and its Actions column grows. */
+.table-wrap td:first-child { min-width: 200px; }
+.table-wrap td:last-child { min-width: 300px; }
+.table-wrap td:has(.row-more) { min-width: 380px; }
