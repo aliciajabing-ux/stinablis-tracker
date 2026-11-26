@@ -130,6 +130,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Usage chart adds USED rows only, by month and by week (week starts Monday) | F7 | Pass |
 | A movement at 17:00 UTC on 31 Oct counts in November (Malaysia time, UTC+8) | Section 15 | Pass |
 | Average delivery time per supplier (used by the CSV) ignores switched-off offers | F7 | Pass |
+| Statistics sidebar: Employee sees 3 items and no price, no download, no "MYR"; Admin sees 5 (price comparison and CSV too); only the first statistic is shown at the start; the script switches between them | F7, Sec 4 | Pass |
 | Delivery ranking: fastest first, ties share a rank (1, 1, 3), switched-off offers and suppliers left out, fastest offer counts, all-materials average, unknown material empty; material list; both roles, no money; the old chart and address are gone | F7 | Pass |
 | Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop). The chart that counted them was removed on 2026-11-26; the events are still saved | F5 | Pass |
 | Money spent = real "Total paid" from Record received, per supplier, Malaysia-time month | F2, F7 | Pass |

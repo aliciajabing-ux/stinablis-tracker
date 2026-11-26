@@ -505,3 +505,44 @@ def test_the_page_offers_the_material_choice_and_the_old_delivery_chart_is_gone(
         assert "PLA Basic White (g)" in page and "ABS Grey" not in page.split('id="ranking-material"')[1].split("</select>")[0]
         assert "lead-chart" not in page and "Average delivery time per supplier" not in page
         assert browser.get("/stats/data/lead-times").status_code == 404
+
+
+# ---------- The Statistics sidebar (guide F7, decision 2026-11-26) ----------
+
+# Returns the links inside the sidebar of a page as (address, words) pairs, in order.
+def sidebar_links(page):
+    import re
+    nav = re.search(r'<nav class="stats-nav".*?</nav>', page, re.S).group(0)
+    return [(href, re.sub(r"\s+", " ", words).strip()) for href, words in re.findall(r'<a [^>]*href="([^"]+)"[^>]*>(.*?)</a>', nav, re.S)]
+
+
+def test_employee_sidebar_lists_only_the_statistics_an_employee_may_open(employee):
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert sidebar_links(page) == [("#usage", "Usage per material"), ("#purchases", "Purchases per material"),
+                                   ("#ranking", "Delivery ranking")]
+    for gone in ("#price", "nav-price", "panel-price", "export.csv", "Supplier price comparison", "MYR"):
+        assert gone not in page, gone
+
+
+def test_admin_sidebar_also_lists_the_price_comparison_and_the_download(admin):
+    links = sidebar_links(admin.get("/stats/").get_data(as_text=True))
+    assert [words for _, words in links] == ["Usage per material", "Purchases per material", "Delivery ranking",
+                                             "Supplier price comparison", "Download spreadsheet (CSV)"]
+    assert links[3][0] == "#price" and links[4][0] == "/stats/export.csv"
+
+
+def test_only_the_first_statistic_is_shown_when_the_page_opens(admin, employee):
+    admin_page = admin.get("/stats/").get_data(as_text=True)
+    assert 'id="panel-usage">' in admin_page                                   # shown
+    for hidden_one in ("panel-purchases", "panel-ranking", "panel-price"):
+        assert 'id="%s" hidden>' % hidden_one in admin_page, hidden_one
+    employee_page = employee.get("/stats/").get_data(as_text=True)
+    assert 'id="panel-usage">' in employee_page
+    assert 'id="panel-purchases" hidden>' in employee_page and 'id="panel-ranking" hidden>' in employee_page
+
+
+def test_the_sidebar_marks_the_first_statistic_and_a_script_switches_between_them(employee):
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert 'id="nav-usage" href="#usage" class="active" aria-current="true"' in page
+    assert "function showStatistic(" in page and 'addEventListener("hashchange"' in page
+    assert 'STATISTIC_NAMES = ["usage", "purchases", "ranking"]' in page          # an Employee's script knows no "price"

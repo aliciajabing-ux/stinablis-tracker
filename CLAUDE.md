@@ -252,6 +252,13 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
           table with the same numbers was removed on 2026-11-26 (team
           decision: it repeated the charts). Estimates: the offer price is
           before shipping.
+    - Statistics sidebar (decision 2026-11-26): a menu on the left lists the
+      statistics (usage, purchases, delivery ranking, and for the Admin the
+      supplier price comparison). Clicking one shows only that statistic, so
+      nobody has to scroll down the page. The chosen one is marked, and the
+      address keeps it (for example /stats/#purchases) so a refresh or a
+      bookmark opens the same one. The Admin also finds the CSV download in
+      the sidebar. On a phone the menu is a row of buttons across the top.
     - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
       and in the pop-up text, never just a bare number.
     - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
@@ -1420,4 +1427,23 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   sample data has one supplier for most materials, so most rankings show one line until offers from more suppliers are
   added (Suppliers > Add material this supplier sells). F-13 (the old chart was cut off on a phone) is now moot,
   because that chart no longer exists. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team request) | DONE: a SIDEBAR on the Statistics page, so nobody scrolls down to find a chart. Guide F7 changed
+  FIRST. HOW IT WORKS: a menu on the left lists the statistics (Usage per material, Purchases per material, Delivery
+  ranking and, for the Admin only, Supplier price comparison and "Download spreadsheet (CSV)"). Clicking an item shows
+  ONLY that statistic and hides the others; the chosen item is marked (orange, aria-current). The address keeps the
+  choice (/stats/#purchases), so a refresh, a bookmark or a shared link opens the same one; an unknown name shows the
+  first. The menu stays in view while scrolling (sticky). On a phone (720 px or narrower) it becomes a row of buttons
+  across the top that scrolls sideways inside itself (the page does not). Every item is at least 44 px tall (Section 8).
+  Files: app/templates/stats.html only (layout styles use the theme's colour variables, no new colours; panels got ids,
+  only the first is visible at the start; the old CSV button at the bottom moved into the sidebar; a short script
+  showStatistic/showStatisticFromAddress; charts measure themselves again when their panel is shown, because Chart.js
+  cannot size a chart inside a hidden panel). ROLES: an Employee's page has no price item, no price panel, no download
+  link, no "MYR" and the script does not even know "price" (typing /stats/#price shows the first statistic); tests
+  prove it. Checked in a browser: Admin and Employee, every item, deep link, reload, bad name, phone width 390 (no
+  sideways page scroll), all charts correctly sized after switching, no script errors. 4 new tests; ROLE_DIFFERENCES.md
+  and TESTS.md mention the sidebar. | NOTE: the page now needs its script to show anything past the first statistic;
+  it needed Chart.js (from the internet) for the charts anyway. | AGENT G (R3): mention the sidebar in the notes if
+  wanted. | PROBLEMS: none known. On a phone the usage chart's long legend still takes a lot of height (older issue, not
+  caused by the sidebar).
 

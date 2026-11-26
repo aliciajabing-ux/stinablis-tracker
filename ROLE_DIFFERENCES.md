@@ -49,6 +49,9 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 
 ### Statistics
 
+The Statistics page has a sidebar that lists only the statistics the role may open: three for an Employee, and for the Admin
+also the supplier price comparison and the spreadsheet download. Clicking one shows it on its own, so nobody scrolls.
+
 | What | Admin | Employee | Notes |
 |---|---|---|---|
 | See the usage per material chart | Yes | Yes | Each bar shows its own unit (g, ml or pcs). |

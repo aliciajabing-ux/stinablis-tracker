@@ -2,7 +2,8 @@
    comparison. Every chart names its unit (g, ml, pcs, days) or MYR in the axis title and pop-up. (The low-stock events,
    spending per supplier and spending per material charts were removed on 2026-11-26.)
    WHO CAN USE IT: Both. Everything with money (price comparison) and the download button is only drawn for
-   Admin (the guide keeps these Admin only); the server also blocks Employees. #}
+   Admin (the guide keeps these Admin only); the server also blocks Employees.
+   The sidebar shows one statistic at a time (decision 2026-11-26), so nobody scrolls down the page. #}
 {% extends "base.html" %}
 {% block title %}Statistics - Stinablis Tracker{% endblock %}
 {% block content %}
@@ -13,6 +14,25 @@
   .button, .panel select { padding:12px 18px; font-size:1rem; }
   .button { display:inline-block; text-decoration:none; }
   .note { font-size:.9rem; }
+  /* The sidebar: one statistic is shown at a time, so nobody scrolls down the page. Colours come from the theme (var(--...)). */
+  .stats-layout { display:grid; grid-template-columns:210px minmax(0, 1fr); gap:20px; align-items:start; }
+  .stats-nav { position:sticky; top:16px; display:flex; flex-direction:column; gap:4px; }
+  .stats-nav-title { margin:0 0 6px; color:var(--moss); font-family:var(--font-mono); font-size:.85rem; }
+  .stats-nav a { display:flex; align-items:center; min-height:44px; box-sizing:border-box; padding:8px 14px; border-radius:10px;
+                 color:var(--text); text-decoration:none; font-family:var(--font-mono); font-size:.9rem; }
+  .stats-nav a:hover, .stats-nav a:focus { background:var(--eerie-light); }
+  .stats-nav a.active { background:var(--orange-wheel); color:var(--smoky-black); font-weight:700; }
+  .stats-nav a.stats-export { margin-top:10px; border:2px solid var(--text); }
+  .stats-nav a.stats-export:hover { background:var(--text); color:var(--smoky-black); }
+  .stats-main { min-width:0; }
+  @media (max-width: 720px) {
+    .stats-layout { display:block; }
+    .stats-nav { position:sticky; top:0; z-index:5; flex-direction:row; overflow-x:auto; gap:6px; padding:8px 0; margin-bottom:12px;
+                 background:var(--eerie-black); }
+    .stats-nav-title { display:none; }
+    .stats-nav a { flex:0 0 auto; white-space:nowrap; }
+    .stats-nav a.stats-export { margin-top:0; }
+  }
   /* The delivery ranking: colours come from the theme's colour list (var(--...)). */
   .ranking { list-style:none; margin:16px 0 0; padding:0; }
   .ranking li { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; padding:12px 0; border-bottom:1px solid var(--line); }
@@ -26,20 +46,30 @@
 </style>
 <h1>Statistics</h1>
 <p>Simple charts of how materials are used and bought. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
-<div class="panel">
+<div class="stats-layout">
+<nav class="stats-nav" aria-label="Statistics menu">
+  <p class="stats-nav-title">Choose a statistic</p>
+  <a id="nav-usage" href="#usage" class="active" aria-current="true">Usage per material</a>
+  <a id="nav-purchases" href="#purchases">Purchases per material</a>
+  <a id="nav-ranking" href="#ranking">Delivery ranking</a>
+  {% if show_admin_tools %}<a id="nav-price" href="#price">Supplier price comparison</a>
+  <a class="stats-export" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a>{% endif %}
+</nav>
+<div class="stats-main">
+<div class="panel" id="panel-usage">
   <h2>Usage per material</h2>
   <p>How much was used in each week or month. Each bar shows its own unit (g, ml or pcs): point at a bar to read it.</p>
   <label for="period">Show by: </label>
   <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
 </div>
-<div class="panel">
+<div class="panel" id="panel-purchases" hidden>
   <h2>Purchases per material</h2>
   <p>How much stock was received (recorded with "Record received") in each of the last 6 months. Each bar shows its own unit (g, ml or pcs).</p>
   <div class="chart-area"><canvas id="purchases-chart" aria-label="Purchases per material bar chart"></canvas></div>
   <p class="waiting" id="purchases-empty" hidden>No stock was received in the last 6 months.</p>
 </div>
-<div class="panel">
+<div class="panel" id="panel-ranking" hidden>
   <h2>Delivery ranking</h2>
   <p>Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. The days are what each supplier
     says; the arrival date is today plus those days (an estimate).</p>
@@ -52,7 +82,7 @@
   <p class="waiting" id="ranking-empty" hidden>No supplier sells this yet.</p>
 </div>
 {% if show_admin_tools %}
-<div class="panel">
+<div class="panel" id="panel-price" hidden>
   <h2>Supplier price comparison</h2>
   <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.
     Point at a bar to see the supplier and the date.</p>
@@ -65,8 +95,9 @@
   <p class="note">These are estimates. The offer price is before shipping. The price paid is the total typed on "Record received"
     (which may include shipping) divided by the quantity, so it can look higher.</p>
 </div>
-<p><a class="button" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a></p>
 {% endif %}
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
   var urls = {
@@ -214,5 +245,25 @@
     drawPriceChart("price-chart-piece", "price-chart-piece-empty", d.per_piece, "MYR per piece", true);
   });
   {% endif %}
+  // The sidebar: show one statistic at a time (the address keeps the choice, for example /stats/#purchases).
+  var STATISTIC_NAMES = ["usage", "purchases", "ranking"{% if show_admin_tools %}, "price"{% endif %}];
+  // Shows the statistic with this name, hides the others, and marks it in the sidebar. An unknown name shows the first one.
+  function showStatistic(name) {
+    if (STATISTIC_NAMES.indexOf(name) === -1) { name = STATISTIC_NAMES[0]; }
+    STATISTIC_NAMES.forEach(function (statisticName) {
+      var link = document.getElementById("nav-" + statisticName);
+      document.getElementById("panel-" + statisticName).hidden = statisticName !== name;
+      link.className = statisticName === name ? "active" : "";
+      if (statisticName === name) { link.setAttribute("aria-current", "true"); } else { link.removeAttribute("aria-current"); }
+    });
+    // A chart drawn while its panel was hidden has no size yet, so every chart measures itself again.
+    Object.keys(charts).forEach(function (chartId) { charts[chartId].resize(); });
+  }
+  // Reads the choice from the address (the part after #) and shows it.
+  function showStatisticFromAddress() {
+    showStatistic(window.location.hash.replace("#", ""));
+  }
+  window.addEventListener("hashchange", showStatisticFromAddress);
+  showStatisticFromAddress();
 </script>
 {% endblock %}
