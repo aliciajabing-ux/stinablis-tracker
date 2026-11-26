@@ -57,16 +57,23 @@
     <td>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</td>
     <td><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
     <td>
-      <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>
-      <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='received') }}">Record received</a>
-      {% if can_manage %}
-      <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
-      <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
-            onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn" type="submit">Remove</button>
-      </form>
-      {% endif %}
+      <div class="row-actions">
+        <a class="btn row-main" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>
+        <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='received') }}">Record received</a>
+        {% if can_manage %}
+        <details class="row-more">
+          <summary>More</summary>
+          <div class="row-more-menu">
+            <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
+            <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
+                  onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn danger" type="submit">Remove</button>
+            </form>
+          </div>
+        </details>
+        {% endif %}
+      </div>
     </td>
   </tr>
   {% else %}
