@@ -174,15 +174,26 @@ def supplier_detail(supplier_id):
 @admin_required
 def supplier_new():
     if request.method == "GET":
-        return render_template("supplier_form.html", supplier=None, message="")
+        return render_template("supplier_form.html", supplier=None, message="", editing=False)
     try:
         fields = read_supplier_form(request.form)
     except FormProblem as problem:
-        return render_template("supplier_form.html", supplier=request.form, message=str(problem)), 400
+        return render_template("supplier_form.html", supplier=request.form, message=str(problem), editing=False), 400
     database = get_db()
     new_id = insert_supplier(database, fields)
     database.commit()
     return redirect(url_for("suppliers.supplier_detail", supplier_id=new_id))
+
+
+# Returns 1 (active) or 0 (switched off) from the Status box of the Change supplier form. A form without the box
+# keeps the supplier as it is; any other value is refused in plain words.
+def read_supplier_status(form, supplier):
+    value = form.get("is_active")
+    if value is None:
+        return supplier["is_active"]
+    if value not in ("0", "1"):
+        raise FormProblem("Please choose Active or Switched off for the status.")
+    return int(value)
 
 
 # Admin only: shows the "Change supplier" form and saves the changes.
@@ -192,15 +203,19 @@ def supplier_edit(supplier_id):
     database = get_db()
     supplier = get_supplier_or_404(database, supplier_id)
     if request.method == "GET":
-        return render_template("supplier_form.html", supplier=supplier, message="")
+        return render_template("supplier_form.html", supplier=supplier, message="", editing=True)
     try:
         fields = read_supplier_form(request.form)
+        new_state = read_supplier_status(request.form, supplier)
     except FormProblem as problem:
-        return render_template("supplier_form.html", supplier=request.form, message=str(problem)), 400
+        return render_template("supplier_form.html", supplier=request.form, message=str(problem), editing=True), 400
     database.execute("UPDATE suppliers SET name=:name, supplier_type=:supplier_type, address=:address, "
-                     "phone=:phone, email=:email, website=:website, notes=:notes, "
-                     "updated_at=CURRENT_TIMESTAMP WHERE id=:id", {**fields, "id": supplier_id})
+                     "phone=:phone, email=:email, website=:website, notes=:notes, is_active=:is_active, "
+                     "updated_at=CURRENT_TIMESTAMP WHERE id=:id", {**fields, "is_active": new_state, "id": supplier_id})
     log_change(database, "SUPPLIER_CHANGED", "suppliers", supplier_id, f"Changed supplier {fields['name']}")
+    if new_state != supplier["is_active"]:
+        word = "SWITCHED_ON" if new_state else "SWITCHED_OFF"
+        log_change(database, "SUPPLIER_" + word, "suppliers", supplier_id, f"Supplier {fields['name']} {word.lower()}")
     database.commit()
     return redirect(url_for("suppliers.supplier_detail", supplier_id=supplier_id))
 
