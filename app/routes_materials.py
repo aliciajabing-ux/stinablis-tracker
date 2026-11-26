@@ -192,7 +192,10 @@ def list_materials():
     show_money = can_see_prices(get_current_user())
     for material in materials:
         material["last_bought"] = get_last_bought(get_db(), material, show_money)
-    return render_template("materials_list.html", materials=materials, search_text=search_text,
+    # One Materials tab, two sections: things counted in pieces are Hardware; everything else is Filament & other.
+    sections = [("Filament & other materials", [m for m in materials if m["unit"] != "pcs"]),
+                ("Hardware", [m for m in materials if m["unit"] == "pcs"])]
+    return render_template("materials_list.html", materials=materials, sections=sections, search_text=search_text,
                            status_filter=status_filter, can_manage=can_manage_materials(get_current_user()))
 
 
