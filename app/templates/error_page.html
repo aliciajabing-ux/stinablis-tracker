@@ -1,0 +1,10 @@
+{# WHAT THIS FILE DOES: A plain-English page for "no permission", "page not found" and "page expired", with a Home button.
+   WHO CAN USE IT: Both (shown by app/__init__.py whenever one of these errors happens). #}
+{% extends "base.html" %}
+{% block title %}Sorry - Stinablis Tracker{% endblock %}
+{% block content %}
+<h1>Sorry, that did not work</h1>
+<p>{{ message }}</p>
+<p><a href="{{ url_for('home') }}" style="display: inline-block; min-height: 44px; box-sizing: border-box; padding: 12px 18px; border-radius: 6px;
+   background: #1a5fb4; color: #fff; text-decoration: none; font-size: 1rem;">Back to Home</a></p>
+{% endblock %}

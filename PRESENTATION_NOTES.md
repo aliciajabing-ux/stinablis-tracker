@@ -8,10 +8,9 @@ Facts below were checked against the code and by running the app on 2026-11-24. 
 are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
 Stinablis facts or real prices (rule R7).
 
-Last re-checked against code: 2026-11-25, on the merged branch `main-iyvssn` (146 automatic tests
-passing). Three other branches were not part of that merge when I checked: `main-0rpyg5` (money spent,
-low-stock events, supplier-edit 403 tests), `main-tq6ebi` (small Agent D fix) and Agent F's review
-branch. Re-check these notes when they are merged (see the status log in `CLAUDE.md`).
+Last re-checked against code: 2026-11-25, final merge commit `6024c83` (384 automatic tests passed,
+2 skipped, 6 "expected failures" that describe known bugs). That commit includes all feature, test and
+design branches. Re-check these notes if anything else is merged (see the status log in `CLAUDE.md`).
 
 > **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
 > stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
@@ -37,17 +36,29 @@ Facts:
   - *One system for several kinds of stock.* Stinablis does industrial engineering and rapid
     prototyping in Kuching. Because our system supports pieces (`pcs`) alongside grams (`g`) and
     millilitres (`ml`), it can track filaments, resins and liquids, and also small hardware items such as
-    screws, springs, magnets, fidget clickers and keychain rings, in one simple web app. This is subject
-    to confirmation with the founder (which materials they really use is still an open question,
-    guide Section 16).
+    screws, springs, magnets, fidget clickers and keychain rings, in one simple web app. The hardware in
+    our demo is **sample data only** (names start with "SAMPLE"). Whether Stinablis really tracks such
+    items is **to be confirmed with the founder** (guide Section 2 and Section 16 Q1, Rule R4).
   - *Buying in Kuching.* The Find supplier page compares a fast local shop (for example delivery in
     1 day) with an online shop that may have a cheaper pack price but a larger minimum order and
     several days of shipping, using estimated total cost and arrival date. Every number is marked as
     an estimate. The suppliers in our demo are invented sample data; the founder still has to give us
     the real ones.
   - *Made for the shop floor.* Plain-English labels, the words OK / LOW / OUT shown with their
-    colours, big buttons, a phone-friendly layout (checked on a real phone), and every permission
-    checked on the server.
+    colours and explained once in a sentence on the Materials page, big buttons (at least about 44 px
+    tall, so a thumb can tap them), a "Last bought" reminder next to each material, plain-English error
+    pages with a **Back to Home** button, a phone-friendly layout, and every permission checked on the
+    server. Be honest about phones: the team's phone test found buttons and text fine, but wide tables
+    scroll sideways (F-11), phone numbers are not yet tappable (F-12), and on the Statistics page the
+    "Average delivery time per supplier" chart is cut off on the left (F-13). These are open findings
+    from the status log, not re-tested in a browser by me; no fix is logged yet.
+    *To check before the demo:* the top menu links get their size from `theme.css`; confirm in a browser
+    that they are about 44 px tall, like the other controls.
+  - *SupplyTrail pitch (team goal, not a measured result).* The aim is to cut the time spent searching
+    for suppliers, local Kuching shops against online ones, from about 2 hours a week towards about
+    30 minutes a week. These two numbers come from the team's pitch. I could not find them in
+    `CLAUDE.md` or the founder questions, so treat them as an **estimate to confirm with the founder**
+    (Section 16), not as a proven saving.
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -62,7 +73,9 @@ Facts:
 |---|---|---|
 | See materials, stock, LOW / OUT warnings | Yes | Yes |
 | Record stock **used** / **received** | Yes | Yes |
+| Type "Bought from" and "Total paid (MYR)" when recording **received** | Yes | **No** (403 if tried) |
 | See supplier contacts, **prices, shipping, cost estimates** | Yes | Yes (team decision 2026-11-24) |
+| See "Last bought" (who, how much, date, total paid in MYR) | Yes | Yes (view only) |
 | Add / change / remove materials | Yes | **No** (403) |
 | Add / change / switch off suppliers and offers, change prices | Yes | **No** (403) |
 | Statistics: usage, average delivery time | Yes | Yes |
@@ -93,7 +106,9 @@ Facts:
 Step by step (code in `app/routes_materials.py`, `app/alerts.py`):
 
 1. **Screen:** Materials list, press **Record used** on a row. Page address `/materials/<id>/record/used`.
-   The page shows the current stock, the status word and the last 10 history lines in Malaysia time.
+   The page shows the current stock, the status word, a one-line hint if it is LOW or OUT, a **Last
+   bought** line (who it was bought from, how much, the date and the total paid in MYR if it was typed),
+   and the last 10 history lines in Malaysia time.
 2. **Send:** the person types a quantity (and an optional note) and presses Save. The browser sends
    a POST to the server.
 3. **Server checks the form is genuine and the person is allowed:** the form carries a hidden
@@ -122,6 +137,13 @@ STOCK_USED activity row appeared.
 
 **Demo tip:** use the Section 15 checklist. Add a material with reorder level 500 g and quantity
 800 g (status OK), record 400 g used (400 g, LOW), record 400 g used again (0 g, OUT).
+
+**Record received (new):** the form has two optional boxes, "Bought from" and "Total paid (MYR)". **Only
+an Admin** sees and can fill them. This is enforced on the server by `can_record_purchase_cost` in
+`permissions.py`: an Employee can still record received stock, but without money, and if an Employee
+sends supplier or total anyway the server answers **403** and saves nothing. What the Admin types becomes
+the new "Last bought" line and the real number behind Home's "money spent" box. Employees can still
+**see** "Last bought" and its money, according to `can_see_prices()`, but cannot change it.
 
 **Sample data check (2026-11-25):** the sample file's date format bug is fixed. An automatic test
 builds the database from the sample files and opens the Record used page, the usage data and the CSV
@@ -205,9 +227,16 @@ a good story for "why one question per decision".
 **Verified on 2026-11-24:** logged in as the sample Employee, GET and POST to `/suppliers/new`,
 `/suppliers/S001/edit`, an offer edit address and `/materials/new` all answered **403**, and
 `/stats/export.csv` answered **403**. Employees can still open the supplier pages and the Find
-supplier page with MYR prices. A test written specially for the supplier and offer edit addresses
-exists on branch `main-0rpyg5` but was not merged when I checked; the materials edit addresses
-already have such tests in the merged code.
+supplier page with MYR prices. Since the merge on 2026-11-25 there are also automatic tests that send
+complete, valid forms as an Employee to the supplier and offer add / edit addresses: all give 403 and
+nothing changes.
+
+**"Last bought" follows the same rule.** The money in the "Last bought" line is shown only if
+`can_see_prices()` says yes (Admin and Employee; a visitor who is not logged in or a switched-off account
+gets nothing). Seeing it changes nothing: typing the purchase cost is behind its own rule,
+`can_record_purchase_cost` (Admin only), and editing prices stays behind `can_manage_*` and
+`admin_required`, so an Employee who types an edit address still gets 403, now with a plain-English page
+and a **Back to Home** button.
 
 What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the spending chart and the CSV export on
 the Statistics page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
@@ -251,18 +280,42 @@ Facts:
 
 ---
 
+## Version 1 (built) versus Version 2 (ideas only)
+
+**Built in Version 1 (you may demo these):**
+- Materials in `g`, `ml` and `pcs`, with OK / LOW / OUT status and a plain-English explanation.
+- Record used and Record received, with a history row and an activity-log row for each change.
+- "Last bought" memory (who, how much, date, total paid; money only for people allowed to see prices).
+- Find supplier: ranked by estimated total cost, then lead time, with estimated arrival dates.
+- Home boxes, usage chart, low-stock events chart, average delivery time, money spent; Admin-only
+  spending chart and CSV download.
+- Roles (Admin and Employee), server-side permission checks, login lock, CSRF protection, the Admin
+  Users screen, plain-English error pages, tap-friendly buttons.
+
+**Version 2 ideas (NOT built, NOT promised; guide Section 17 says write them down and do not build them):**
+- Printable labels for racks and shelves.
+- Humidity and dry-box alerts for moisture-sensitive filaments in Sarawak's damp climate.
+- Linking material stock to job quoting, so a quote uses real material cost.
+- Also version 2 already: barcode or NFC scanning, customer orders and invoices, email alerts,
+  automatic ordering, connecting to printers.
+
+Only the list above under "Built" may be shown as working. Everything under "Version 2" is a talking
+point for questions.
+
 ## Two-minute demo script
 
-1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent
-   (the money box says 'Not set up yet' until we confirm how it is counted)."
+1. Log in as the Admin. "Home shows four boxes: total materials, LOW, OUT, and money spent this
+   month. Money spent adds up the real totals an Admin typed on Record received; on the sample data it
+   may show a small number or MYR 0.00." (Do not claim a real figure.)
 2. (Optional, 15 seconds) Press **Users** to show the Admin-only screen for accounts.
 3. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
    "Best" at the top, and the word "estimate".
-4. Go to Materials, **Record used**, type a quantity, save. Show the status change.
+4. Go to Materials. Point to the OK / LOW / OUT sentence and a **Last bought** line. Press **Record
+   used**, type a quantity, save. Show the status change. (On a phone: the buttons are big enough to tap.)
 5. Log out. Log in as the Employee. Show: prices are visible, no Add / Change / Remove buttons and
    no Users link.
-6. Type `/suppliers/new` in the address bar: the "Forbidden" page. "The server blocks it, not just
-   the button."
+6. Type `/suppliers/new` in the address bar: a plain-English "no permission" page with a **Back to Home**
+   button. "The server blocks it, not just the button."
 
 ## Questions you may be asked (honest answers)
 
@@ -275,16 +328,18 @@ Facts:
 - **"What if the internet is down?"** The app itself runs on our own computer. Only the Statistics
   charts need the internet, because the chart library is loaded from the web.
 - **"What can it not do yet?"** Email alerts, a manual stock correction screen (ADJUSTED), an
-  activity-log screen, a one-click backup button, and real "money spent" and "low-stock events"
-  numbers (finished on a separate branch that was not merged when I checked). All are in the status log.
-- **"What would you build next (version 2)?"** Ideas only, not built and not promised (guide
-  Section 17): printable labels for racks and shelves; humidity and dry-box alerts for
-  moisture-sensitive filaments in Sarawak's damp climate; and linking material stock to job quoting so a
-  quote uses real material cost. Barcode scanning, customer orders and invoices are also version 2.
-- **"Why is the money box empty?"** The team agreed to store the real cost when stock is received,
-  but that part is not built yet, so the screen says "Not set up yet" rather than guessing.
-- **"How do you know it works?"** 146 automatic tests (merged branch, 2026-11-25), a manual
-  checklist (`TESTS.md`), and a phone check.
+  activity-log screen, a one-click backup button, and the shared look across every screen (Agent H's
+  job). Money spent and low-stock events now work. Received lines saved without a total count as MYR 0,
+  and low-stock events are counted from the day the feature was switched on. All are in the status log.
+- **"What would you build next (version 2)?"** See "Version 1 versus Version 2" above: those are ideas
+  only, not built and not promised.
+- **"Are the hardware items (screws, springs, magnets...) real?"** They are sample data to show that the
+  system can count pieces next to grams and millilitres. What hardware Stinablis really tracks is a
+  founder question.
+- **"Is the 2 hours to 30 minutes a week saving proven?"** No. It is the team's goal and estimate. We
+  have not measured it and the founder has not confirmed the 2-hour starting point.
+- **"How do you know it works?"** 384 automatic tests passed (2 skipped, 6 expected failures
+  that describe known bugs; commit `6024c83`, 2026-11-25), a manual checklist (`TESTS.md`), and a phone check.
 - **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
   secret token (CSRF protection), on top of the safe cookie settings.
 

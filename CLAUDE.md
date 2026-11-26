@@ -58,6 +58,10 @@ Web application (a website that only staff can log into) that:
   That information comes from our interview with the founder.
 - [CONFIRM WITH FOUNDER] List of materials they currently use.
 - [CONFIRM WITH FOUNDER] Which suppliers are online and which are local.
+- [CONFIRM WITH FOUNDER] Whether staff also need to track small hardware
+  pieces counted in pcs (for example screws, springs, magnets, fidget
+  clickers, keychain rings). Until the founder answers, such items appear
+  ONLY in the sample/demo data, clearly named as samples (Rule R4).
 
 
 ---------------------------------------------------------------------
@@ -183,6 +187,12 @@ F3. MATERIALS SCREEN
     - Search box and filter buttons (for example "show only LOW").
     - Add / edit / delete a material: ADMIN only.
     - "Record used" and "Record received" buttons: everyone.
+    - "Last bought" memory (decision 2026-11-24): each material row and the
+      Record screens show who it was last bought from, how much, the date
+      and (if typed) the total paid in MYR. It is read from the newest
+      RECEIVED line that names a supplier or a cost. The money part follows
+      can_see_prices() (Admin and Employee, view only). Changing prices
+      stays Admin only and the server still answers 403 to anyone else.
 
 F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
     - One row per supplier: name, type (ONLINE or LOCAL), address,
@@ -306,6 +316,11 @@ All of these numbers are ESTIMATES. The screen must say so.
 - Use colours with words too: green = OK, orange = LOW, red = OUT.
   (Do not rely on colour alone; always write the word.)
 - Maximum 3 clicks to any common task.
+- Buttons and links are at least about 44 px tall so a thumb can tap them.
+- Status words are explained once in plain English on the Materials screen:
+  OK = enough, LOW = at or below the reorder level, OUT = none left.
+- Error pages (no permission, page not found, expired form) use plain words
+  and a button back to Home.
 - Mobile-friendly: it should work on a phone or tablet at the printer.
 - Every form shows a short help sentence under the title.
 - Error messages in plain language. Bad: "Error 422 invalid payload".
@@ -1119,6 +1134,28 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   low_stock_events column names changed; the upgrade command will NOT rename them. | Agent C / Agent F:
   F-7 (read_number turns "1,5,5" into 155) also affects the new "Total paid" box.
 
+
+2026-11-24 | Main Chat (plan, done at the team's request across Agent A, C and B files) | DECISION: adapt
+  three improvements from the ShopGuard idea list into Version 1. (a) Hardware pieces (unit pcs) next to
+  g and ml items in the SAMPLE data only: screws, springs, magnets, fidget clickers and keychain rings,
+  all named "SAMPLE ..." and listed under a hardware supplier; the real Stinablis item list is still
+  [CONFIRM WITH FOUNDER] (Section 2, Section 16 Q1; Rule R4). (b) "Last bought" memory on the Materials
+  list and the Record used / Record received screens (see Section 5 F3), using can_see_prices() for the
+  money and leaving every edit check as it was (can_manage_*, admin_required, 403). (c) A plain-English
+  pass: a one-line OK / LOW / OUT explanation, a LOW / OUT hint on the Record screens, tap-friendly
+  buttons, and plain error pages with a Home button (Section 8). Sections 2, 5 and 8 updated FIRST. |
+  Then: sample_data CSVs, app/routes_materials.py + materials_list.html + materials_record.html (Agent C),
+  app/__init__.py + one new template error_page.html (Agent B), new tests. | CROSS-AGENT REQUESTS (R3,
+  edits made at the team's request, please review): AGENT A: sample_data/materials.csv,
+  supplier_offers.csv, stock_movements.csv and SAMPLE_DATA_README.txt got new sample rows (dates kept in
+  "YYYY-MM-DD HH:MM:SS"). AGENT C: new helper in routes_materials.py for the last-bought line. AGENT B:
+  error pages in app/__init__.py. AGENT H: base.html and app/static/ NOT touched; the shared look and the
+  44 px tap size on every screen are still yours (the new tap-size lines are only inside the Agent C
+  templates). AGENT F: please add Employee-sees-last-bought tests to your review list.
+  | CLAUDE.md.txt was NOT recreated or committed.
+
+2026-11-25 | Agent G (documentation & presentation) | FINAL DOC SYNC against origin/main-o7f8p8 at 10f78ab (branches main-0rpyg5, main-tq6ebi and Agent F's review are now merged). Full suite on that commit: 379 passed, 2 skipped, 6 xfailed (about 68 seconds). Updated README.md, GLOSSARY.md and PRESENTATION_NOTES.md: new test count; "Last bought" memory (money follows can_see_prices, edits still 403); sample hardware in pcs marked as SAMPLE and to confirm with the founder (R4); OK / LOW / OUT explained in plain English; 44 px tap size; plain-English 403/404/400 pages with "Back to Home"; money spent and low-stock events now described as working (they were "Not set up yet"); Version 1 built list kept apart from Version 2 ideas. | Re-check once more only if more branches are merged. Team: confirm the hardware list and the real suppliers with the founder (Section 16). | PROBLEMS: (1) The "SupplyTrail" pitch figures (supplier search from about 2 hours a week towards about 30 minutes a week) were not found anywhere in the repo, so PRESENTATION_NOTES.md labels them as the team's goal and an estimate, not measured and not confirmed by the founder (R4); Mark: please confirm the source. (2) Six tests are xfail (known bugs from Agent F's review); owners should fix them and remove the marks. (3) Still stale in the guide (R3, not mine): Section 6 price_per_unit / shipping_cost "Admin only data"; Section 13 says "three roles"; header and Section 10 say PROJECT_GUIDE.txt; Section 3 FilaOps link. (4) No activity-log screen (F9) or backup button yet.
+
 2026-11-24 | Agent E | CHECKED: "Usage per material shows sample bars at Jun 2026" is NOT a bug. The chart always
   shows the last 6 months, oldest on the left: Jun, Jul, Aug, Sep, Oct, Nov 2026. "Jun 2026" is only the FIRST
   (leftmost) label and has no data. The sample usage (18 to 22 Nov 2026) is in the LAST slot, "Nov 2026", at
@@ -1159,3 +1196,30 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   117 and 259) still use the old name; please change them to "Notifications". Agent F: the comment in
   tests/test_review_agent_f.py line 586 still says "Needs attention" (comment only). | None.
 
+
+
+2026-11-24 | Agent F (testing & review) | Founder-side phone test (iPhone-size screen, real site on the
+  Mac over Wi-Fi) done by the team member; I added what they found. Only reads; no app code touched.
+  | NEXT: owners fix below, then re-test on the phone. | PROBLEMS (Rule R3):
+  F-11 Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
+      columns (tables sit in an overflow-x box). Text size and buttons are fine. Idea: fewer columns
+      or stacked rows on narrow screens. Owner: Agent C (materials_list.html), Agent D
+      (suppliers.html, supplier_detail.html). Section 8 asks for mobile-friendly.
+  F-12 Phone numbers (and emails) are plain text, not tappable. Use tel: and mailto: links in
+      suggest.html, suppliers.html, supplier_detail.html. Owner: Agent D.
+  F-13 Statistics: the "Average delivery time per supplier" chart is cut off on the left side on a
+      phone (the usage chart is fine). Probably long supplier names squeezing the chart. Owner: Agent E
+      (stats.html / its Chart.js settings, id lead-chart).
+  F-9 UPDATE: confirmed on the phone. "Record used" gives an internal server error for materials
+      that have sample history (M001, M003, M004), because the dates in sample_data/stock_movements.csv
+      are like 2026-11-18T06:30:00Z. Local fix that worked for the tester: on macOS run
+      sed -i '' -E 's/T([0-9:]{8})Z/ \1/' sample_data/stock_movements.csv, delete data/tracker.db,
+      run setup_database.py again, then set-password for both sample users. Owner: Agent A (fix the
+      sample file or the import). Agent C could also make the pages read both date styles.
+  NOT A BUG: "Record used" shows the number keypad on a phone with no letters (it uses
+      inputmode="decimal" on purpose). Good for typing quantities.
+  Also noted: the dev server needed --host 0.0.0.0 and a port other than 5000 (macOS AirPlay) to open
+      from a phone; macOS system Python 3.9 has no hashlib.scrypt, so auth.py crashes there
+      (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
+
+2026-11-25 | Agent G (documentation & presentation) | DOC SYNC after the final merge into main (commit 6024c83; I re-ran the suite: 384 passed, 2 skipped, 6 xfailed). Updated README.md, PRESENTATION_NOTES.md and one GLOSSARY.md entry: test count and commit; "Bought from" and "Total paid" on Record received are Admin only (can_record_purchase_cost; an Employee who sends them gets 403), while Employees still see "Last bought" under can_see_prices(); the shared dark theme (app/static/theme.css) is mentioned; the phone test findings F-11 and F-12 are stated honestly. | Before the demo: check in a browser that the top menu links (sized in theme.css by padding plus a small minimum height) are about 44 px tall like the other controls (Agent H). | PROBLEMS (R3, not mine): F-11 to F-13 from the phone test are still open (sideways-scrolling tables, phone numbers not tappable, delivery-time chart cut off); the merge repeated some older status-log entries in this file; the SupplyTrail figures still have no source (see the previous Agent G entry).
