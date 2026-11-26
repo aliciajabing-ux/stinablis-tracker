@@ -237,20 +237,26 @@ def test_remove_keeps_the_row_and_history(admin, database_file):
 
 # ---------- Search and filter (F3) ----------
 
-# The Materials list shows OK first, then LOW, then OUT (Ryan's test, 2026-11-26), and keeps names in A-Z order inside each group.
+# The Materials list has two sections (Filament & other materials, then Hardware = items counted in pieces). Inside EACH
+# section it shows OK first, then LOW, then OUT (Ryan's test, 2026-11-26), and keeps names in A-Z order inside each group.
 def test_materials_list_is_sorted_by_urgency(admin, database_file):
     connection = sqlite3.connect(database_file)
     connection.executemany(
         "INSERT INTO materials (id, name, material_type, colour, unit, quantity_on_hand, reorder_level) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [("M4", "AAA Nuts", "Hardware", "Steel", "pcs", 900, 100),     # OK, first A-Z
-         ("M5", "ZZZ Resin", "Resin", "Grey", "ml", 0, 100)])           # OUT, last A-Z
+        [("M4", "AAA Nuts", "Hardware", "Steel", "pcs", 900, 100),     # Hardware section, OK
+         ("M5", "ZZZ Resin", "Resin", "Grey", "ml", 0, 100)])           # Filament section, OUT, last A-Z
     connection.commit()
     connection.close()
     page = admin.get("/materials/").get_data(as_text=True)
-    expected_order = ["AAA Nuts", "PLA Basic", "PETG", "ABS", "ZZZ Resin"]     # OK first, then LOW, then OUT (Ryan's test, 2026-11-26)
-    positions = [page.index('data-label="Name">' + name) for name in expected_order]
-    assert positions == sorted(positions)
+    hardware_start = page.index("<h2>Hardware")
+    sections = {"Filament": page[page.index("<h2>Filament"):hardware_start], "Hardware": page[hardware_start:]}
+    expected_order = {"Filament": ["PLA Basic", "PETG", "ABS", "ZZZ Resin"],   # OK, LOW, OUT, OUT (A-Z)
+                      "Hardware": ["AAA Nuts"]}
+    for section, names in expected_order.items():
+        positions = [sections[section].index('data-label="Name">' + name) for name in names]
+        assert positions == sorted(positions), section
+    assert 'data-label="Name">AAA Nuts' not in sections["Filament"]       # pieces never appear in the filament section
 
 
 def test_search_and_status_filter(employee):

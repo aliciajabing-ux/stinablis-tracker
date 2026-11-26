@@ -149,8 +149,8 @@ needs a connection to see the charts.
 python -m pytest tests
 ```
 
-This takes about a minute. On commit `6024c83` (2026-11-25, the final merge into `main`) it reported
-**384 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
+This takes about a minute. After the group's final merge (2026-11-26) it reported
+**462 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
 known bug; see the status log). The tests use a temporary database and never touch
 `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves. (Re-run it before the demo;
 the numbers change whenever someone adds a test.)
@@ -164,10 +164,14 @@ the numbers change whenever someone adds a test.)
   total paid in MYR. It is read from the newest "received" line that names a supplier or a cost. Admin
   and Employee both see the money (view only, team decision 2026-11-24, `can_see_prices`); the server
   still answers 403 to anyone who tries to change prices. A material with no such line shows nothing.
-* **Sample hardware items in pieces (`pcs`).** The sample data now has small hardware next to the
-  `g` and `ml` items: SAMPLE M4 socket screws, compression springs, magnets, a fidget clicker kit and
-  keychain rings, sold by a SAMPLE hardware supplier. They are **demo items only**: the founder has
-  not confirmed what hardware Stinablis really tracks (guide Section 2 and Section 16 Q1).
+* **Sample materials, including hardware in pieces (`pcs`).** The sample data has 39 materials. The first
+  13 include SAMPLE-named hardware (M4 socket screws, compression springs, magnets, a fidget clicker kit,
+  keychain rings) sold by a SAMPLE hardware supplier. A teammate then added 26 more (M014 to M039: PLA+,
+  PLA, PETG and PLA Silk filament, screws, nuts, inserts, bearings, magnets, clicker switches, keychain
+  parts and more) so that Test 2 can be run. These are **not** named "SAMPLE" and have **no supplier
+  offers yet**. All of it is demo data: the founder has not confirmed what Stinablis really tracks (guide
+  Section 2 and Section 16 Q1). The Materials list shows two sections, "Filament & other materials" and
+  "Hardware", and inside each section it runs OK, then LOW, then OUT.
 * **OK / LOW / OUT in plain English.** The Materials page explains the words once: **OK** = enough in
   stock, **LOW** = at or below the reorder level (time to order), **OUT** = none left. The word is always
   shown together with the colour.
@@ -183,10 +187,11 @@ the numbers change whenever someone adds a test.)
   the two optional boxes "Bought from" and "Total paid (MYR)" (rule `can_record_purchase_cost`). An
   Employee can still record received stock, without the money; if an Employee types money anyway the
   server answers 403 and saves nothing. Home's money box adds up the real totals for the current month,
-  and the spending chart (Admin only) shows them per supplier. A low-stock event is saved each time a
-  "Record used" drops a material from OK to LOW or OUT, and the Statistics chart counts them per month.
+  and the Admin-only supplier price comparison on the Statistics page uses the prices paid. A low-stock
+  event is saved each time a "Record used" drops a material from OK to LOW or OUT (the Statistics page
+  no longer draws a chart of them).
 
-## Known problems (as of 2026-11-25; see the status log in `CLAUDE.md`)
+## Known problems (as of 2026-11-26; see the status log in `CLAUDE.md`)
 
 * Received lines saved without a total (always the case when an Employee records them) count as MYR 0
   in the money numbers. Low-stock events
@@ -202,11 +207,51 @@ the numbers change whenever someone adds a test.)
 * **Open phone-test findings (from the status log, not re-tested in a browser by me):**
   **F-11** the Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
   columns; **F-12** supplier phone numbers and emails are plain text, not tappable `tel:` / `mailto:` links
-  (I also found no such links in the templates); **F-13** on the Statistics page the "Average delivery time
-  per supplier" chart is cut off on the left on a phone. Text size and buttons were fine in that test. No
-  fix for these is logged yet.
+  (I also found no such links in the templates); **F-13** (the "Average delivery time per supplier" chart cut off
+  on phones) was about a chart that has since been replaced by the "Delivery ranking" on the Statistics
+  page; I have not re-checked that page on a phone. Text size and buttons were fine in that test. F-11 and
+  F-12 have no fix logged yet.
 * Six automatic tests are marked "expected failure" because they describe known bugs found by
   Agent F (see the status log).
+
+## Real user test with Ryan (2026-11-26)
+
+Ryan from Stinablis tested the app (Jacob was not available). He was timed.
+
+* **Before the test (pre-test interview, confirmed by Ryan):** Stinablis spends about **2 to 3 hours per
+  week** finding out where materials were bought. That means checking the **Shopee purchase history**,
+  **local shop memory**, a **collaborator list** and **past receipts**.
+* **Test 1 tasks (total time 7:16):**
+  1. Find where we bought standard resin.
+  2. Find which supplier is cheapest for nuts.
+  3. Add a new purchase.
+* **Where he got stuck: Tasks 1 and 2** (finding standard resin's supplier, and comparing supplier prices
+  for nuts). Reason: the Materials list had **no search bar**, and moving between stock information and
+  supplier information was **not direct**.
+* **His words, exactly:** "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
+* **What it means for us:** he will use it, but it must not be confusing, and the one thing that matters is
+  typing in one piece of data quickly.
+
+**What changed on `main` after the test (the group's final decisions, 2026-11-26):**
+
+1. **A search box first on Materials** ("Search by item name", the list narrows as you type).
+2. **The list runs OK, then LOW, then OUT**, and the "Show only OK" button is hidden to reduce clutter.
+3. **Two sections on Materials:** "Filament & other materials" and "Hardware" (items counted in pieces).
+   The OK, LOW, OUT order applies inside each section. The group added 26 more sample materials (M014 to
+   M039) so Test 2 can be run: they include PLA+ Orange and PETG Grey.
+4. **The Statistics page** (the menu word stays "Statistics") has a delivery ranking per chosen material
+   (fastest to slowest, no prices). The Home page stays simple, with a **Notifications** list, and OUT
+   stays red. (An earlier idea to rename the page "Stock" and add a Current stock list on Home was **not**
+   kept.)
+
+**Honest open gaps:**
+* **Task 2 is still not a one-step job.** The "Find supplier" page only shows a ranked supplier list for
+  items that are **LOW or OUT**, so for an item that is OK (such as nuts) there is no direct comparison.
+  The 26 new sample materials also have **no supplier offers yet**. The team still has to decide (guide
+  rule R4) whether the comparison should work for every item.
+* **Test 2 has not been timed or completed.** It uses **PLA Orange, PETG Gray and adding a new purchase**.
+  Until it is done we do **not** claim any faster time than the 7:16 baseline. Write the Test 2 time next
+  to 7:16. (The new sample data contains "PLA+ 1.75mm" in Orange and "PETG 1.75mm" in Grey for this.)
 
 ## What is not built (do not demo these)
 
