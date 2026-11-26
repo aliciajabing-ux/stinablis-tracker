@@ -11,6 +11,10 @@
   /* Layout only: the colours and shapes come from app/static/theme.css. */
   .panel { padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
   .chart-area { position:relative; width:100%; height:300px; }
+  /* The colour key sits under the chart (not inside it), so on a phone it cannot squeeze the chart or cover the Y axis. */
+  .legend-list { display:flex; flex-wrap:wrap; gap:6px 16px; list-style:none; margin:10px 0 0; padding:0; font-size:.9rem; }
+  .legend-list li { display:flex; align-items:center; gap:6px; min-width:0; overflow-wrap:anywhere; }
+  .legend-swatch { flex:0 0 auto; width:14px; height:14px; border-radius:3px; border:1px solid var(--line); }
   .button, .panel select { padding:12px 18px; font-size:1rem; }
   .button { display:inline-block; text-decoration:none; }
   .note { font-size:.9rem; }
@@ -62,11 +66,13 @@
   <label for="period">Show by: </label>
   <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
+  <ul class="legend-list" id="usage-legend"></ul>
 </div>
 <div class="panel" id="panel-purchases" hidden>
   <h2>Purchases per material</h2>
   <p>How much stock was received (recorded with "Record received") in each of the last 6 months. Each bar shows its own unit (g, ml or pcs).</p>
   <div class="chart-area"><canvas id="purchases-chart" aria-label="Purchases per material bar chart"></canvas></div>
+  <ul class="legend-list" id="purchases-legend"></ul>
   <p class="waiting" id="purchases-empty" hidden>No stock was received in the last 6 months.</p>
 </div>
 <div class="panel" id="panel-ranking" hidden>
@@ -144,7 +150,24 @@
   // Returns the chart settings for the usage and purchases bar charts (axis titles and the unit in the pop-up).
   function quantityOptions(yText, xText) {
     return {scales: {y: {beginAtZero: true, title: axisTitle(yText)}, x: {title: axisTitle(xText)}},
-            plugins: {tooltip: {callbacks: {label: quantityTooltip}}}};
+            plugins: {legend: {display: false}, tooltip: {callbacks: {label: quantityTooltip}}}};
+  }
+  // Writes the colour key under a chart: one line per material, a colour square and its name (plain text, never colour alone).
+  function drawLegend(listId, chartData) {
+    var list = document.getElementById(listId);
+    if (!list) { return; }
+    list.innerHTML = "";
+    chartData.datasets.forEach(function (dataset) {
+      var item = document.createElement("li");
+      var swatch = document.createElement("span");
+      swatch.className = "legend-swatch";
+      swatch.style.background = dataset.backgroundColor;
+      var name = document.createElement("span");
+      name.textContent = dataset.label;
+      item.appendChild(swatch);
+      item.appendChild(name);
+      list.appendChild(item);
+    });
   }
   // Draws (or redraws) one chart inside the canvas with the given id.
   function drawChart(canvasId, config) {
@@ -166,6 +189,7 @@
     fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
       drawChart("usage-chart", {type: "bar", data: colourDatasets(d),
                                 options: quantityOptions("Quantity used (g, ml or pcs)", periodWords)});
+      drawLegend("usage-legend", d);
     });
   }
   document.getElementById("period").addEventListener("change", loadUsage);
@@ -174,6 +198,7 @@
     showEmptyNote("purchases-empty", d.datasets.length === 0);
     drawChart("purchases-chart", {type: "bar", data: colourDatasets(d),
                                   options: quantityOptions("Quantity received (g, ml or pcs)", "Month")});
+    drawLegend("purchases-legend", d);
   });
   // Draws the delivery ranking: one line per supplier, fastest first (the words come from the server, so they are set as plain text).
   function showRanking(ranking) {

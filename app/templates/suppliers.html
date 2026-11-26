@@ -7,13 +7,13 @@
 <h1>Suppliers</h1>
 <p>Shops and websites we buy from. Click a name to see contact details and what they sell.</p>
 {% if can_manage %}<p><a class="button" href="{{ url_for('suppliers.supplier_new') }}">Add supplier</a></p>{% endif %}
-<div class="scroll"><table>
-  <tr><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th></tr>
+<div class="scroll cards"><table>
+  <tr class="head"><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th></tr>
   {% for s in suppliers %}
   <tr>
-    <td><a href="{{ url_for('suppliers.supplier_detail', supplier_id=s['id']) }}">{{ s['name'] }}</a></td>
-    <td>{{ s['supplier_type'] }}</td><td>{{ s['phone'] or '' }}</td><td>{{ s['email'] or '' }}</td>
-    <td>{{ 'Active' if s['is_active'] == 1 else 'Switched off' }}</td>
+    <td data-label="Name"><a href="{{ url_for('suppliers.supplier_detail', supplier_id=s['id']) }}">{{ s['name'] }}</a></td>
+    <td data-label="Type">{{ s['supplier_type'] }}</td><td data-label="Phone">{{ s['phone'] or '' }}</td><td data-label="Email">{{ s['email'] or '' }}</td>
+    <td data-label="Status">{{ 'Active' if s['is_active'] == 1 else 'Switched off' }}</td>
   </tr>
   {% else %}<tr><td colspan="5">No suppliers yet.</td></tr>
   {% endfor %}

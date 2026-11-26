@@ -109,6 +109,18 @@ def test_home_needs_attention_lists_low_and_out_with_find_supplier(employee):
     assert page.index("ABS Grey") < page.index("PETG Clear")     # OUT is listed before LOW
 
 
+# 2026-11-26: the status is a coloured box (same as Materials), just left of the Find supplier button.
+def test_home_notifications_show_status_box_left_of_find_supplier(admin, employee):
+    for browser in (admin, employee):
+        page = browser.get("/").get_data(as_text=True)
+        out_box = page.index('class="tag tag-OUT"')
+        low_box = page.index('class="tag tag-LOW"')
+        assert out_box < page.index('href="/suggest/M3"')          # ABS Grey (OUT): box, then button
+        assert low_box < page.index('href="/suggest/M2"')          # PETG Clear (LOW): box, then button
+        assert out_box < low_box                                   # OUT still first
+        assert "MYR" not in page
+
+
 # The "money spent this month" box was removed on 2026-11-26 (team decision): three boxes, no money on Home.
 def test_home_has_three_boxes_and_no_money_box_for_either_role(admin, employee):
     for browser in (admin, employee):

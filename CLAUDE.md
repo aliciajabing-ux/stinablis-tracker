@@ -189,6 +189,9 @@ F2. HOME / DASHBOARD (the first screen after login)
       2026-11-26: the team said it is not relevant any more.)
     - A "Notifications" list (called "Needs attention" until 2026-11-26): the
       low and out-of-stock materials, with a button to see the suggested supplier.
+      Each line shows its status (LOW or OUT) in the same coloured box as the
+      Materials screen, placed just to the left of the "Find supplier" button
+      (decision 2026-11-26, for readability).
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
@@ -1645,6 +1648,52 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   page tags (OK, LOW, OUT) were already bold, so nothing changed there. Checked in a browser: computed weight is 700 for
   the Home LOW and OUT and for the Materials OK, LOW and OUT tags. Only CSS, no page or test changed. | NONE. | None.
 
+2026-11-26 | Agent E (team request; touches Agent H's shared look only by reusing its existing tag classes) | DONE: on Home, each
+  Notifications line now shows its status as the SAME coloured box as the Materials page (LOW orange, OUT red; classes
+  "tag tag-LOW" / "tag tag-OUT" from theme.css), placed just LEFT of the "Find supplier" button (readability). The old plain
+  bold "- LOW:" word in the sentence is gone. Guide F2 changed FIRST. Files: app/templates/home.html (one small wrapper
+  ".row-end", one style line), tests/test_stats_dashboard.py (1 new test: box comes before the button, OUT before LOW, same for
+  Admin and Employee, no MYR). Order, button links, empty text and permissions unchanged. Checked in a browser as Admin,
+  Employee and phone width 390: no sideways scroll, no "MYR", boxes look the same as on Materials. | NEXT: none. If the team
+  wants the box at the far LEFT of each line instead, it is a small move in home.html. | None.
+
+2026-11-26 | Agent E (team choice, option D; touches Agent H's theme.css) | DONE: Home boxes 1 and 3 (the "light" ones) are now deep moss
+  (#4F5A3C) with light text, so the text stands out; box 2 stays dark. Only CSS: app/static/theme.css (new variable --deep-moss in the
+  :root list, and the ".tile:nth-child(odd)" rule). THIS IS A COLOUR OUTSIDE THE 7-COLOUR PALETTE (like --out-red); the team picked it
+  from options A to D, so it counts as confirmed. LOW and OUT words keep their own colours. | Agent H: please keep it. Team: anyone with
+  a local edit to theme.css should drop it (git stash drop) to avoid a conflict. | None.
+
+2026-11-26 | Agent E (team request after the phone test; touches Agent H's theme.css) | DONE: the Materials page now FITS a phone screen
+  (F-11 for this page). CAUSE: on a phone each material is already a card (Agent C's 640 px layout), but theme.css still forced every
+  table to be at least 880 px wide ("body table { min-width: 880px }") and the Materials columns had their own minimums (200, 300 and
+  380 px), so each card was wider than the screen and the right side ("More", the end of the "Not bought through this app yet" note)
+  was cut off. FIX: a new block at the end of app/static/theme.css, only for screens 640 px or narrower: the table and its cells get no
+  minimum width and long words may wrap. Desktop and tablet are unchanged. Guide: no change (Section 8 already says mobile-friendly).
+  Checked in a browser at width 390 (Admin): the page and the card box do not scroll sideways, "Record used", "Record received" and
+  "More" are all visible ("More" wraps under the buttons). | NOT DONE: the Suppliers and Supplier detail pages still use the wide-table
+  layout on a phone (F-11 there; Agent D owns suppliers.html and supplier_detail.html); phone numbers are still not tappable (F-12,
+  Agent D). | None.
+
+2026-11-26 | Agent E (team request; touches Agent D's suppliers.html, supplier_detail.html and suggest.html, and Agent H's theme.css) | DONE: the
+  supplier pages now FIT a phone screen (F-11 for these pages), the same way as Materials. THREE TABLES changed: the Suppliers list, "Materials
+  this supplier sells" on a supplier page, and the Find supplier table (suggest.html, which the Home Notifications buttons open). Markup only: the
+  table box got the class "cards", the header row the class "head", and every cell a data-label (Name, Type, Phone ...). On a screen 640 px or
+  narrower each row becomes a small card ("Name: ...", "Phone: ...") and the header row is hidden; on a bigger screen nothing changes. The CSS is
+  one shared block at the end of app/static/theme.css (".cards"). No link, form, csrf_token or permission check was touched: the Change / Switch
+  off buttons still show only under can_manage, the money cells only under show_prices (Rule C7). Checked in a browser at width 390 as Admin and
+  Employee on all three pages: no sideways scroll for the page or the table box, labels read well. Full suite passes. | NOT DONE: phone numbers and
+  emails are still plain text, not tappable (F-12, Agent D). The Find supplier page says "1 days" for a one-day lead time (small wording bug, Agent D).
+  | None.
+
+2026-11-26 | Agent E (team request after the phone test) | DONE: on the Statistics page the colour key of the "Usage per material" and "Purchases per
+  material" charts no longer eats into the chart. CAUSE: Chart.js drew the key INSIDE the chart box (300 px tall); on a phone, with up to 8 materials,
+  the key took most of that height, squeezed the plot and ran into the Y axis. FIX (app/templates/stats.html only): the built-in key is switched
+  off for these two charts, and the same key is written as a plain list UNDER the chart: a colour square and the material name with its unit,
+  for example "ABS Grey (g)" (words still never rely on colour alone). The chart now keeps its full height, the Y axis is clear, and the list wraps
+  to as many lines as needed. Same on desktop (the key moved from above the chart to below it). Pop-ups, axis titles, data and permissions are
+  unchanged; both roles see these two charts. Checked in a browser at width 390 (Employee) and 1100 (Admin): no sideways page scroll, no script
+  errors, key lists match the materials. Full suite passes. | NOT DONE: the price comparison charts (Admin only) have their own legend; not touched
+  because the team did not report a problem there. | None.
 
 2026-11-26 | Agent D (suppliers & suggestion) | DONE: wording fix on the Find supplier page. A lead time of 1 now reads
   "1 day" (any other number reads "N days"), and the sentence "No supplier can deliver ... within N days" follows the same

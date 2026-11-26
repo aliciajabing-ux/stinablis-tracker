@@ -174,8 +174,8 @@ def test_lead_time_words_use_day_for_one_and_days_for_other_numbers(admin, datab
     connection.close()
     one_day_page = admin.get("/suggest/M1").get_data(as_text=True)
     seven_day_page = admin.get("/suggest/M3").get_data(as_text=True)
-    assert "<td>1 day</td>" in one_day_page and "1 days" not in one_day_page
-    assert "<td>7 days</td>" in seven_day_page
+    assert '<td data-label="Lead time">1 day</td>' in one_day_page and "1 days" not in one_day_page
+    assert '<td data-label="Lead time">7 days</td>' in seven_day_page
     assert "within 1 day." in admin.get("/suggest/M3?days=1").get_data(as_text=True)
     assert "within 1 days" not in admin.get("/suggest/M3?days=1").get_data(as_text=True)
     assert "within 0 days." in admin.get("/suggest/M3?days=0").get_data(as_text=True)
