@@ -16,6 +16,9 @@
   .legend-list li { display:flex; align-items:center; gap:6px; min-width:0; overflow-wrap:anywhere; }
   .legend-swatch { flex:0 0 auto; width:14px; height:14px; border-radius:3px; border:1px solid var(--line); }
   .button, .panel select { padding:12px 18px; font-size:1rem; }
+  /* A choice box is as wide as its longest option; never let it be wider than its panel (phone). Long names are cut inside the box. */
+  .panel select { max-width:100%; box-sizing:border-box; }
+  @media (max-width: 640px) { .panel select { padding:12px 8px; font-size:.95rem; } }   /* more room for long material names */
   .button { display:inline-block; text-decoration:none; }
   .note { font-size:.9rem; }
   /* The sidebar: one statistic is shown at a time, so nobody scrolls down the page. Colours come from the theme (var(--...)). */
