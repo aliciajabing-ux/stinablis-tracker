@@ -1694,3 +1694,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   unchanged; both roles see these two charts. Checked in a browser at width 390 (Employee) and 1100 (Admin): no sideways page scroll, no script
   errors, key lists match the materials. Full suite passes. | NOT DONE: the price comparison charts (Admin only) have their own legend; not touched
   because the team did not report a problem there. | None.
+
+2026-11-26 | Agent E (team request after the phone test) | DONE: on the Statistics page, the "Rank suppliers for" choice box of the Delivery ranking now FITS a
+  phone screen. CAUSE: a choice box is as wide as its longest option and nothing capped it at the width of its panel, so with long names such as
+  "SAMPLE Fidget Clicker Kit Black (pcs)" the box stuck out past the right edge. FIX (app/templates/stats.html only, 2 CSS lines): every choice box
+  inside a panel gets max-width 100% (and box-sizing border-box), and on a screen 640 px or narrower its side padding and text are a little
+  smaller so long material names show in full. No data, address, permission or script change. Checked in a browser at width 390 (Employee) with the
+  longest material name: the box is inside the panel, the whole name is readable, no sideways page scroll. Full suite passes. | NOT DONE: the "Show by"
+  box of Usage per material gets the same cap (it was never too wide). | None.
