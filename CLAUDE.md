@@ -1700,3 +1700,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   rule. Only app/templates/suggest.html changed (two lines, wording only, no permission logic, Rule C7). supplier_detail.html
   was left alone: its column header already says "(days)". 1 new test in tests/test_suppliers_suggest.py (1 day, 7 days, and
   the "within 1 day" / "within 0 days" sentence). | None. | None.
+
+2026-11-26 | Agent E (team request after the phone test) | DONE: on the Statistics page, the "Rank suppliers for" choice box of the Delivery ranking now FITS a
+  phone screen. CAUSE: a choice box is as wide as its longest option and nothing capped it at the width of its panel, so with long names such as
+  "SAMPLE Fidget Clicker Kit Black (pcs)" the box stuck out past the right edge. FIX (app/templates/stats.html only, 2 CSS lines): every choice box
+  inside a panel gets max-width 100% (and box-sizing border-box), and on a screen 640 px or narrower its side padding and text are a little
+  smaller so long material names show in full. No data, address, permission or script change. Checked in a browser at width 390 (Employee) with the
+  longest material name: the box is inside the panel, the whole name is readable, no sideways page scroll. Full suite passes. | NOT DONE: the "Show by"
+  box of Usage per material gets the same cap (it was never too wide). | None.
