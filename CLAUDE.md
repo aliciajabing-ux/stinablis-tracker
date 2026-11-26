@@ -1630,3 +1630,13 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   theme.css. Suite on the combined code: 450 pass, 2 skipped, 6 expected failures. A new pull request carries these
   commits into main. | NONE. | None.
 
+2026-11-26 | Agent E (team request; touches Agent H's theme.css) | DONE: the OUT word on the Home box is now the SAME red as the OUT
+  tag on the Materials page (filled red --out-red, light text --out-text, solid border). Before, a later change had
+  made it a dashed neutral outline ("calm, not an alarm"), which also became invisible on a light card (light text on a
+  light box). Only CSS: app/static/theme.css line for ".tile.out .word", plus the stale comment on --hot-orange (it
+  said OUT is neutral). The colours are the two extra ones already in the :root list (#C62828 and #FFF4F0, not part of
+  the 7-colour palette; confirmed wanted by this request). Checked in a browser: the Home OUT word and the Materials OUT
+  tag have identical computed colours, and the word reads well on a light box and on a dark box. | NOTE FOR TEAM:
+  the team member is trying different colours for the 1st and 3rd Home boxes locally (previews A to D were sent);
+  that choice is NOT in Git yet. | NONE. | None.
+
