@@ -96,6 +96,11 @@ def test_home_boxes_show_counts_with_words(admin):
     assert page.count('class="number">1<') == 2
 
 
+def test_home_list_is_called_notifications(admin):
+    page = admin.get("/").get_data(as_text=True)
+    assert "<h2>Notifications</h2>" in page and "Needs attention" not in page
+
+
 def test_home_needs_attention_lists_low_and_out_with_find_supplier(employee):
     page = employee.get("/").get_data(as_text=True)
     assert "PETG Clear" in page and "ABS Grey" in page and "PLA Basic" not in page

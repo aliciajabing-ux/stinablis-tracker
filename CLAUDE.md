@@ -1151,3 +1151,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   fonts.gstatic.com; if the team wants no outside requests, remove the 3 font lines in base.html and
   login.html (the page then uses Segoe UI or Arial). (2) The Home drawing is plain decoration (aria-hidden).
 
+2026-11-26 | Agent E | DONE, at the team's request: the Home list "Needs attention" is now called "Notifications"
+  (heading, and the empty text now says "No notifications. All materials are OK."). Only the words changed:
+  the list still shows LOW and OUT materials (OUT first) with a Find supplier button. Files: app/templates/
+  home.html, comments in app/routes_stats.py, TESTS.md, and 1 new test in tests/test_stats_dashboard.py.
+  Full suite passes. | AGENT G (R3): GLOSSARY.md line "Needs attention" and PRESENTATION_NOTES.md (about lines
+  117 and 259) still use the old name; please change them to "Notifications". Agent F: the comment in
+  tests/test_review_agent_f.py line 586 still says "Needs attention" (comment only). | None.
+

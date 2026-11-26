@@ -1,4 +1,4 @@
-{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Needs attention" list.
+{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Notifications" list.
    WHO CAN USE IT: Both. The money box is drawn for Admin and Employee (the server decides, not this page). #}
 {% extends "base.html" %}
 {% block title %}Home - Stinablis Tracker{% endblock %}
@@ -48,7 +48,7 @@
   {% endif %}
 </div>
 <div class="attention">
-  <h2>Needs attention</h2>
+  <h2>Notifications</h2>
   <p>Materials that are LOW or OUT. Press "Find supplier" to see who can deliver.</p>
   <ul>
     {% for material in attention %}
@@ -58,7 +58,7 @@
         (reorder at {{ material['reorder_level']|round(2) }} {{ material['unit'] }})</span>
       <a class="button" href="{{ url_for('suppliers.suggest_supplier', material_id=material['id']) }}">Find supplier</a>
     </li>
-    {% else %}<li>Nothing needs attention. All materials are OK.</li>
+    {% else %}<li>No notifications. All materials are OK.</li>
     {% endfor %}
   </ul>
 </div>

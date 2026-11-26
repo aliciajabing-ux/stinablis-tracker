@@ -115,7 +115,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | What we prove | Guide rule | Result |
 |---|---|---|
 | Home boxes show total, LOW and OUT counts, with the words LOW and OUT | F2, Section 8 | Pass |
-| "Needs attention" lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
+| "Notifications" (was "Needs attention") lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
 | Admin Home has the money box; Employee Home has no money box and no "MYR" anywhere | F2, Section 4, 14 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |
 | Not logged in is sent to login on every statistics address | Section 4 | Pass |

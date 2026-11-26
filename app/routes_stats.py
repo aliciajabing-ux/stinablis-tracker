@@ -1,4 +1,4 @@
-# WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Needs attention" list) and the Statistics screen
+# WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Notifications" list) and the Statistics screen
 #   (usage chart, low-stock chart, spending, average delivery time, and the CSV download).
 # WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the spending chart and CSV download are Admin only. All checked on the server.
 #
@@ -137,7 +137,7 @@ def get_month_spending(database):
     return {"by_supplier": by_supplier, "total": sum(by_supplier.values())}
 
 
-# Shows the Home dashboard: four boxes and the "Needs attention" list.
+# Shows the Home dashboard: four boxes and the "Notifications" list.
 def show_dashboard():
     database = get_db()
     show_money = can_see_prices(get_current_user())
