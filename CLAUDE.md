@@ -62,6 +62,11 @@ Web application (a website that only staff can log into) that:
   pieces counted in pcs (for example screws, springs, magnets, fidget
   clickers, keychain rings). Until the founder answers, such items appear
   ONLY in the sample/demo data, clearly named as samples (Rule R4).
+  Update 2026-11-26: a teammate added 26 more sample materials (M014 to M039:
+  PLA+, PLA, PETG and PLA Silk filament, screws, nuts, inserts, bearings,
+  magnets, clicker switches, keychain parts and more) so that Test 2 can
+  be run (PLA+ Orange, PETG Grey). They are NOT named "SAMPLE" and have no
+  supplier offers yet. [CONFIRM WITH FOUNDER] whether they match real stock.
 
 
 ---------------------------------------------------------------------
@@ -187,7 +192,10 @@ F3. MATERIALS SCREEN
     - A big search box at the very top of the list ("Search by item name"),
       filtering as you type (decision 2026-11-26). Filter buttons: Show all,
       Show only LOW, Show only OUT. The "Show only OK" button was removed as
-      clutter. Order of the list: OK first, then LOW, then OUT.
+      clutter. The list has two sections (decision 2026-11-26, from the
+      ShopGuard materials): "Filament & other materials" (g and ml items) and
+      "Hardware" (items counted in pieces). Inside each section the order is
+      OK first, then LOW, then OUT.
     - Add / edit / delete a material: ADMIN only.
     - "Add material" has an optional "Who sells it?" part (2026-11-26): no
       supplier, an existing supplier, or a new supplier, plus what they charge
@@ -1557,3 +1565,22 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   quote; see the two Main Chat entries above) back into README.md and PRESENTATION_NOTES.md, which were
   kept at the main-0rpyg5 versions. The data addresses of main's Stock page are not present. | The two
   Main Chat entries above still describe main's Stock page, Noti and soft OUT; this entry overrides them.
+
+2026-11-26 | Main Chat (group decisions after the 9bade66 merge; done at the team's request) | The group
+  confirmed four points for main, starting from origin/main 9bade66. (1) Menu and page name stay
+  "Statistics", and the 9bade66 Statistics page stays (delivery ranking per chosen material, no price
+  table). So the earlier Main Chat decision to rename it "Stock", the Current stock chart with a unit choice
+  and the Supplier speed ranking list (F7 text and status-log entry of 2026-11-26 above) are NOT part of
+  main any more. (2) The simpler Home page, the "Notifications" label (not "Noti") and the red OUT badge from
+  9bade66 stay; the calm dashed OUT badge and the Home "Current stock" list are NOT part of main. (3)
+  origin/add-shopguard-materials is merged: 26 new sample materials (M014 to M039, including PLA+ Orange and
+  PETG Grey) and a Materials list in two sections, "Filament & other materials" and "Hardware" (unit pcs).
+  The OK first, then LOW, then OUT order now applies inside each section, and the test that checks it was
+  changed to check each section. (4) README.md and PRESENTATION_NOTES.md get Ryan's test facts back (see
+  the 2026-11-26 entry "VERIFIED DETAILS OF RYAN'S TEST"), written for the screens that really exist on
+  main. Ryan's fixes that stay on main: search box first on Materials, OK/LOW/OUT order, "Show only OK"
+  hidden. Ryan's fixes that were replaced by the group's own design: "Stock" menu word, Home Current stock,
+  "Noti", calm OUT badge, Current stock chart and Supplier speed ranking. Permissions, tables and
+  CLAUDE.md.txt were not touched. | OPEN GAP (R4, still undecided): the "Find supplier" page only lists
+  suppliers for LOW or OUT items, so Ryan's Task 2 (cheapest supplier for nuts) is still not one step for an
+  OK item, and the new sample items have no supplier offers. | Test 2 has NOT been timed or completed.
