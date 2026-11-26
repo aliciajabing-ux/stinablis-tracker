@@ -22,8 +22,7 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 
 | What | Admin | Employee | Notes |
 |---|---|---|---|
-| See the Home dashboard with the four number boxes | Yes | Yes | Total, LOW, OUT and money spent this month. |
-| See the money spent this month box (view only) | Yes | Yes | Team decision 2026-11-24: seeing money is allowed, changing it is not. |
+| See the Home dashboard with the three number boxes | Yes | Yes | Total, LOW and OUT. |
 | See the Notifications list with Find supplier buttons | Yes | Yes | The LOW and OUT materials, OUT first. |
 
 ### Materials
@@ -87,6 +86,7 @@ also the supplier price comparison and the spreadsheet download. Clicking one sh
 | 2026-11-24 | The Users screen is Admin only. |
 | 2026-11-26 | Procurement statistics: **purchases per material is for both roles; the supplier price comparison (charts) is Admin only**. |
 | 2026-11-26 | **Removed from the Statistics page:** the low-stock events chart, the spending per supplier chart and the spending per material chart. The Home money box and the CSV download stay. |
+| 2026-11-26 | **Removed from the Home page:** the "estimated money spent this month" box (the team said it is not relevant any more). Home now has three boxes and no money for either role. |
 
 ## Not built yet (so they are not in the tables)
 

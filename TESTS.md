@@ -122,7 +122,7 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | CSV lists purchases and spending per material (Admin only) | F7 | Pass |
 | Price comparison charts: numbers per kg / litre and per piece, the newest purchase is the price last paid, offer with no purchase kept, nothing for materials with neither; Admin only (Employee 403, no chart on the Employee page). The table with the same numbers was removed 2026-11-26 | F7 | Pass |
 | Admin versus Employee table (ROLE_DIFFERENCES.md): 24 rows proven against the real website, and the page says the same as the proof | Sec 4, 13 | Pass |
-| Admin Home has the money box; Employee Home has no money box and no "MYR" anywhere | F2, Section 4, 14 | Pass |
+| Home has three boxes and no money box or "MYR" for either role (the money box was removed 2026-11-26) | F2 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |
 | Not logged in is sent to login on every statistics address | Section 4 | Pass |
 | Admin can download the CSV; Employee statistics page has no spending, no MYR, no download button | F7 | Pass |

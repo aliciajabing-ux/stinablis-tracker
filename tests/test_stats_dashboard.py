@@ -5,6 +5,7 @@
 # These checks build a temporary database (never data/tracker.db).
 
 import os
+import re
 import sqlite3
 import sys
 from datetime import date, datetime, timedelta
@@ -108,15 +109,12 @@ def test_home_needs_attention_lists_low_and_out_with_find_supplier(employee):
     assert page.index("ABS Grey") < page.index("PETG Clear")     # OUT is listed before LOW
 
 
-def test_home_admin_sees_money_box(admin):
-    page = admin.get("/").get_data(as_text=True)
-    assert "Estimated money spent" in page
-
-
-def test_home_employee_sees_money_box(employee):
-    # Team decision 2026-11-24: employees may SEE prices and money totals (only Admin can change them).
-    page = employee.get("/").get_data(as_text=True)
-    assert "Estimated money spent" in page
+# The "money spent this month" box was removed on 2026-11-26 (team decision): three boxes, no money on Home.
+def test_home_has_three_boxes_and_no_money_box_for_either_role(admin, employee):
+    for browser in (admin, employee):
+        page = browser.get("/").get_data(as_text=True)
+        assert len(re.findall(r'class="tile[ "]', page)) == 3                      # the boxes, not the box holder
+        assert "Estimated money spent" not in page and "MYR" not in page
 
 
 def test_home_needs_login(website):
@@ -235,13 +233,6 @@ def test_spending_month_uses_malaysia_time(database_file):
     assert spending == {"Kuching Shop": 40.0}
 
 
-def test_home_money_box_shows_real_money_to_both_roles(admin, employee, database_file, monkeypatch):
-    monkeypatch.setattr(routes_stats, "malaysia_now", lambda: NOW)
-    add_purchase(database_file, "A", "S2", 120.5, "2026-11-05 02:00:00")
-    assert "MYR 120.50" in admin.get("/").get_data(as_text=True)
-    assert "MYR 120.50" in employee.get("/").get_data(as_text=True)
-
-
 # The three charts the team removed on 2026-11-26 are gone for everybody: no page text, no chart, no data address.
 @pytest.mark.parametrize("address", ["/stats/data/low-stock", "/stats/data/spending", "/stats/data/spending-by-material"])
 def test_removed_chart_addresses_are_gone(admin, employee, address):
@@ -280,11 +271,6 @@ def test_usage_month_edges_use_malaysia_time_not_utc(database_file):
     month = routes_stats.get_usage_by_period(open_database(database_file), "month", now=NOW)
     data = month["datasets"][0]["data"]
     assert data[-2] == 10 and data[-1] == 20
-
-
-def test_money_text_format():
-    assert routes_stats.format_money(72) == "MYR 72.00"
-    assert routes_stats.format_money(1234.5) == "MYR 1,234.50"
 
 
 def test_csv_cells_cannot_run_as_formulas():

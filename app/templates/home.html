@@ -1,18 +1,18 @@
-{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Notifications" list.
-   WHO CAN USE IT: Both. The money box is drawn for Admin and Employee (the server decides, not this page). #}
+{# WHAT THIS FILE DOES: The Home dashboard: three number boxes and the "Notifications" list.
+   WHO CAN USE IT: Both. (The "money spent this month" box was removed on 2026-11-26.) #}
 {% extends "base.html" %}
 {% block title %}Home - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
   /* Layout only: the colours and shapes come from app/static/theme.css. */
-  .tiles { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin-bottom:24px; }
+  .tiles { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; margin-bottom:24px; }
   .tile .number { font-size:2rem; overflow-wrap:anywhere; }
   .attention { padding:20px 24px; margin-bottom:8px; }
   .attention ul { list-style:none; margin:0; padding:0; }
   .attention li { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
                   padding:12px 0; border-bottom:1px solid; }
   .button { display:inline-block; padding:12px 18px; font-size:1rem; text-decoration:none; }
-  @media (max-width: 520px) { .tiles { grid-template-columns:minmax(0, 1fr); } }
+  @media (max-width: 640px) { .tiles { grid-template-columns:minmax(0, 1fr); } }
 </style>
 <section class="hero">
   <div class="hero-text">
@@ -39,13 +39,6 @@
   <div class="tile"><div class="number">{{ counts['TOTAL'] }}</div>Total materials</div>
   <div class="tile low"><div class="number">{{ counts['LOW'] }}</div><span class="word">LOW</span> on stock</div>
   <div class="tile out"><div class="number">{{ counts['OUT'] }}</div><span class="word">OUT</span> of stock</div>
-  {% if show_money %}
-  <div class="tile">
-    {% if month_total_text %}<div class="number">{{ month_total_text }}</div>Estimated money spent in {{ month_name }}
-    {% else %}<div class="number">Not set up yet</div>Estimated money spent in {{ month_name }}
-    (waiting for the team to confirm how it is counted){% endif %}
-  </div>
-  {% endif %}
 </div>
 <div class="attention">
   <h2>Notifications</h2>
