@@ -1,10 +1,11 @@
-# WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Notifications" list) and the Statistics screen
+# WHAT THIS FILE DOES: The Home dashboard (three boxes and the "Notifications" list) and the Statistics screen
 #   (usage, purchases, the delivery ranking, the supplier price comparison, and the CSV download).
-# WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the price comparison and the CSV download are Admin only. All checked on the server.
+# WHO CAN USE IT: Both. The price comparison and the CSV download are Admin only, checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
-# It feeds the Home box and the CSV. Procurement statistics (decision 2026-11-26) are built from the same lines:
-# purchases per material (no money, both roles) and the supplier price comparison, as a table and as charts (Admin only).
+# It feeds the CSV (the Home box that showed it was removed on 2026-11-26). Procurement statistics (decision 2026-11-26)
+# are built from the same lines: purchases per material (no money, both roles) and the supplier price comparison,
+# as two charts (Admin only).
 # REMOVED on 2026-11-26 (team decision): the low-stock events chart, the spending per supplier chart and the spending
 # per material chart. Low-stock events are still saved in low_stock_events (Agent C writes them); they are just not charted.
 
@@ -16,7 +17,7 @@ from flask import Blueprint, Response, jsonify, render_template, request
 
 from app.alerts import count_materials_by_status, get_materials_needing_attention
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
-from app.permissions import admin_required, can_see_prices, is_admin, login_required
+from app.permissions import admin_required, is_admin, login_required
 
 stats_blueprint = Blueprint("stats", __name__, url_prefix="/stats", template_folder="templates")
 
@@ -35,11 +36,6 @@ def malaysia_now():
 # Turns a UTC date text from the database into a Malaysia-time datetime.
 def to_malaysia_time(utc_text):
     return datetime.strptime(utc_text, TIME_FORMAT) + timedelta(hours=MALAYSIA_HOURS_AHEAD_OF_UTC)
-
-
-# Returns money as text, for example "MYR 72.00".
-def format_money(amount):
-    return "MYR {:,.2f}".format(amount)
 
 
 # Returns the week (starting Monday) or month a Malaysia-time moment belongs to, as a date.
@@ -258,17 +254,11 @@ def get_month_spending(database):
     return {"by_supplier": by_supplier, "total": sum(by_supplier.values())}
 
 
-# Shows the Home dashboard: four boxes and the "Notifications" list.
+# Shows the Home dashboard: three boxes and the "Notifications" list.
 def show_dashboard():
     database = get_db()
-    show_money = can_see_prices(get_current_user())
-    context = {"counts": count_materials_by_status(database),
-               "attention": get_materials_needing_attention(database),
-               "show_money": show_money, "month_name": malaysia_now().strftime("%B %Y")}
-    if show_money:
-        spending = get_month_spending(database)
-        context["month_total_text"] = format_money(spending["total"]) if spending else None
-    return render_template("home.html", **context)
+    return render_template("home.html", counts=count_materials_by_status(database),
+                           attention=get_materials_needing_attention(database))
 
 
 # Shows the Statistics page (the charts fetch their numbers from the data addresses below).

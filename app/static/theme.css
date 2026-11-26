@@ -69,7 +69,7 @@ body .help, body .muted { color: var(--moss) !important; }
 /* Home number boxes: light and dark cards side by side (the checkerboard in the reference). */
 body .tile { background: var(--smoky-black) !important; color: var(--text); border: 2px solid var(--line);
              border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 20px; }
-body .tile:nth-child(1), body .tile:nth-child(4) { background: var(--text) !important; color: var(--smoky-black);
+body .tile:nth-child(odd) { background: var(--text) !important; color: var(--smoky-black);
              border-color: var(--smoky-black); }
 body .tile .number { font-family: var(--font-body); font-weight: 700; }
 /* The status word on a box is a highlighted tag, so it stays readable on light and dark cards. */

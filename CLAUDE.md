@@ -172,11 +172,12 @@ F1. LOGIN SCREEN
     - After 5 wrong passwords, lock the account for 15 minutes.
 
 F2. HOME / DASHBOARD (the first screen after login)
-    - Four big boxes at the top:
+    - Three big boxes at the top:
         * Total number of materials
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
-        * Estimated money spent this month (Admin and Employee, view only)
+      (The fourth box, "estimated money spent this month", was REMOVED on
+      2026-11-26: the team said it is not relevant any more.)
     - A "Notifications" list (called "Needs attention" until 2026-11-26): the
       low and out-of-stock materials, with a button to see the suggested supplier.
 
@@ -1446,4 +1447,23 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   it needed Chart.js (from the internet) for the charts anyway. | AGENT G (R3): mention the sidebar in the notes if
   wanted. | PROBLEMS: none known. On a phone the usage chart's long legend still takes a lot of height (older issue, not
   caused by the sidebar).
+
+2026-11-26 | Agent E (team decision: "it is not relevant any more"; touches Agent H's theme.css and Agent F's tests) | DONE: the
+  Home box "Estimated money spent this month" is REMOVED. Guide F2 changed FIRST (now three boxes). WHAT CHANGED:
+  home.html (the box and its text), routes_stats.py (show_dashboard no longer works out any money; the function
+  format_money and the can_see_prices import, which nothing else used, are gone), theme.css (the light/dark pattern of
+  the boxes is now light, dark, light: "odd boxes light" instead of "boxes 1 and 4"), the boxes are now one row of
+  three on a screen wider than 640 px and one column below that. TESTS: the 3 tests of the money box became one
+  test that proves Home has exactly three boxes and no money box and no "MYR" for either role; the format_money test
+  and the "real money on Home" test were deleted; in Agent F's file one test lost its Home line (it still proves
+  Employees see supplier prices and shipping). ROLE_DIFFERENCES.md and its test lost the money-box row ("three number
+  boxes" now) and gained a decision line; TESTS.md updated. Checked in a browser: Admin, Employee and phone width 390
+  (3 boxes, no "MYR" on Home, no sideways scroll, no script errors). | KEPT (not asked for): the money functions behind
+  the CSV (get_month_spending, get_spending_by_supplier, SPENDING_METHOD_CONFIRMED), because the Admin CSV still
+  has "Spending this month" and "Spending per material" rows; the "Last bought" money on Materials; supplier prices.
+  | PROBLEMS / TEAM TO DECIDE: (1) Section 1 of the guide still says the statistics show "how much is spent"; after the
+  team's removals that is only in the CSV and the price comparison, so the sentence may need rewording. (2) Section 4
+  still says Employees see "money totals"; that now only means supplier prices, shipping and the "Last bought" total.
+  (3) If the CSV spending rows should go too, say so. | AGENT G (R3): README, GLOSSARY and PRESENTATION_NOTES may still
+  describe the money box on Home.
 
