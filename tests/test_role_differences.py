@@ -117,8 +117,6 @@ ROLE_ROWS = [
      page_has("/stats/", "Purchases per material")),
     ("Statistics", "See the average delivery time chart", True, True,
      page_has("/stats/", "Average delivery time per supplier")),
-    ("Statistics", "See the supplier price comparison table", True, False,
-     page_has("/stats/", "Supplier price comparison")),
     ("Statistics", "See the supplier price comparison charts", True, False, opens("/stats/data/price-comparison")),
     ("Statistics", "Download the statistics spreadsheet (CSV)", True, False, opens("/stats/export.csv")),
     ("Users", "Open the Users screen", True, False, opens("/users/")),

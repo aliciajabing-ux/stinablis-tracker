@@ -330,17 +330,14 @@ def test_spending_per_material_adds_totals_of_the_last_six_months(database_file)
     assert chart["amounts"] == [150.0, 90.0] and chart["purchases"] == [2, 1]
 
 
-def test_price_comparison_cheapest_offer_against_the_price_last_paid(database_file):
+def test_price_comparison_chart_uses_the_newest_purchase_for_the_price_last_paid(database_file):
     add_received_line(database_file, "A", "M1", 1000, "2026-11-01 02:00:00", "S1", 90)      # older line: ignored
     add_received_line(database_file, "B", "M1", 2000, "2026-11-05 02:00:00", "S1", 150)     # newest: MYR 75 per kg
     add_received_line(database_file, "C", "M2", 1000, "2026-11-06 02:00:00", "S1", 72)      # MYR 72 against offer 90
-    rows = {row["material"]: row for row in routes_stats.get_price_comparison(open_database(database_file))}
-    white = rows["PLA Basic White"]
-    assert white["offer_text"] == "MYR 60.00 per kg (Web Store)"
-    assert white["paid_text"].startswith("MYR 75.00 per kg (Kuching Shop, 05 Nov 2026)")
-    assert white["difference_text"] == "Paid 25% more than the cheapest offer"
-    assert rows["PETG Clear"]["difference_text"] == "Paid 20% less than the cheapest offer"
-    assert rows["ABS Grey"]["offer_text"] == "No offer" and rows["ABS Grey"]["paid_text"] == "Not bought yet"
+    group = routes_stats.get_price_comparison_chart(open_database(database_file))["per_kg_litre"]
+    white, petg = group["labels"].index("PLA Basic White (per kg)"), group["labels"].index("PETG Clear (per kg)")
+    assert group["offer"][white] == 60.0 and group["paid"][white] == 75.0
+    assert group["offer"][petg] == 90.0 and group["paid"][petg] == 72.0
 
 
 def test_procurement_data_addresses_follow_the_roles(admin, employee):

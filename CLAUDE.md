@@ -242,8 +242,9 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
         * Supplier price comparison per material: cheapest supplier offer
           next to the price last paid, per kg, per litre or per piece -
           ADMIN only. Shown as two bar charts (per kg or litre, and per
-          piece, because their prices are on very different scales) and as
-          a table with the same numbers. Estimates: the offer price is
+          piece, because their prices are on very different scales). The
+          table with the same numbers was removed on 2026-11-26 (team
+          decision: it repeated the charts). Estimates: the offer price is
           before shipping.
     - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
       and in the pop-up text, never just a bare number.
@@ -1380,4 +1381,16 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   420 pass, 2 skipped, 6 expected failures. | AGENT G (R3): README.md, GLOSSARY.md and PRESENTATION_NOTES.md may still
   mention the low-stock events chart and the spending charts; please remove them. If the team also wants the spending
   rows out of the CSV, or the low-stock event saving removed, say so. | PROBLEMS: none known.
+
+2026-11-26 | Agent E (team decision: the table repeated the charts) | DONE: removed "The same numbers as a table" from the
+  Supplier price comparison. Guide F7 changed FIRST. Removed: the table in stats.html (the estimates note stays under
+  the two charts) and an unused style line; in routes_stats.py the table code (build_comparison_row,
+  get_price_comparison and the comparison_rows value sent to the page). The two price charts, their data address
+  (/stats/data/price-comparison, Admin only) and the pop-ups (supplier and date) are unchanged. NOTE: the words
+  "Paid 25% more than the cheapest offer" lived only in the table, so they are gone; the charts show the two prices
+  and the pop-up gives the supplier and date. (If the team wants the percentage back, it can go into the pop-up.)
+  TESTS: the table test became a chart test (the price last paid comes from the NEWEST purchase); the role record
+  (ROLE_DIFFERENCES.md and test_role_differences.py) lost the table row; TESTS.md updated. Checked in a browser: no
+  table, 5 charts for Admin, no script errors. | AGENT G (R3): if the notes or README mention the comparison table,
+  please remove that. | PROBLEMS: none known.
 

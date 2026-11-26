@@ -173,38 +173,6 @@ def find_last_paid(database, material_id):
         "ORDER BY s.created_at DESC, s.rowid DESC LIMIT 1", (material_id,)).fetchone()
 
 
-# Returns one table row comparing the cheapest offer with the price last paid for a material (Admin only).
-def build_comparison_row(database, material):
-    scale, words = price_unit_words(material["unit"])
-    offer = find_cheapest_unit_offer(database, material["id"], material["unit"])
-    paid = find_last_paid(database, material["id"])
-    row = {"material": " ".join(p for p in (material["name"], material["colour"]) if p),
-           "unit_words": words, "offer_text": "No offer", "paid_text": "Not bought yet", "difference_text": ""}
-    offer_price = offer["price_per_unit"] * scale if offer else None
-    paid_price = paid["total_cost_myr"] / paid["quantity"] * scale if paid else None
-    if offer:
-        row["offer_text"] = format_money(offer_price) + " " + words + " (" + offer["supplier_name"] + ")"
-    if paid:
-        row["paid_text"] = (format_money(paid_price) + " " + words + " (" + (paid["supplier_name"] or "supplier not typed")
-                            + ", " + to_malaysia_time(paid["created_at"]).strftime("%d %b %Y") + ")")
-    if offer and paid and offer_price > 0:
-        change = (paid_price - offer_price) / offer_price * 100
-        if change >= 1:
-            row["difference_text"] = "Paid {:.0f}% more than the cheapest offer".format(change)
-        elif change <= -1:
-            row["difference_text"] = "Paid {:.0f}% less than the cheapest offer".format(-change)
-        else:
-            row["difference_text"] = "Paid about the cheapest price"
-    return row
-
-
-# Returns the supplier price comparison rows for every active material (Admin only; estimates).
-def get_price_comparison(database):
-    materials = database.execute(
-        "SELECT id, name, colour, unit FROM materials WHERE is_active = 1 ORDER BY name, colour").fetchall()
-    return [build_comparison_row(database, material) for material in materials]
-
-
 # Returns one material's numbers for the price comparison chart, or None when it has neither an offer nor a purchase.
 # Prices are MYR per kg, per litre or per piece (Admin only; estimates, the offer is before shipping).
 def build_chart_point(database, material):
@@ -267,10 +235,8 @@ def show_dashboard():
 @login_required
 def statistics_page():
     admin_tools = is_admin(get_current_user())
-    comparison_rows = get_price_comparison(get_db()) if admin_tools else []     # money: Admin only
     return render_template("stats.html", show_admin_tools=admin_tools,
-                           now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
-                           comparison_rows=comparison_rows)
+                           now_text=malaysia_now().strftime("%d %b %Y %H:%M"))
 
 
 # Sends usage numbers (per week or month) to the bar chart.

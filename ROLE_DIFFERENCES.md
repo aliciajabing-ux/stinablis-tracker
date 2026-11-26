@@ -54,8 +54,7 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 | See the usage per material chart | Yes | Yes | Each bar shows its own unit (g, ml or pcs). |
 | See the purchases per material chart (no money) | Yes | Yes | Quantities only, so it is safe for Employees. |
 | See the average delivery time chart | Yes | Yes | Days only. |
-| See the supplier price comparison table | Yes | No | Admin only. The Employee page does not even contain the word "MYR". |
-| See the supplier price comparison charts | Yes | No | Admin only. Two bar charts (per kg or litre, and per piece) with the cheapest offer next to the price last paid. |
+| See the supplier price comparison charts | Yes | No | Admin only. Two bar charts (per kg or litre, and per piece) with the cheapest offer next to the price last paid. The Employee page does not even contain the word "MYR". |
 | Download the statistics spreadsheet (CSV) | Yes | No | Admin only. |
 
 ### Users
@@ -83,7 +82,7 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 | 2026-11-24 | **Only the Admin types the supplier and total paid** on Record received (Option B). Employee lines have no total, so they count as MYR 0 in money spent. |
 | 2026-11-24 | The "Last bought" note is shown to both roles (the money part follows the "see prices" rule). |
 | 2026-11-24 | The Users screen is Admin only. |
-| 2026-11-26 | Procurement statistics: **purchases per material is for both roles; the supplier price comparison (table and charts) is Admin only**. |
+| 2026-11-26 | Procurement statistics: **purchases per material is for both roles; the supplier price comparison (charts) is Admin only**. |
 | 2026-11-26 | **Removed from the Statistics page:** the low-stock events chart, the spending per supplier chart and the spending per material chart. The Home money box and the CSV download stay. |
 
 ## Not built yet (so they are not in the tables)
