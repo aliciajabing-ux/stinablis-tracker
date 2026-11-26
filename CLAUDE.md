@@ -40,8 +40,9 @@ Web application (a website that only staff can log into) that:
   3. Warns people when a material is running low.
   4. Suggests the best supplier to order from, and shows how long it
      will take to arrive.
-  5. Shows simple statistics (charts and numbers) so the boss can see
-     what is used, what is running low, and how much is spent.
+  5. Shows simple statistics (charts and a ranking) so the boss can see
+     what is used, what is bought, which supplier delivers fastest, and
+     how supplier prices compare.
   6. Limits what each type of user can see and change.
 
 
@@ -135,8 +136,9 @@ ROLE 2: EMPLOYEE (general staff, for example operators at the printers)
   - Record stock received (for example "received 2 spools today").
   - See low-stock warnings.
   - See the basic statistics for their daily work.
-  - SEE supplier prices, shipping costs and money totals (team decision
-    2026-11-24). Seeing is not changing.
+  - SEE supplier prices, shipping costs and the total paid on the "Last
+    bought" note (team decision 2026-11-24; the Home "money spent" box
+    was removed on 2026-11-26). Seeing is not changing.
   Cannot:
   - Change supplier prices (costs).
   - Add, change, or delete suppliers.
@@ -155,8 +157,10 @@ PERMISSION RULE (very important)
   data leak.
 
 SENSITIVE DATA (must never reach an employee account)
-- (Supplier prices and cost totals: employees may now SEE these, since
-  2026-11-24. They must still never be able to CHANGE them.)
+- (Supplier prices, shipping costs and the "Last bought" total paid:
+  employees may now SEE these, since 2026-11-24. They must still never be
+  able to CHANGE them. The price comparison charts and the CSV download
+  stay Admin only.)
 - User passwords (stored in scrambled form only; never shown).
 - Admin account details.
 
@@ -1466,4 +1470,15 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   still says Employees see "money totals"; that now only means supplier prices, shipping and the "Last bought" total.
   (3) If the CSV spending rows should go too, say so. | AGENT G (R3): README, GLOSSARY and PRESENTATION_NOTES may still
   describe the money box on Home.
+
+2026-11-26 | Agent E (team asked for this wording) | DONE: the two guide sentences that the team's removals made out of date were
+  reworded (the guide, so nobody has to ask; no code changed). SECTION 1, item 5: was "Shows simple statistics (charts
+  and numbers) so the boss can see what is used, what is running low, and how much is spent." Now: "Shows simple
+  statistics (charts and a ranking) so the boss can see what is used, what is bought, which supplier delivers
+  fastest, and how supplier prices compare." (What is running low is shown by the Home Notifications, item 3.)
+  SECTION 4, Employee "Can": was "SEE supplier prices, shipping costs and money totals". Now: "SEE supplier prices,
+  shipping costs and the total paid on the 'Last bought' note (team decision 2026-11-24; the Home 'money spent' box
+  was removed on 2026-11-26)." SECTION 4, Sensitive data: was "Supplier prices and cost totals". Now: "Supplier prices,
+  shipping costs and the 'Last bought' total paid ... The price comparison charts and the CSV download stay Admin
+  only." Older log entries that say "money totals" (and the dated decision line in ROLE_DIFFERENCES.md) are history and were not changed. | AGENT G (R3): PRESENTATION_NOTES.md (about line 200) still says Employees see "money totals"; please use the new wording. | None.
 
