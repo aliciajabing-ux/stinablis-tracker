@@ -1640,3 +1640,8 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   the team member is trying different colours for the 1st and 3rd Home boxes locally (previews A to D were sent);
   that choice is NOT in Git yet. | NONE. | None.
 
+2026-11-26 | Agent E (team request; touches Agent H's theme.css) | DONE: the words LOW and OUT on the Home boxes are now bold
+  (font-weight 700 on ".tile .word" in app/static/theme.css, one word added to one line). The same words on the Materials
+  page tags (OK, LOW, OUT) were already bold, so nothing changed there. Checked in a browser: computed weight is 700 for
+  the Home LOW and OUT and for the Materials OK, LOW and OUT tags. Only CSS, no page or test changed. | NONE. | None.
+
