@@ -189,6 +189,9 @@ F2. HOME / DASHBOARD (the first screen after login)
       2026-11-26: the team said it is not relevant any more.)
     - A "Notifications" list (called "Needs attention" until 2026-11-26): the
       low and out-of-stock materials, with a button to see the suggested supplier.
+      Each line shows its status (LOW or OUT) in the same coloured box as the
+      Materials screen, placed just to the left of the "Find supplier" button
+      (decision 2026-11-26, for readability).
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
@@ -1645,3 +1648,11 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   page tags (OK, LOW, OUT) were already bold, so nothing changed there. Checked in a browser: computed weight is 700 for
   the Home LOW and OUT and for the Materials OK, LOW and OUT tags. Only CSS, no page or test changed. | NONE. | None.
 
+2026-11-26 | Agent E (team request; touches Agent H's shared look only by reusing its existing tag classes) | DONE: on Home, each
+  Notifications line now shows its status as the SAME coloured box as the Materials page (LOW orange, OUT red; classes
+  "tag tag-LOW" / "tag tag-OUT" from theme.css), placed just LEFT of the "Find supplier" button (readability). The old plain
+  bold "- LOW:" word in the sentence is gone. Guide F2 changed FIRST. Files: app/templates/home.html (one small wrapper
+  ".row-end", one style line), tests/test_stats_dashboard.py (1 new test: box comes before the button, OUT before LOW, same for
+  Admin and Employee, no MYR). Order, button links, empty text and permissions unchanged. Checked in a browser as Admin,
+  Employee and phone width 390: no sideways scroll, no "MYR", boxes look the same as on Materials. | NEXT: none. If the team
+  wants the box at the far LEFT of each line instead, it is a small move in home.html. | None.
