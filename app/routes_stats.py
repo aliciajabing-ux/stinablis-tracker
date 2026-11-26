@@ -1,5 +1,5 @@
-# WHAT THIS FILE DOES: The Home dashboard (four boxes and the "Needs attention" list) and the Statistics screen
-#   (usage chart, low-stock chart, spending, average delivery time, and the CSV download).
+# WHAT THIS FILE DOES: The Home dashboard (four boxes, "Current stock" with quick-action shortcuts, and the "Noti" list)
+#   and the Stock screen (current stock chart with a unit choice, usage chart, supplier speed ranking, spending, CSV download).
 # WHO CAN USE IT: Both. The money box is for Admin and Employee (view only); the spending chart and CSV download are Admin only. All checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, Response, jsonify, render_template, request
 
-from app.alerts import count_materials_by_status, get_materials_needing_attention
+from app.alerts import add_status, count_materials_by_status, get_materials_needing_attention, sort_ok_low_out
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import admin_required, can_see_prices, is_admin, login_required
 
@@ -23,6 +23,7 @@ MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 PERIODS_SHOWN = 6                      # how many weeks or months the charts show
 MOST_USED_MATERIALS_SHOWN = 8
 SPREADSHEET_DANGER_STARTS = ("=", "+", "-", "@")
+STOCK_UNIT_CHOICES = {"g": "Grams (g)", "ml": "Millilitres (ml)", "pcs": "Pieces"}   # the units a user can pick for the stock chart
 
 
 # Returns the current Malaysia time (UTC+8) as a datetime.
@@ -113,6 +114,38 @@ def get_average_lead_times(database):
             "days": [round(r["average_days"], 1) for r in rows]}
 
 
+# Returns every active material with its status word, listed OK first, then LOW, then OUT.
+def get_current_stock(database):
+    rows = database.execute("SELECT * FROM materials WHERE is_active = 1").fetchall()
+    return sort_ok_low_out([add_status(row) for row in rows])
+
+
+# Returns the unit (g, ml or pcs) that most active materials use, so the stock chart opens on something useful.
+def pick_default_unit(database):
+    rows = database.execute("SELECT unit, COUNT(*) AS n FROM materials WHERE is_active = 1 "
+                           "GROUP BY unit ORDER BY n DESC, unit").fetchall()
+    return rows[0]["unit"] if rows else "g"
+
+
+# Returns the stock chart numbers for one unit: each material's name, amount in stock and reorder level (no money).
+def get_stock_chart(database, unit):
+    unit = unit if unit in STOCK_UNIT_CHOICES else "g"
+    items = [m for m in get_current_stock(database) if m["unit"] == unit]
+    names = [" ".join(part for part in (m["name"], m["colour"]) if part) for m in items]
+    return {"unit": unit, "labels": names, "quantities": [round(m["quantity_on_hand"], 2) for m in items],
+            "reorder_levels": [round(m["reorder_level"], 2) for m in items],
+            "statuses": [m["status"] for m in items]}
+
+
+# Returns the suppliers from fastest to slowest average delivery, each with a rank (no prices read at all).
+def get_supplier_speed_ranking(database):
+    speeds = get_average_lead_times(database)
+    ranking = []
+    for place, (name, days) in enumerate(zip(speeds["labels"], speeds["days"]), start=1):
+        ranking.append({"rank": place, "name": name, "days": days})
+    return ranking
+
+
 # Returns {supplier name: MYR} of what was really paid for stock received in the month that starts on month_start.
 # Only "Record received" lines where someone typed a supplier and a total are counted.
 def get_spending_by_supplier(database, month_start):
@@ -137,12 +170,13 @@ def get_month_spending(database):
     return {"by_supplier": by_supplier, "total": sum(by_supplier.values())}
 
 
-# Shows the Home dashboard: four boxes and the "Needs attention" list.
+# Shows the Home dashboard: four boxes, "Current stock" with quick-action shortcuts, and the "Noti" list.
 def show_dashboard():
     database = get_db()
     show_money = can_see_prices(get_current_user())
     context = {"counts": count_materials_by_status(database),
                "attention": get_materials_needing_attention(database),
+               "current_stock": get_current_stock(database),
                "show_money": show_money, "month_name": malaysia_now().strftime("%B %Y")}
     if show_money:
         spending = get_month_spending(database)
@@ -150,14 +184,16 @@ def show_dashboard():
     return render_template("home.html", **context)
 
 
-# Shows the Statistics page (the charts fetch their numbers from the data addresses below).
+# Shows the Stock page (the charts fetch their numbers from the data addresses below).
 @stats_blueprint.route("/")
 @login_required
 def statistics_page():
+    database = get_db()
     return render_template("stats.html", show_admin_tools=is_admin(get_current_user()),
                            now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
                            spending_ready=SPENDING_METHOD_CONFIRMED,
-                           low_events_ready=LOW_EVENTS_METHOD_CONFIRMED)
+                           unit_choices=STOCK_UNIT_CHOICES, default_unit=pick_default_unit(database),
+                           speed_ranking=get_supplier_speed_ranking(database))
 
 
 # Sends usage numbers (per week or month) to the bar chart.
@@ -168,7 +204,14 @@ def usage_data():
     return jsonify(get_usage_by_period(get_db(), period))
 
 
-# Sends low-stock events per month to the line chart (empty until the team confirms the counting rule).
+# Sends the current stock of every material that uses the chosen unit (g, ml or pcs) to the stock chart.
+@stats_blueprint.route("/data/stock")
+@login_required
+def stock_data():
+    return jsonify(get_stock_chart(get_db(), request.args.get("unit", "g")))
+
+
+# Sends low-stock events per month (no page draws this any more since 2026-11-26; kept so nothing else breaks).
 @stats_blueprint.route("/data/low-stock")
 @login_required
 def low_stock_data():
@@ -177,7 +220,7 @@ def low_stock_data():
     return jsonify(get_low_stock_chart(get_db()))
 
 
-# Sends average delivery days per supplier to the chart.
+# Sends average delivery days per supplier (the page now shows a ranking list instead of a chart).
 @stats_blueprint.route("/data/lead-times")
 @login_required
 def lead_time_data():

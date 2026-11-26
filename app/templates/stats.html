@@ -1,7 +1,7 @@
-{# WHAT THIS FILE DOES: The Statistics page: usage, low-stock, delivery-time and (Admin only) spending charts.
+{# WHAT THIS FILE DOES: The Stock page: current stock chart (choose g, ml or pieces), usage chart, supplier speed ranking and (Admin only) spending chart.
    WHO CAN USE IT: Both. Spending and the download button are only drawn for Admin (the guide keeps these Admin only); the server also blocks Employees. #}
 {% extends "base.html" %}
-{% block title %}Statistics - Stinablis Tracker{% endblock %}
+{% block title %}Stock - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
   .panel { background:#fff; border-radius:6px; padding:16px; margin-bottom:16px; min-width:0; overflow:hidden; }
@@ -10,8 +10,19 @@
   .button { display:inline-block; background:#1a5fb4; color:#fff; text-decoration:none; }
   .waiting { background:#fff7e0; padding:10px; border-radius:6px; }
 </style>
-<h1>Statistics</h1>
-<p>Simple charts of how materials are used. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
+<h1>Stock</h1>
+<p>How much we have, how much was used, and who delivers fastest. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
+<div class="panel">
+  <h2>Current stock</h2>
+  <p>How much of each item is in stock. Pick one unit at a time, so the bars can be compared.
+     The light bar is the reorder level: when stock is at or below it, it is time to order.</p>
+  <label for="stock-unit">Show items counted in: </label>
+  <select id="stock-unit">
+    {% for code, words in unit_choices.items() %}<option value="{{ code }}"{% if code == default_unit %} selected{% endif %}>{{ words }}</option>{% endfor %}
+  </select>
+  <p id="stock-empty" class="waiting" hidden>No items are counted in this unit.</p>
+  <div class="chart-area" id="stock-area"><canvas id="stock-chart" aria-label="Current stock bar chart"></canvas></div>
+</div>
 <div class="panel">
   <h2>Usage per material</h2>
   <p>How much was used in each week or month.</p>
@@ -20,14 +31,15 @@
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
 </div>
 <div class="panel">
-  <h2>Low-stock events per month</h2>
-  {% if low_events_ready %}<div class="chart-area"><canvas id="low-chart" aria-label="Low-stock events line chart"></canvas></div>
-  {% else %}<p class="waiting">Not set up yet. The team still needs to confirm how a low-stock event is counted.</p>{% endif %}
-</div>
-<div class="panel">
-  <h2>Average delivery time per supplier</h2>
-  <p>Days from ordering to arriving. This is an average over what each supplier sells.</p>
-  <div class="chart-area"><canvas id="lead-chart" aria-label="Average delivery days bar chart"></canvas></div>
+  <h2>Supplier speed ranking</h2>
+  <p>Fastest to slowest. Average days from ordering to arriving, over everything each supplier sells.</p>
+  {% if speed_ranking %}
+  <ol class="ranking">
+    {% for supplier in speed_ranking %}
+    <li><strong>{{ supplier.name }}</strong>: about {{ '%g'|format(supplier.days) }} day{{ '' if supplier.days == 1 else 's' }}{% if loop.first %} (fastest){% endif %}</li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="waiting">No delivery times yet. They appear once a supplier has something for sale.</p>{% endif %}
 </div>
 {% if show_admin_tools %}
 <div class="panel">
@@ -41,8 +53,7 @@
 <script>
   var urls = {
     usage: "{{ url_for('stats.usage_data') }}",
-    low: "{{ url_for('stats.low_stock_data') }}",
-    lead: "{{ url_for('stats.lead_time_data') }}"{% if show_admin_tools and spending_ready %},
+    stock: "{{ url_for('stats.stock_data') }}"{% if show_admin_tools and spending_ready %},
     spending: "{{ url_for('stats.spending_data') }}"{% endif %}
   };
   var charts = {};
@@ -84,17 +95,22 @@
   }
   document.getElementById("period").addEventListener("change", loadUsage);
   loadUsage();
-  fetch(urls.lead).then(function (r) { return r.json(); }).then(function (d) {
-    drawChart("lead-chart", {type: "bar", options: {indexAxis: "y"},
-      data: {labels: d.labels, datasets: [{label: "Average days", data: d.days, backgroundColor: PALETTE[2]}]}});
-  });
-  if (document.getElementById("low-chart")) {
-    fetch(urls.low).then(function (r) { return r.json(); }).then(function (d) {
-      drawChart("low-chart", {type: "line",
-        data: {labels: d.labels, datasets: [{label: "Low-stock events", data: d.counts, borderColor: PALETTE[1],
-          backgroundColor: PALETTE[1], pointBackgroundColor: PALETTE[1], pointRadius: 4}]}});
+  // Loads the current stock for the chosen unit and draws it as horizontal bars (one row per item).
+  function loadStock() {
+    var unit = document.getElementById("stock-unit").value;
+    fetch(urls.stock + "?unit=" + encodeURIComponent(unit)).then(function (r) { return r.json(); }).then(function (d) {
+      var empty = d.labels.length === 0;
+      document.getElementById("stock-empty").hidden = !empty;
+      document.getElementById("stock-area").hidden = empty;
+      document.getElementById("stock-area").style.height = Math.max(160, 44 * d.labels.length + 80) + "px";
+      drawChart("stock-chart", {type: "bar", options: {indexAxis: "y"},
+        data: {labels: d.labels, datasets: [
+          {label: "In stock (" + d.unit + ")", data: d.quantities, backgroundColor: PALETTE[2]},
+          {label: "Reorder level (" + d.unit + ")", data: d.reorder_levels, backgroundColor: PALETTE[3]}]}});
     });
   }
+  document.getElementById("stock-unit").addEventListener("change", loadStock);
+  loadStock();
   {% if show_admin_tools and spending_ready %}
   if (urls.spending) {
     fetch(urls.spending).then(function (r) { return r.json(); }).then(function (d) {

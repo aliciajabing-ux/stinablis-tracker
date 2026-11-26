@@ -177,15 +177,28 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
         * Estimated money spent this month (Admin and Employee, view only)
-    - A "Needs attention" list: the low and out-of-stock materials, with
-      a button to see the suggested supplier.
+    - A "Noti" list (renamed from "Needs attention", 2026-11-26): the low and
+      out-of-stock materials, with a button to see the suggested supplier.
+    - A "Current stock" list next to the quick-action shortcuts on the same
+      landing view (decision 2026-11-26, Ryan's test): every active material
+      with its amount, status word, and "Record used" / "Record received"
+      shortcuts. Order: OK first, then LOW, then OUT.
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
       colour, quantity left, unit (grams, millilitres, pieces), and
       status (OK / LOW / OUT).
-    - Search box and filter buttons (for example "show only LOW").
+    - A big search box at the very top of the list ("Search by item name"),
+      filtering as you type (decision 2026-11-26). Filter buttons: Show all,
+      Show only LOW, Show only OUT. The "Show only OK" button was removed as
+      clutter. Order of the list: OK first, then LOW, then OUT.
     - Add / edit / delete a material: ADMIN only.
+    - "Add material" has an optional "Who sells it?" part (2026-11-26): no
+      supplier, an existing supplier, or a new supplier, plus what they charge
+      (pack size, price per pack in MYR, smallest order, shipping, delivery
+      days). Material, supplier and offer are saved together or not at all.
+      Admin only (Employees get 403 on the whole form); the form does not
+      appear on "Edit material".
     - "Record used" and "Record received" buttons: everyone.
     - "Last bought" memory (decision 2026-11-24): each material row and the
       Record screens show who it was last bought from, how much, the date
@@ -227,12 +240,19 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
     - Admin and Employee both see cost, supplier name, lead time, arrival
       date, and contact details (team decision 2026-11-24).
 
-F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
+F7. STOCK SCREEN (menu name "Stock", renamed from "Statistics" on 2026-11-26;
+    ADMIN sees everything; EMPLOYEE sees stock and usage only)
+    - Current stock chart: how much of each material is in stock, with a
+      choice of unit (g, ml or pieces) so staff can plan buying one unit
+      at a time. No money in it (Admin and Employee).
     - Usage per material per week or per month (bar chart).
-    - Number of low-stock events per month (line chart).
+    - Supplier speed ranking: a plain list of suppliers from fastest to
+      slowest average delivery time (replaces the delivery-time bar chart).
     - Spending per supplier (pie or bar chart) - ADMIN only.
-    - Average lead time per supplier.
     - Export to spreadsheet (CSV) - ADMIN only.
+    - Removed on 2026-11-26 (confusing for staff): the low-stock events line
+      chart and the average delivery time bar chart. The events are still
+      saved in the database; only the chart is gone.
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -313,7 +333,9 @@ All of these numbers are ESTIMATES. The screen must say so.
 ---------------------------------------------------------------------
 - Big, clear buttons with plain words: "Record used", "Find supplier",
   "Add material". Never use technical words on screen.
-- Use colours with words too: green = OK, orange = LOW, red = OUT.
+- Use colours with words too: green = OK, orange = LOW. OUT is shown in a
+  calm, muted outline (not red), because "none left" is a normal state for
+  some items and must not look like an emergency (Ryan's test, 2026-11-26).
   (Do not rely on colour alone; always write the word.)
 - Maximum 3 clicks to any common task.
 - Buttons and links are at least about 44 px tall so a thumb can tap them.
@@ -1214,3 +1236,70 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
       (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
 
 2026-11-25 | Agent G (documentation & presentation) | DOC SYNC after the final merge into main (commit 6024c83; I re-ran the suite: 384 passed, 2 skipped, 6 xfailed). Updated README.md, PRESENTATION_NOTES.md and one GLOSSARY.md entry: test count and commit; "Bought from" and "Total paid" on Record received are Admin only (can_record_purchase_cost; an Employee who sends them gets 403), while Employees still see "Last bought" under can_see_prices(); the shared dark theme (app/static/theme.css) is mentioned; the phone test findings F-11 and F-12 are stated honestly. | Before the demo: check in a browser that the top menu links (sized in theme.css by padding plus a small minimum height) are about 44 px tall like the other controls (Agent H). | PROBLEMS (R3, not mine): F-11 to F-13 from the phone test are still open (sideways-scrolling tables, phone numbers not tappable, delivery-time chart cut off); the merge repeated some older status-log entries in this file; the SupplyTrail figures still have no source (see the previous Agent G entry).
+
+2026-11-26 | Main Chat (team decision after the real user test with Ryan, done at the team's request across
+  Agent C, E, H and F files) | USER TEST: Ryan from Stinablis (Jacob was not available) tested the app
+  with a timer. Result: 7:16 baseline time; he got stuck on steps 1 and 2. His words: "Will use but need
+  improvements. (Don't want confusing) As long can key in one data, its good." DECISION: fix the four
+  highest-impact points. (1) A fast search box at the top of Materials. (2) Menu "Statistics" is now
+  "Stock"; Home shows Current stock next to the quick-action shortcuts; the "Show only OK" button is
+  removed. (3) Lists show OK first, then LOW, then OUT; the OUT badge is softened; "Needs attention" is
+  now "Noti". (4) The low-stock events chart and the average delivery time chart are replaced by a
+  Current stock chart with a unit choice (g, ml, pieces) and a Supplier speed ranking list (this also
+  closes phone finding F-13). Sections 5 (F2, F3, F7) and 8 updated FIRST. All permission rules are
+  unchanged (can_see_prices, can_manage_*, admin_required, CSV and spending still Admin only; no new
+  money anywhere). No table was changed. | Then: app/alerts.py (list order), routes_materials.py and
+  materials_list.html (search first, order, no Show OK), routes_stats.py + stats.html + home.html (Stock
+  page, Current stock, speed ranking), base.html and theme.css (menu word, softer OUT), tests, README and
+  PRESENTATION_NOTES. | CROSS-AGENT REQUESTS (R3, edits made at the team's request, please review): AGENT C
+  (alerts.py, routes_materials.py, materials_list.html), AGENT E (routes_stats.py, home.html, stats.html),
+  AGENT H (base.html menu word, theme.css OUT badge), AGENT F (menu word, matrix and new tests). The data
+  addresses /stats/data/low-stock and /stats/data/lead-times still answer (their tests still pass) but no
+  page draws them any more; the team may remove them later. | Ryan's quote is kept word for word in
+  README.md and PRESENTATION_NOTES.md. CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Main Chat (documentation only; no code changed) | VERIFIED DETAILS OF RYAN'S TEST, replacing the
+  earlier note that the steps were not recorded. PRE-TEST BASELINE (Ryan, pre-test interview): Stinablis
+  spends about 2 to 3 hours per week checking Shopee purchase history, local shop memory, a collaborator list
+  and past receipts to find where materials were bought. TEST 1 (total time 7:16): (1) find where we bought
+  standard resin; (2) find which supplier is cheapest for nuts; (3) add a new purchase. Ryan got stuck on
+  Tasks 1 and 2 because the Materials list had no search bar and going between stock and supplier
+  information was not direct. That is why the instant search bar on Materials and Current stock with quick
+  actions on Home were added. His words: "Will use but need improvements. (Don't want confusing) As long can
+  key in one data, its good." README.md and PRESENTATION_NOTES.md now carry these facts (the "ask the team
+  which steps" note is gone; the "about 2 hours a week" figure is now a confirmed starting point, while the
+  "30 minutes a week" target is still only a goal). | NEXT: run TEST 2 (PLA Orange, PETG Gray, add a new
+  purchase) and write the time next to 7:16. Test 2 has NOT been timed or completed, so no faster post-fix
+  time may be claimed. The sample data has no "PLA Orange" or "PETG Gray" (only PLA Basic White and Black and
+  PETG Clear): add them first or test on the real data. | OPEN GAP (R4, team decision needed, nothing
+  changed): the "Find supplier" page (/suggest/<id>) only lists ranked suppliers when the material is LOW or
+  OUT, so for an OK item such as the nuts in the sample data Task 2 is still not a one-step job, and the
+  Materials list has no "Find supplier" button. Should the comparison work for every item? Agent D owns the
+  page and Agent C the Materials list. | CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Add material with its supplier (Agent C's screen; built at the team's request, with a small
+  refactor in Agent D's routes_suppliers.py) | The Admin-only "Add material" form now has an optional
+  "Who sells it?" part: choose "No supplier for now" (default), an existing active supplier, or "A new
+  supplier..." (name, ONLINE/LOCAL, address, phone, email, website, notes). When a supplier is chosen the
+  Admin also fills in what they charge: pack size, price per pack (MYR), smallest order, shipping (MYR) and
+  delivery days. The offer takes the material's unit. Material, supplier and offer are saved together (all
+  or nothing) and the activity log gets MATERIAL_ADDED, SUPPLIER_ADDED and OFFER_ADDED lines. A supplier
+  name that already exists is refused ("choose it from the list instead"). Employees still get 403 on the
+  whole form. Reused code instead of copying it: routes_suppliers.py now has read_offer_numbers,
+  insert_supplier and insert_offer, and its own "Add supplier" / "Add offer" screens use them (behaviour
+  unchanged; its 29 tests pass). 16 new tests in tests/test_materials.py; all 162 tests pass. Checked in a
+  phone-sized browser with the dark theme and CSRF switched on. | Agent F: add the form to the manual
+  checks in TESTS.md. Agent D: please read the small change in routes_suppliers.py. Team: "Edit material"
+  does not show suppliers (use the Suppliers page). | The Edit material form was not changed.
+
+2026-11-26 | Main Chat (merge of origin/main-iyvssn commit b51993b into main, at the team's request) | CHECKED
+  before merging: the "Add material with its supplier" change keeps the Admin-only rule (add_material is still
+  admin_required; Employees get 403), changes no table, schema.sql, sample data or permissions.py, and does not
+  touch CLAUDE.md.txt. Its small refactor in routes_suppliers.py (read_offer_numbers, insert_supplier,
+  insert_offer) keeps the Suppliers screens behaving the same. FIXED while merging: (1) the branch was built on an
+  older main and defined a second get_active_suppliers() in routes_materials.py with no argument, which would have
+  silently replaced main's get_active_suppliers(database) and crashed the Add material form; the extra one was
+  removed and the form now calls main's. (2) The imports, the new tests (both sides kept) and this log (both sides
+  kept) were merged by hand. Full suite: 421 passed, 2 skipped, 6 expected failures. | Agent F: add the form
+  to the manual checks (the branch entry above already asks). Agent D: please read the small change in
+  routes_suppliers.py. | The Edit material form still shows no supplier part. CLAUDE.md.txt was NOT touched.

@@ -8,9 +8,23 @@ Facts below were checked against the code and by running the app on 2026-11-24. 
 are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
 Stinablis facts or real prices (rule R7).
 
-Last re-checked against code: 2026-11-25, final merge commit `6024c83` (384 automatic tests passed,
-2 skipped, 6 "expected failures" that describe known bugs). That commit includes all feature, test and
+Last re-checked against code: 2026-11-26, after the fixes from Ryan's user test (405 automatic tests
+passed, 2 skipped, 6 "expected failures" that describe known bugs). That includes all feature, test and
 design branches. Re-check these notes if anything else is merged (see the status log in `CLAUDE.md`).
+
+**Ryan's user test (2026-11-26) in one breath:** Ryan from Stinablis (Jacob was not available) confirmed
+that today Stinablis spends **2 to 3 hours per week** checking Shopee purchase history, local shop memory, a
+collaborator list and past receipts to find where materials were bought. In Test 1 (total time **7:16**)
+he had three tasks: (1) find where we bought standard resin, (2) find which supplier is cheapest for nuts,
+(3) add a new purchase. He got **stuck on Tasks 1 and 2**: the Materials list had no search bar, and going
+from stock information to supplier information was not direct. In his words: "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
+We made four fixes: fast search first on Materials; "Statistics" renamed **Stock** and Home shows Current
+stock with Record shortcuts; OK, LOW, OUT order with a softer OUT badge and "Noti" instead of "Needs
+attention"; and two confusing charts replaced by a Current stock chart (pick g, ml or pieces) and a
+Supplier speed ranking list. **Test 2** (PLA Orange, PETG Gray, add a new purchase) has **not** been timed or
+completed yet, so we have **not** re-timed the flow; do not claim it is faster than 7:16. One honest gap: the
+"Find supplier" ranking still only appears for LOW or OUT items, so comparing suppliers for an item that is OK
+(like the nuts in the sample data) is not a one-step job yet.
 
 > **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
 > stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
@@ -49,16 +63,17 @@ Facts:
     tall, so a thumb can tap them), a "Last bought" reminder next to each material, plain-English error
     pages with a **Back to Home** button, a phone-friendly layout, and every permission checked on the
     server. Be honest about phones: the team's phone test found buttons and text fine, but wide tables
-    scroll sideways (F-11), phone numbers are not yet tappable (F-12), and on the Statistics page the
-    "Average delivery time per supplier" chart is cut off on the left (F-13). These are open findings
-    from the status log, not re-tested in a browser by me; no fix is logged yet.
+    scroll sideways on the Suppliers pages (F-11; the Materials list was fixed on 2026-11-26 and is now a stack
+    of small cards), and phone numbers are not yet tappable (F-12). The cut-off delivery-time chart (F-13)
+    is gone: it was replaced by the Supplier speed ranking list. F-11 (Suppliers pages) and F-12 are still
+    open findings from the status log.
     *To check before the demo:* the top menu links get their size from `theme.css`; confirm in a browser
     that they are about 44 px tall, like the other controls.
-  - *SupplyTrail pitch (team goal, not a measured result).* The aim is to cut the time spent searching
-    for suppliers, local Kuching shops against online ones, from about 2 hours a week towards about
-    30 minutes a week. These two numbers come from the team's pitch. I could not find them in
-    `CLAUDE.md` or the founder questions, so treat them as an **estimate to confirm with the founder**
-    (Section 16), not as a proven saving.
+  - *SupplyTrail pitch.* The aim is to cut the time spent searching for suppliers, local Kuching shops
+    against online ones. **The starting point is now confirmed:** in the pre-test interview Ryan confirmed
+    Stinablis spends about **2 to 3 hours per week** on this (Shopee purchase history, local shop memory, a
+    collaborator list and past receipts). The **target of about 30 minutes a week is still the team's goal,
+    not a measured result**, because Test 2 has not been timed or completed yet.
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -78,8 +93,8 @@ Facts:
 | See "Last bought" (who, how much, date, total paid in MYR) | Yes | Yes (view only) |
 | Add / change / remove materials | Yes | **No** (403) |
 | Add / change / switch off suppliers and offers, change prices | Yes | **No** (403) |
-| Statistics: usage, average delivery time | Yes | Yes |
-| Statistics: spending chart, CSV download | Yes | **No** (403) |
+| Stock page: current stock (choose g, ml or pieces), usage, supplier speed ranking | Yes | Yes |
+| Stock page: spending chart, CSV download | Yes | **No** (403) |
 | Manage user accounts (Users screen: add user, change role, reset password, switch off) | Yes | **No** (403) |
 
 Facts:
@@ -90,7 +105,7 @@ Facts:
 - If in doubt, deny (guide Section 4).
 - Still open for the founder: should Employees see supplier phone numbers and emails? Today they
   can (our proposal); the founder has not confirmed.
-- Settled (guide Section 5, F7): the Statistics spending chart and CSV export are Admin only.
+- Settled (guide Section 5, F7): the Stock page's spending chart and CSV export are Admin only.
 - Built: the Admin Users screen (F8). Not built yet: the activity-log screen (F9). Every change is
   still written to the activity log table.
 
@@ -129,7 +144,7 @@ Step by step (code in `app/routes_materials.py`, `app/alerts.py`):
 10. **Back to the list** with a short confirmation message.
 11. **LOW or OUT:** the status is not stored; it is worked out each time a page is shown by
     `get_status` (zero or less = OUT; at or below the reorder level = LOW; otherwise OK). So the Home
-    page "Needs attention" list and the red / orange boxes update by themselves.
+    page "Noti" list and the orange LOW box update by themselves.
 
 Verified on 2026-11-24 with the sample data: PLA Basic White 830 g (reorder level 1000 g, so
 already LOW); an Employee recorded 200 g used; quantity became 630 g, one USED row and one
@@ -239,7 +254,7 @@ gets nothing). Seeing it changes nothing: typing the purchase cost is behind its
 and a **Back to Home** button.
 
 What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the spending chart and the CSV export on
-the Statistics page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
+the Stock page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
 covered seeing prices, not these.) The question still open for the founder is whether Employees
 should see supplier phone numbers and emails.
 
@@ -287,8 +302,8 @@ Facts:
 - Record used and Record received, with a history row and an activity-log row for each change.
 - "Last bought" memory (who, how much, date, total paid; money only for people allowed to see prices).
 - Find supplier: ranked by estimated total cost, then lead time, with estimated arrival dates.
-- Home boxes, usage chart, low-stock events chart, average delivery time, money spent; Admin-only
-  spending chart and CSV download.
+- Home boxes with Current stock and Record shortcuts, a Stock page (current stock chart with a unit choice,
+  usage chart, supplier speed ranking), money spent; Admin-only spending chart and CSV download.
 - Roles (Admin and Employee), server-side permission checks, login lock, CSRF protection, the Admin
   Users screen, plain-English error pages, tap-friendly buttons.
 
@@ -308,7 +323,7 @@ point for questions.
    month. Money spent adds up the real totals an Admin typed on Record received; on the sample data it
    may show a small number or MYR 0.00." (Do not claim a real figure.)
 2. (Optional, 15 seconds) Press **Users** to show the Admin-only screen for accounts.
-3. Point to **Needs attention**. Press **Find supplier** on PLA Basic White. Read the ranked list,
+3. Point to **Noti**. Press **Find supplier** on PLA Basic White. Read the ranked list,
    "Best" at the top, and the word "estimate".
 4. Go to Materials. Point to the OK / LOW / OUT sentence and a **Last bought** line. Press **Record
    used**, type a quantity, save. Show the status change. (On a phone: the buttons are big enough to tap.)
@@ -325,7 +340,7 @@ point for questions.
   suggestion, a history of who changed what, and different rights for different people.
 - **"What happens if someone types a forbidden address?"** 403 Forbidden, checked on the server.
 - **"How are passwords stored?"** Scrambled (hashed); nobody can read them back, not even us.
-- **"What if the internet is down?"** The app itself runs on our own computer. Only the Statistics
+- **"What if the internet is down?"** The app itself runs on our own computer. Only the Stock page
   charts need the internet, because the chart library is loaded from the web.
 - **"What can it not do yet?"** Email alerts, a manual stock correction screen (ADJUSTED), an
   activity-log screen, a one-click backup button, and the shared look across every screen (Agent H's
@@ -336,10 +351,11 @@ point for questions.
 - **"Are the hardware items (screws, springs, magnets...) real?"** They are sample data to show that the
   system can count pieces next to grams and millilitres. What hardware Stinablis really tracks is a
   founder question.
-- **"Is the 2 hours to 30 minutes a week saving proven?"** No. It is the team's goal and estimate. We
-  have not measured it and the founder has not confirmed the 2-hour starting point.
-- **"How do you know it works?"** 384 automatic tests passed (2 skipped, 6 expected failures
-  that describe known bugs; commit `6024c83`, 2026-11-25), a manual checklist (`TESTS.md`), and a phone check.
+- **"Is the 2 hours to 30 minutes a week saving proven?"** No. The starting point is confirmed: Ryan said
+  Stinablis spends 2 to 3 hours per week finding where materials were bought. The 30-minute target is our
+  goal only. We have not measured it: Test 1 took 7:16 before the fixes, and Test 2 has not been timed yet.
+- **"How do you know it works?"** 405 automatic tests passed (2 skipped, 6 expected failures
+  that describe known bugs; commit `a46347f`, 2026-11-26), a manual checklist (`TESTS.md`), and a phone check.
 - **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
   secret token (CSRF protection), on top of the safe cookie settings.
 

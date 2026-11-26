@@ -59,6 +59,17 @@ def read_supplier_form(form):
     }
 
 
+# Returns the checked offer numbers (pack size, price, minimum order, shipping, lead time) from a form.
+def read_offer_numbers(form):
+    return {
+        "pack_size": read_number(form, "pack_size", "pack size", smallest=0.001),
+        "price_per_pack_myr": read_number(form, "price_per_pack_myr", "price"),
+        "minimum_order_packs": read_number(form, "minimum_order_packs", "minimum order", True, smallest=1),
+        "shipping_cost_myr": read_number(form, "shipping_cost_myr", "shipping cost"),
+        "lead_time_days": read_number(form, "lead_time_days", "lead time in days", True, largest=365),
+    }
+
+
 # Returns the checked offer fields from the form as a dictionary.
 def read_offer_form(form, database):
     pack_unit = form.get("pack_unit", "")
@@ -66,15 +77,7 @@ def read_offer_form(form, database):
                                 (form.get("material_id", ""),)).fetchone()
     if pack_unit not in UNITS or material is None:
         raise FormProblem("Please choose a material and a unit.")
-    return {
-        "material_id": material["id"],
-        "pack_unit": pack_unit,
-        "pack_size": read_number(form, "pack_size", "pack size", smallest=0.001),
-        "price_per_pack_myr": read_number(form, "price_per_pack_myr", "price"),
-        "minimum_order_packs": read_number(form, "minimum_order_packs", "minimum order", True, smallest=1),
-        "shipping_cost_myr": read_number(form, "shipping_cost_myr", "shipping cost"),
-        "lead_time_days": read_number(form, "lead_time_days", "lead time in days", True, largest=365),
-    }
+    return {"material_id": material["id"], "pack_unit": pack_unit, **read_offer_numbers(form)}
 
 
 # Writes one line to the activity log about a supplier or an offer (who, what, when).
@@ -92,6 +95,29 @@ def make_next_id(database, table_name, letter):
     ids = [row["id"] for row in database.execute(f"SELECT id FROM {table_name}")]
     numbers = [int(i[1:]) for i in ids if i[1:].isdigit()]
     return f"{letter}{max(numbers, default=0) + 1:03d}"
+
+
+# Saves a new supplier and its activity-log line (no commit here). Returns the new supplier id.
+def insert_supplier(database, fields):
+    new_id = make_next_id(database, "suppliers", "S")
+    database.execute("INSERT INTO suppliers (id, name, supplier_type, address, phone, email, website, notes) "
+                     "VALUES (:id, :name, :supplier_type, :address, :phone, :email, :website, :notes)",
+                     {**fields, "id": new_id})
+    log_change(database, "SUPPLIER_ADDED", "suppliers", new_id, f"Added supplier {fields['name']}")
+    return new_id
+
+
+# Saves a new offer (supplier sells material) and its activity-log line (no commit here). Returns the offer id.
+def insert_offer(database, supplier_id, supplier_name, fields):
+    new_id = make_next_id(database, "supplier_offers", "O")
+    database.execute(
+        "INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, price_per_pack_myr, "
+        "minimum_order_packs, shipping_cost_myr, lead_time_days) VALUES (:id, :supplier_id, :material_id, "
+        ":pack_size, :pack_unit, :price_per_pack_myr, :minimum_order_packs, :shipping_cost_myr, :lead_time_days)",
+        {**fields, "id": new_id, "supplier_id": supplier_id})
+    log_change(database, "OFFER_ADDED", "supplier_offers", new_id,
+               f"{supplier_name} sells {fields['material_id']} at MYR {fields['price_per_pack_myr']:.2f} per pack")
+    return new_id
 
 
 # Returns the supplier row, or stops with "not found" (Employees cannot open switched-off suppliers).
@@ -154,11 +180,7 @@ def supplier_new():
     except FormProblem as problem:
         return render_template("supplier_form.html", supplier=request.form, message=str(problem)), 400
     database = get_db()
-    new_id = make_next_id(database, "suppliers", "S")
-    database.execute("INSERT INTO suppliers (id, name, supplier_type, address, phone, email, website, notes) "
-                     "VALUES (:id, :name, :supplier_type, :address, :phone, :email, :website, :notes)",
-                     {**fields, "id": new_id})
-    log_change(database, "SUPPLIER_ADDED", "suppliers", new_id, f"Added supplier {fields['name']}")
+    new_id = insert_supplier(database, fields)
     database.commit()
     return redirect(url_for("suppliers.supplier_detail", supplier_id=new_id))
 
@@ -212,14 +234,7 @@ def offer_new(supplier_id):
     except FormProblem as problem:
         return render_template("offer_form.html", supplier=supplier, offer=request.form, materials=materials,
                                message=str(problem)), 400
-    new_id = make_next_id(database, "supplier_offers", "O")
-    database.execute(
-        "INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, price_per_pack_myr, "
-        "minimum_order_packs, shipping_cost_myr, lead_time_days) VALUES (:id, :supplier_id, :material_id, "
-        ":pack_size, :pack_unit, :price_per_pack_myr, :minimum_order_packs, :shipping_cost_myr, :lead_time_days)",
-        {**fields, "id": new_id, "supplier_id": supplier_id})
-    log_change(database, "OFFER_ADDED", "supplier_offers", new_id,
-               f"{supplier['name']} sells {fields['material_id']} at MYR {fields['price_per_pack_myr']:.2f} per pack")
+    insert_offer(database, supplier_id, supplier["name"], fields)
     database.commit()
     return redirect(url_for("suppliers.supplier_detail", supplier_id=supplier_id))
 

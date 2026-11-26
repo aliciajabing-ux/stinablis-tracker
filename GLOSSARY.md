@@ -170,7 +170,7 @@ Every answer from the server starts with a number that says how it went.
 - **CSS:** the language that describes how a page looks (colours, sizes). In our files you see it
   inside `<style>`.
 - **JavaScript (JS):** code that runs inside the browser. We use a small amount, only to draw charts.
-- **Chart.js:** a free library that draws the bar and line charts. The Statistics page loads it from
+- **Chart.js:** a free library that draws the bar and line charts. The Stock page (called Statistics until 2026-11-26) loads it from
   the internet (from a **CDN**), so that page needs a connection to draw charts.
 - **CDN (content delivery network):** a public website that hosts shared library files for others
   to load.
@@ -205,7 +205,9 @@ Every answer from the server starts with a number that says how it went.
 - **Status OK / LOW / OUT:** `OUT` = none left (quantity is zero). `LOW` = quantity is at or below the
   reorder level, so it is time to order. `OK` = enough in stock. The Materials page explains these three
   words in one plain sentence, and the word is always shown, not just a colour (green / orange / red).
-- **Needs attention:** the Home list of LOW and OUT materials, OUT first.
+- **Noti:** the Home list of LOW and OUT materials, OUT first (it was called "Needs attention" until 2026-11-26).
+- **Current stock:** the Home list (and the Stock page chart) of how much of every material we have; OK first, then LOW, then OUT.
+- **Supplier speed ranking:** the Stock page list of suppliers from fastest to slowest average delivery time.
 - **Supplier:** a shop that sells materials. Type `LOCAL` or `ONLINE`.
 - **Offer (`supplier_offers`):** one row saying "this supplier sells this material at this price".
 - **Pack:** what an offer is sold in (for example one 1000 g spool). The price is **per pack**, not
@@ -233,8 +235,8 @@ Every answer from the server starts with a number that says how it went.
 - **Record used / Record received:** the two buttons that change stock. They are the only way the
   quantity changes.
 - **Low-stock event:** the moment a "Record used" drops a material from OK to LOW or OUT. One row is
-  saved in the `low_stock_events` table at that moment, and the Statistics chart counts the rows per
-  month (Malaysia time). Further drops while it stays LOW or OUT do not count again.
+  saved in the `low_stock_events` table at that moment (no page draws a chart of them since 2026-11-26).
+  The rows are counted per month (Malaysia time) by `/stats/data/low-stock`. Further drops while it stays LOW or OUT do not count again.
 - **Not set up yet:** what a screen says when the team has not yet decided how to calculate that
   number. It is switched off on purpose (rule R4: do not guess). Money spent and low-stock events used
   to say this; both are now switched on.

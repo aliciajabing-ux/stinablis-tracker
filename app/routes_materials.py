@@ -8,10 +8,11 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
+from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status, sort_ok_low_out
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
+from app.routes_suppliers import FormProblem, insert_offer, insert_supplier, read_offer_numbers, read_supplier_form
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
 
@@ -23,6 +24,8 @@ NUMBER_PATTERN = re.compile(r"^\d{1,7}(\.\d{1,2})?$")
 MOVEMENT_WORDS = {"USED": "Used", "RECEIVED": "Received", "ADJUSTED": "Starting stock"}
 KIND_TO_MOVEMENT = {"used": "USED", "received": "RECEIVED"}
 NUMBER_HELP = "Please type the {label} as a number, for example 200"
+NEW_SUPPLIER = "new"      # the value of the "Who sells it?" drop-down for "a new supplier"
+SUPPLIER_FIELDS = ("name", "supplier_type", "address", "phone", "email", "website", "notes")
 
 
 # Returns the number typed in a form box, or None if it is not a plain number (letters, minus, too big...).
@@ -189,6 +192,7 @@ def list_materials():
     materials = [add_status(row) for row in rows]
     if status_filter in (STATUS_OK, STATUS_LOW, STATUS_OUT):
         materials = [m for m in materials if m["status"] == status_filter]
+    materials = sort_ok_low_out(materials)
     show_money = can_see_prices(get_current_user())
     for material in materials:
         material["last_bought"] = get_last_bought(get_db(), material, show_money)
@@ -199,22 +203,79 @@ def list_materials():
                            status_filter=status_filter, can_manage=can_manage_materials(get_current_user()))
 
 
-# Shows the "Add material" form (Admin only) and saves the new material.
+# Shows the "Add material" form again, filled in, with the given problems (status 400 when there are some).
+def show_new_material_form(problems):
+    return render_template("materials_form.html", material=None, form=request.form, problems=problems,
+                           units=UNITS, suppliers=get_active_suppliers(get_db())), (400 if problems else 200)
+
+
+# Reads the optional "Who sells it?" part of the Add material form.
+# Returns None if no supplier was chosen (or a problem was added to the list), otherwise a dictionary.
+def read_supplier_part(form, database, problems):
+    choice = form.get("supplier_choice", "")
+    if not choice:
+        return None
+    part = {}
+    try:
+        if choice == NEW_SUPPLIER:
+            part["supplier_fields"] = read_new_supplier_fields(form, database)
+        else:
+            part["supplier"] = database.execute(
+                "SELECT id, name FROM suppliers WHERE id = ? AND is_active = 1", (choice,)).fetchone()
+            if part["supplier"] is None:
+                raise FormProblem("Please choose a supplier from the list.")
+        part["offer_numbers"] = read_offer_numbers(form)
+    except FormProblem as problem:
+        problems.append(str(problem))
+        return None
+    return part
+
+
+# Returns the checked details of a brand-new supplier from the Add material form (boxes start with "new_").
+def read_new_supplier_fields(form, database):
+    fields = read_supplier_form({name: form.get("new_" + name, "") for name in SUPPLIER_FIELDS})
+    same_name = database.execute("SELECT 1 FROM suppliers WHERE lower(name) = lower(?)", (fields["name"],)).fetchone()
+    if same_name:
+        raise FormProblem("A supplier with that name already exists. Please choose it from the list instead.")
+    return fields
+
+
+# Saves the chosen or new supplier and the offer "this supplier sells this material" (no commit here).
+def save_supplier_part(database, part, material_id, unit):
+    if "supplier_fields" in part:
+        supplier_id = insert_supplier(database, part["supplier_fields"])
+        supplier_name = part["supplier_fields"]["name"]
+    else:
+        supplier_id, supplier_name = part["supplier"]["id"], part["supplier"]["name"]
+    insert_offer(database, supplier_id, supplier_name,
+                 {"material_id": material_id, "pack_unit": unit, **part["offer_numbers"]})
+    return supplier_name
+
+
+# Shows the "Add material" form (Admin only) and saves the new material, and optionally its supplier.
 @materials_blueprint.route("/new", methods=["GET", "POST"])
 @admin_required
 def add_material():
     if request.method == "GET":
-        return render_template("materials_form.html", material=None, form=request.form, problems=[], units=UNITS)
+        return show_new_material_form([])
+    database = get_db()
     values, problems = read_material_form(request.form, is_new=True)
+    supplier_part = read_supplier_part(request.form, database, problems)
     if problems:
-        return render_template("materials_form.html", material=None, form=request.form, problems=problems, units=UNITS), 400
-    material_id = save_new_material(get_db(), values, get_current_user())
-    flash(f"Added {values['name']}.")
+        return show_new_material_form(problems)
+    material_id = save_new_material(database, values, get_current_user(), commit=False)
+    message = f"Added {values['name']}."
+    if supplier_part:
+        supplier_name = save_supplier_part(database, supplier_part, material_id, values["unit"])
+        message = f"Added {values['name']}, sold by {supplier_name}."
+    database.commit()
+    flash(message)
     return redirect(url_for("materials.list_materials"))
 
 
 # Saves a new material and, if there is starting stock, a "starting stock" history row. Returns its id.
-def save_new_material(database, values, user):
+# With commit=False the caller saves everything together (so a problem later saves nothing).
+def save_new_material(database, values, user, commit=True):
     material_id = "M" + uuid.uuid4().hex[:8]
     now_text = utc_now().strftime(TIME_FORMAT)
     database.execute(
@@ -228,7 +289,8 @@ def save_new_material(database, values, user):
         material = database.execute("SELECT * FROM materials WHERE id = ?", (material_id,)).fetchone()
         database.execute("UPDATE materials SET quantity_on_hand = ? WHERE id = ?", (values["starting_quantity"], material_id))
         add_movement_rows(database, material, "ADJUSTED", values["starting_quantity"], "Starting stock", user)
-    database.commit()
+    if commit:
+        database.commit()
     return material_id
 
 

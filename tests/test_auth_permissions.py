@@ -262,11 +262,11 @@ def test_menu_links_show_only_when_logged_in(database_file):
     website = create_app({"DATABASE": database_file, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     menu_client = website.test_client()
     login_page = menu_client.get("/login").data
-    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
+    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Stock<"]:
         assert link_text not in login_page
     log_in(menu_client, "worker", EMPLOYEE_PASSWORD)
     home_page = menu_client.get("/").data
-    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Statistics<"]:
+    for link_text in [b">Home<", b">Materials<", b">Suppliers<", b">Stock<"]:
         assert link_text in home_page
     assert b'href="/materials/"' in home_page or b'href="/materials"' in home_page
 
