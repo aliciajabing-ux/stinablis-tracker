@@ -184,8 +184,17 @@ F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
       colour, quantity left, unit (grams, millilitres, pieces), and
       status (OK / LOW / OUT).
-    - Search box and filter buttons (for example "show only LOW").
+    - A big search box at the very top of the list ("Search by item name"),
+      filtering as you type (decision 2026-11-26). Filter buttons: Show all,
+      Show only LOW, Show only OUT. The "Show only OK" button was removed as
+      clutter. Order of the list: OK first, then LOW, then OUT.
     - Add / edit / delete a material: ADMIN only.
+    - "Add material" has an optional "Who sells it?" part (2026-11-26): no
+      supplier, an existing supplier, or a new supplier, plus what they charge
+      (pack size, price per pack in MYR, smallest order, shipping, delivery
+      days). Material, supplier and offer are saved together or not at all.
+      Admin only (Employees get 403 on the whole form); the form does not
+      appear on "Edit material".
     - "Record used" and "Record received" buttons: everyone.
     - "Last bought" memory (decision 2026-11-24): each material row and the
       Record screens show who it was last bought from, how much, the date
@@ -1447,6 +1456,45 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   wanted. | PROBLEMS: none known. On a phone the usage chart's long legend still takes a lot of height (older issue, not
   caused by the sidebar).
 
+2026-11-26 | Main Chat (team decision after the real user test with Ryan, done at the team's request across
+  Agent C, E, H and F files) | USER TEST: Ryan from Stinablis (Jacob was not available) tested the app
+  with a timer. Result: 7:16 baseline time; he got stuck on steps 1 and 2. His words: "Will use but need
+  improvements. (Don't want confusing) As long can key in one data, its good." DECISION: fix the four
+  highest-impact points. (1) A fast search box at the top of Materials. (2) Menu "Statistics" is now
+  "Stock"; Home shows Current stock next to the quick-action shortcuts; the "Show only OK" button is
+  removed. (3) Lists show OK first, then LOW, then OUT; the OUT badge is softened; "Needs attention" is
+  now "Noti". (4) The low-stock events chart and the average delivery time chart are replaced by a
+  Current stock chart with a unit choice (g, ml, pieces) and a Supplier speed ranking list (this also
+  closes phone finding F-13). Sections 5 (F2, F3, F7) and 8 updated FIRST. All permission rules are
+  unchanged (can_see_prices, can_manage_*, admin_required, CSV and spending still Admin only; no new
+  money anywhere). No table was changed. | Then: app/alerts.py (list order), routes_materials.py and
+  materials_list.html (search first, order, no Show OK), routes_stats.py + stats.html + home.html (Stock
+  page, Current stock, speed ranking), base.html and theme.css (menu word, softer OUT), tests, README and
+  PRESENTATION_NOTES. | CROSS-AGENT REQUESTS (R3, edits made at the team's request, please review): AGENT C
+  (alerts.py, routes_materials.py, materials_list.html), AGENT E (routes_stats.py, home.html, stats.html),
+  AGENT H (base.html menu word, theme.css OUT badge), AGENT F (menu word, matrix and new tests). The data
+  addresses /stats/data/low-stock and /stats/data/lead-times still answer (their tests still pass) but no
+  page draws them any more; the team may remove them later. | Ryan's quote is kept word for word in
+  README.md and PRESENTATION_NOTES.md. CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Main Chat (documentation only; no code changed) | VERIFIED DETAILS OF RYAN'S TEST, replacing the
+  earlier note that the steps were not recorded. PRE-TEST BASELINE (Ryan, pre-test interview): Stinablis
+  spends about 2 to 3 hours per week checking Shopee purchase history, local shop memory, a collaborator list
+  and past receipts to find where materials were bought. TEST 1 (total time 7:16): (1) find where we bought
+  standard resin; (2) find which supplier is cheapest for nuts; (3) add a new purchase. Ryan got stuck on
+  Tasks 1 and 2 because the Materials list had no search bar and going between stock and supplier
+  information was not direct. That is why the instant search bar on Materials and Current stock with quick
+  actions on Home were added. His words: "Will use but need improvements. (Don't want confusing) As long can
+  key in one data, its good." README.md and PRESENTATION_NOTES.md now carry these facts (the "ask the team
+  which steps" note is gone; the "about 2 hours a week" figure is now a confirmed starting point, while the
+  "30 minutes a week" target is still only a goal). | NEXT: run TEST 2 (PLA Orange, PETG Gray, add a new
+  purchase) and write the time next to 7:16. Test 2 has NOT been timed or completed, so no faster post-fix
+  time may be claimed. The sample data has no "PLA Orange" or "PETG Gray" (only PLA Basic White and Black and
+  PETG Clear): add them first or test on the real data. | OPEN GAP (R4, team decision needed, nothing
+  changed): the "Find supplier" page (/suggest/<id>) only lists ranked suppliers when the material is LOW or
+  OUT, so for an OK item such as the nuts in the sample data Task 2 is still not a one-step job, and the
+  Materials list has no "Find supplier" button. Should the comparison work for every item? Agent D owns the
+  page and Agent C the Materials list. | CLAUDE.md.txt was NOT touched.
 
 2026-11-26 | Add material with its supplier (Agent C's screen; built at the team's request, with a small
   refactor in Agent D's routes_suppliers.py) | The Admin-only "Add material" form now has an optional
@@ -1475,3 +1523,37 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Materials, Suppliers, Statistics and Users all open. | Team: use branch main-iyvssn from now on (git
   checkout main-iyvssn, git pull), or merge it into main-0rpyg5 so there is only one line of work.
   | Anyone still committing to main-0rpyg5 will need to merge main-iyvssn.
+
+2026-11-26 | Main Chat (merge of origin/main-iyvssn commit b51993b into main, at the team's request) | CHECKED
+  before merging: the "Add material with its supplier" change keeps the Admin-only rule (add_material is still
+  admin_required; Employees get 403), changes no table, schema.sql, sample data or permissions.py, and does not
+  touch CLAUDE.md.txt. Its small refactor in routes_suppliers.py (read_offer_numbers, insert_supplier,
+  insert_offer) keeps the Suppliers screens behaving the same. FIXED while merging: (1) the branch was built on an
+  older main and defined a second get_active_suppliers() in routes_materials.py with no argument, which would have
+  silently replaced main's get_active_suppliers(database) and crashed the Add material form; the extra one was
+  removed and the form now calls main's. (2) The imports, the new tests (both sides kept) and this log (both sides
+  kept) were merged by hand. Full suite: 421 passed, 2 skipped, 6 expected failures. | Agent F: add the form
+  to the manual checks (the branch entry above already asks). Agent D: please read the small change in
+  routes_suppliers.py. | The Edit material form still shows no supplier part. CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Merge of main into main-iyvssn (done at the team's request; the team chose the designs below) |
+  main and main-0rpyg5 had both redesigned Home and Statistics in different ways (main: Ryan's test fixes;
+  main-0rpyg5: Notifications, procurement charts, delivery ranking, sidebar). Nine files conflicted. THE
+  TEAM DECIDED: (1) Home: keep main-0rpyg5's ("Notifications" list; no Current stock list). (2) Statistics:
+  keep main-0rpyg5's page and its menu word "Statistics" (usage, purchases, delivery ranking, price
+  comparison, sidebar); main's "Stock" page, its unit choice chart and the "Supplier speed ranking" are NOT
+  in this build. (3) OUT label: keep the solid red one (not the soft dashed one). TAKEN FROM main (no
+  conflict with those choices): the fast search box first on Materials and live filtering, "Show only OK"
+  removed, Materials list order OK first then LOW then OUT (Ryan's test; I chose this, the team can flip it
+  in app/alerts.py sort_ok_low_out), error page and the other small changes, and Ryan's test notes in this
+  log. Guide: F2, F7 and the OUT colour line in Section 8 kept as on main-0rpyg5; F3 (search, order, Add
+  material "Who sells it?") taken from main. README.md, GLOSSARY.md, PRESENTATION_NOTES.md and TESTS.md
+  kept as on main-0rpyg5 because main's versions described the pages not taken. Tests: removed the 11
+  checks in tests/test_ryan_feedback.py that tested the Stock page, Current stock, "Noti", the menu word
+  "Stock" and the soft OUT badge (those features are not in this build); the search, OK-first Materials
+  order, hidden "Show only OK" and status-word checks stay. Restored the older menu and Home tests, and
+  updated the Materials order test to OK first. All 454 tests pass (2 skipped and 6 expected failures were
+  already marked). | Agent G: add Ryan's user-test facts (baseline 2 to 3 hours a week, Test 1 took 7:16, his
+  quote; see the two Main Chat entries above) back into README.md and PRESENTATION_NOTES.md, which were
+  kept at the main-0rpyg5 versions. The data addresses of main's Stock page are not present. | The two
+  Main Chat entries above still describe main's Stock page, Noti and soft OUT; this entry overrides them.

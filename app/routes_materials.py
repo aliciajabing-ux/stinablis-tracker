@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
+from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status, sort_ok_low_out
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
@@ -194,6 +194,7 @@ def list_materials():
     materials.sort(key=lambda material: urgency_order[material["status"]])
     if status_filter in (STATUS_OK, STATUS_LOW, STATUS_OUT):
         materials = [m for m in materials if m["status"] == status_filter]
+    materials = sort_ok_low_out(materials)
     show_money = can_see_prices(get_current_user())
     for material in materials:
         material["last_bought"] = get_last_bought(get_db(), material, show_money)

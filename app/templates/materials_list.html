@@ -10,6 +10,18 @@
   .filters a, .btn { min-height: 44px; box-sizing: border-box; line-height: 22px; }   /* easy to tap on a phone */
   .memo { display: block; margin-top: 4px; font-size: 0.85rem; color: #444; }
   .legend { font-size: 0.95rem; }
+  .search-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
+  .search-bar label { flex-basis: 100%; font-weight: bold; }
+  .search-bar input[type=text] { flex: 1 1 260px; min-height: 48px; font-size: 1.1rem; box-sizing: border-box; }
+  tr[hidden] { display: none !important; }
+  /* On a phone each material becomes a small card, so the status word and the buttons are visible without sideways scrolling. */
+  @media (max-width: 640px) {
+    .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; box-sizing: border-box; }
+    .table-wrap tr.head { display: none; }
+    .table-wrap tr[data-name] { margin-bottom: 12px; padding: 6px 4px; border: 2px solid #3a3933; border-radius: 14px; }
+    .table-wrap td { border: 0 !important; padding: 4px 10px !important; }
+    .table-wrap td[data-label]::before { content: attr(data-label) ": "; font-weight: bold; }
+  }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; }
   th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
@@ -22,18 +34,17 @@
   input[type=text] { padding: 10px; font-size: 1rem; }
 </style>
 <h1>Materials</h1>
-<p>All the materials we keep. Use "Record used" when you take some from the shelf and "Record received" when new stock arrives.</p>
-<p class="legend"><strong>OK</strong> = enough in stock. <strong>LOW</strong> = at or below the reorder level, time to order.
-   <strong>OUT</strong> = none left.</p>
-
-{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
-
-<form method="get" action="{{ url_for('materials.list_materials') }}">
-  <input type="text" name="q" value="{{ search_text }}" placeholder="Search name, type or colour" maxlength="100">
+<form class="search-bar" method="get" action="{{ url_for('materials.list_materials') }}" role="search">
+  <label for="search-box">Search by item name</label>
+  <input id="search-box" type="text" name="q" value="{{ search_text }}" placeholder="Type an item name, for example PLA"
+         maxlength="100" autofocus autocomplete="off">
   {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
   <button class="btn main" type="submit">Search</button>
   {% if can_manage %}<a class="btn main" href="{{ url_for('materials.add_material') }}">Add material</a>{% endif %}
 </form>
+<p>Find the item, then press "Record used" when you take some from the shelf or "Record received" when new stock arrives.</p>
+
+{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
 
 <p class="filters">
   <a href="{{ url_for('materials.list_materials', q=search_text) }}" class="{{ 'on' if not status_filter }}">Show all</a>
@@ -42,21 +53,23 @@
 {# Agent H hid the "Show only OK" button (2026-11-26). The address ?status=OK still works. To bring it back, remove this comment mark:
   <a href="{{ url_for('materials.list_materials', q=search_text, status='OK') }}" class="{{ 'on' if status_filter == 'OK' }}">Show only OK</a> #}
 </p>
+<p class="legend"><strong>OK</strong> = enough in stock. <strong>LOW</strong> = at or below the reorder level, time to order.
+   <strong>OUT</strong> = none left.</p>
 
 <div class="table-wrap">
 <table>
-  <tr><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
+  <tr class="head"><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
   {% for material in materials %}
-  <tr>
-    <td>{{ material.name }}
+  <tr data-name="{{ (material.name ~ ' ' ~ (material.colour or '') ~ ' ' ~ (material.material_type or ''))|lower }}">
+    <td data-label="Name">{{ material.name }}
       {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
         {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>
       {% else %}<span class="memo">Not bought through this app yet.</span>{% endif %}
     </td>
-    <td>{{ material.material_type or '' }}</td>
-    <td>{{ material.colour or '' }}</td>
-    <td>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</td>
-    <td><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
+    <td data-label="Type">{{ material.material_type or '' }}</td>
+    <td data-label="Colour">{{ material.colour or '' }}</td>
+    <td data-label="Left">{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</td>
+    <td data-label="Status"><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
     <td>
       <div class="row-actions">
         <a class="btn row-main" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>
@@ -82,4 +95,17 @@
   {% endfor %}
 </table>
 </div>
+<script>
+  // Filters the table rows while you type. (The Search button still works without JavaScript.)
+  (function () {
+    var box = document.getElementById("search-box");
+    var rows = document.querySelectorAll("tr[data-name]");
+    function filterRows() {
+      var text = box.value.trim().toLowerCase();
+      rows.forEach(function (row) { row.hidden = text !== "" && row.dataset.name.indexOf(text) === -1; });
+    }
+    box.addEventListener("input", filterRows);
+    filterRows();
+  })();
+</script>
 {% endblock %}

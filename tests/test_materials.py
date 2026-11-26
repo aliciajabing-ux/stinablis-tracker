@@ -237,7 +237,7 @@ def test_remove_keeps_the_row_and_history(admin, database_file):
 
 # ---------- Search and filter (F3) ----------
 
-# The Materials list shows OUT first, then LOW, then OK, and keeps names in A-Z order inside each group.
+# The Materials list shows OK first, then LOW, then OUT (Ryan's test, 2026-11-26), and keeps names in A-Z order inside each group.
 def test_materials_list_is_sorted_by_urgency(admin, database_file):
     connection = sqlite3.connect(database_file)
     connection.executemany(
@@ -248,8 +248,8 @@ def test_materials_list_is_sorted_by_urgency(admin, database_file):
     connection.commit()
     connection.close()
     page = admin.get("/materials/").get_data(as_text=True)
-    expected_order = ["ABS", "ZZZ Resin", "PETG", "AAA Nuts", "PLA Basic"]
-    positions = [page.index("<td>" + name) for name in expected_order]
+    expected_order = ["AAA Nuts", "PLA Basic", "PETG", "ABS", "ZZZ Resin"]     # OK first, then LOW, then OUT (Ryan's test, 2026-11-26)
+    positions = [page.index('data-label="Name">' + name) for name in expected_order]
     assert positions == sorted(positions)
 
 
