@@ -12,12 +12,19 @@ Last re-checked against code: 2026-11-26, after the fixes from Ryan's user test 
 passed, 2 skipped, 6 "expected failures" that describe known bugs). That includes all feature, test and
 design branches. Re-check these notes if anything else is merged (see the status log in `CLAUDE.md`).
 
-**Ryan's user test (2026-11-26) in one breath:** Ryan from Stinablis (Jacob was not available) was timed:
-7:16 baseline, stuck on steps 1 and 2. In his words: "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
+**Ryan's user test (2026-11-26) in one breath:** Ryan from Stinablis (Jacob was not available) confirmed
+that today Stinablis spends **2 to 3 hours per week** checking Shopee purchase history, local shop memory, a
+collaborator list and past receipts to find where materials were bought. In Test 1 (total time **7:16**)
+he had three tasks: (1) find where we bought standard resin, (2) find which supplier is cheapest for nuts,
+(3) add a new purchase. He got **stuck on Tasks 1 and 2**: the Materials list had no search bar, and going
+from stock information to supplier information was not direct. In his words: "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
 We made four fixes: fast search first on Materials; "Statistics" renamed **Stock** and Home shows Current
 stock with Record shortcuts; OK, LOW, OUT order with a softer OUT badge and "Noti" instead of "Needs
 attention"; and two confusing charts replaced by a Current stock chart (pick g, ml or pieces) and a
-Supplier speed ranking list. We have **not** re-timed the flow yet; do not claim it is faster.
+Supplier speed ranking list. **Test 2** (PLA Orange, PETG Gray, add a new purchase) has **not** been timed or
+completed yet, so we have **not** re-timed the flow; do not claim it is faster than 7:16. One honest gap: the
+"Find supplier" ranking still only appears for LOW or OUT items, so comparing suppliers for an item that is OK
+(like the nuts in the sample data) is not a one-step job yet.
 
 > **Reminder before the final demo:** test counts, pending fixes and open-source log notes can go
 > stale. Re-check them against `TESTS.md` and the STATUS LOG in `CLAUDE.md` right before the demo.
@@ -62,11 +69,11 @@ Facts:
     open findings from the status log.
     *To check before the demo:* the top menu links get their size from `theme.css`; confirm in a browser
     that they are about 44 px tall, like the other controls.
-  - *SupplyTrail pitch (team goal, not a measured result).* The aim is to cut the time spent searching
-    for suppliers, local Kuching shops against online ones, from about 2 hours a week towards about
-    30 minutes a week. These two numbers come from the team's pitch. I could not find them in
-    `CLAUDE.md` or the founder questions, so treat them as an **estimate to confirm with the founder**
-    (Section 16), not as a proven saving.
+  - *SupplyTrail pitch.* The aim is to cut the time spent searching for suppliers, local Kuching shops
+    against online ones. **The starting point is now confirmed:** in the pre-test interview Ryan confirmed
+    Stinablis spends about **2 to 3 hours per week** on this (Shopee purchase history, local shop memory, a
+    collaborator list and past receipts). The **target of about 30 minutes a week is still the team's goal,
+    not a measured result**, because Test 2 has not been timed or completed yet.
 - Only logged-in staff can use it. It works on a phone browser at the printer.
 - It is **not** built yet: email alerts, automatic ordering, barcode scanning, connecting to
   printers, customer orders, a phone app (guide Section 17: version 2 ideas).
@@ -344,10 +351,11 @@ point for questions.
 - **"Are the hardware items (screws, springs, magnets...) real?"** They are sample data to show that the
   system can count pieces next to grams and millilitres. What hardware Stinablis really tracks is a
   founder question.
-- **"Is the 2 hours to 30 minutes a week saving proven?"** No. It is the team's goal and estimate. We
-  have not measured it and the founder has not confirmed the 2-hour starting point.
+- **"Is the 2 hours to 30 minutes a week saving proven?"** No. The starting point is confirmed: Ryan said
+  Stinablis spends 2 to 3 hours per week finding where materials were bought. The 30-minute target is our
+  goal only. We have not measured it: Test 1 took 7:16 before the fixes, and Test 2 has not been timed yet.
 - **"How do you know it works?"** 405 automatic tests passed (2 skipped, 6 expected failures
-  that describe known bugs; commit `6024c83`, 2026-11-25), a manual checklist (`TESTS.md`), and a phone check.
+  that describe known bugs; commit `a46347f`, 2026-11-26), a manual checklist (`TESTS.md`), and a phone check.
 - **"How are forms protected from forged requests?"** Every form that changes data carries a hidden
   secret token (CSRF protection), on top of the safe cookie settings.
 

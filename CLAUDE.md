@@ -1251,3 +1251,22 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   addresses /stats/data/low-stock and /stats/data/lead-times still answer (their tests still pass) but no
   page draws them any more; the team may remove them later. | Ryan's quote is kept word for word in
   README.md and PRESENTATION_NOTES.md. CLAUDE.md.txt was NOT touched.
+
+2026-11-26 | Main Chat (documentation only; no code changed) | VERIFIED DETAILS OF RYAN'S TEST, replacing the
+  earlier note that the steps were not recorded. PRE-TEST BASELINE (Ryan, pre-test interview): Stinablis
+  spends about 2 to 3 hours per week checking Shopee purchase history, local shop memory, a collaborator list
+  and past receipts to find where materials were bought. TEST 1 (total time 7:16): (1) find where we bought
+  standard resin; (2) find which supplier is cheapest for nuts; (3) add a new purchase. Ryan got stuck on
+  Tasks 1 and 2 because the Materials list had no search bar and going between stock and supplier
+  information was not direct. That is why the instant search bar on Materials and Current stock with quick
+  actions on Home were added. His words: "Will use but need improvements. (Don't want confusing) As long can
+  key in one data, its good." README.md and PRESENTATION_NOTES.md now carry these facts (the "ask the team
+  which steps" note is gone; the "about 2 hours a week" figure is now a confirmed starting point, while the
+  "30 minutes a week" target is still only a goal). | NEXT: run TEST 2 (PLA Orange, PETG Gray, add a new
+  purchase) and write the time next to 7:16. Test 2 has NOT been timed or completed, so no faster post-fix
+  time may be claimed. The sample data has no "PLA Orange" or "PETG Gray" (only PLA Basic White and Black and
+  PETG Clear): add them first or test on the real data. | OPEN GAP (R4, team decision needed, nothing
+  changed): the "Find supplier" page (/suggest/<id>) only lists ranked suppliers when the material is LOW or
+  OUT, so for an OK item such as the nuts in the sample data Task 2 is still not a one-step job, and the
+  Materials list has no "Find supplier" button. Should the comparison work for every item? Agent D owns the
+  page and Agent C the Materials list. | CLAUDE.md.txt was NOT touched.

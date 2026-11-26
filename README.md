@@ -212,8 +212,17 @@ the numbers change whenever someone adds a test.)
 
 Ryan from Stinablis tested the app (Jacob was not available). He was timed.
 
-* **Baseline time: 7:16.** He got **stuck on steps 1 and 2**. (The test notes do not say which two steps
-  these were; ask the team who ran the test before quoting them.)
+* **Before the test (pre-test interview, confirmed by Ryan):** Stinablis spends about **2 to 3 hours per
+  week** finding out where materials were bought. That means checking the **Shopee purchase history**,
+  **local shop memory**, a **collaborator list** and **past receipts**.
+* **Test 1 tasks (total time 7:16):**
+  1. Find where we bought standard resin.
+  2. Find which supplier is cheapest for nuts.
+  3. Add a new purchase.
+* **Where he got stuck: Tasks 1 and 2** (finding standard resin's supplier, and comparing supplier prices
+  for nuts). Reason: the Materials list had **no search bar**, and moving between stock information and
+  supplier information was **not direct**. This is why we added the instant search bar on Materials and put
+  Current stock and the quick actions together on Home.
 * **His words, exactly:** "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
 * **What it means for us:** he will use it, but it must not be confusing, and the one thing that matters is
   typing in one piece of data quickly.
@@ -233,8 +242,15 @@ Ryan from Stinablis tested the app (Jacob was not available). He was timed.
    millilitres or pieces), and a **Supplier speed ranking** list from fastest to slowest. No money appears
    in either, so Admin and Employee both see them.
 
-**Not yet re-tested:** nobody has timed the app again after these changes. Ask Ryan (or another staff
-member) to repeat the same steps and write down the new time next to the 7:16 baseline.
+**Honest open gap (Task 2):** the search bar now finds "nuts" instantly, but the "Find supplier" page only
+shows a ranked supplier list for items that are **LOW or OUT**. In the sample data the nuts are OK, so
+comparing their suppliers is still not a one-step job, and the Materials list has no "Find supplier" button.
+The team should decide (guide rule R4) whether that comparison should work for every item. It is not fixed yet.
+
+**Not yet re-tested:** **Test 2** (PLA Orange, PETG Gray, add a new purchase) has **not been timed or
+completed yet**. Until it is, we do **not** claim any faster time than the 7:16 baseline. Note: the sample
+data has no "PLA Orange" or "PETG Gray" (it has PLA Basic White and Black, and PETG Clear), so add those
+items first, or run Test 2 on the real data. Write the Test 2 time next to the 7:16 baseline.
 
 ## What is not built (do not demo these)
 
