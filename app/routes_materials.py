@@ -175,8 +175,31 @@ def get_last_bought(database, material, show_money):
     if row is None:
         return None
     return {"supplier": row["supplier_name"] or "a supplier that was not named",
+            "supplier_named": row["supplier_name"] is not None,
             "amount": f"{row['quantity']:g} {unit_word(material['unit'])}", "when": to_malaysia_time(row["created_at"])[:11],
             "cost": row["total_cost_myr"] if show_money else None}
+
+
+# Returns {material id: supplier name}: ONE supplier per material, from its active offers. If a material has
+# more than one active offer, the fastest delivery wins, then the lowest pack price, then the lowest offer id.
+def get_offer_supplier_names(database):
+    rows = database.execute(
+        "SELECT o.material_id, s.name FROM supplier_offers o JOIN suppliers s ON s.id = o.supplier_id "
+        "WHERE o.is_active = 1 AND s.is_active = 1 "
+        "ORDER BY o.material_id, o.lead_time_days, o.price_per_pack_myr, o.id").fetchall()
+    names = {}
+    for row in rows:
+        names.setdefault(row["material_id"], row["name"])     # the first row per material is the winner
+    return names
+
+
+# Returns the one supplier to show for a material: the supplier it was last bought from (if a purchase named
+# one), otherwise the supplier of its active offer, otherwise None.
+def pick_material_supplier(material, offer_supplier_names):
+    last_bought = material.get("last_bought")
+    if last_bought and last_bought["supplier_named"]:
+        return last_bought["supplier"]
+    return offer_supplier_names.get(material["id"])
 
 
 # Shows the table of all active materials, with the search box and the OK / LOW / OUT filter.
@@ -196,8 +219,10 @@ def list_materials():
         materials = [m for m in materials if m["status"] == status_filter]
     materials = sort_ok_low_out(materials)
     show_money = can_see_prices(get_current_user())
+    offer_supplier_names = get_offer_supplier_names(get_db())
     for material in materials:
         material["last_bought"] = get_last_bought(get_db(), material, show_money)
+        material["supplier_name"] = pick_material_supplier(material, offer_supplier_names)
     # One Materials tab, two sections: things counted in pieces are Hardware; everything else is Filament & other.
     sections = [("Filament & other materials", [m for m in materials if m["unit"] != "pcs"]),
                 ("Hardware", [m for m in materials if m["unit"] == "pcs"])]

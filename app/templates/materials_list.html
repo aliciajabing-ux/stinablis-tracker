@@ -65,9 +65,9 @@
   {% for material in section_items %}
   <tr data-name="{{ (material.name ~ ' ' ~ (material.colour or '') ~ ' ' ~ (material.material_type or ''))|lower }}">
     <td data-label="Name">{{ material.name }}
+      {% if material.supplier_name %}<span class="memo">Supplier: {{ material.supplier_name }}</span>{% endif %}
       {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
-        {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>
-      {% else %}<span class="memo">Not bought through this app yet.</span>{% endif %}
+        {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>{% endif %}
     </td>
     <td data-label="Type">{{ material.material_type or '' }}</td>
     <td data-label="Colour">{{ material.colour or '' }}</td>

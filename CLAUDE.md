@@ -211,6 +211,10 @@ F3. MATERIALS SCREEN
       days). Material, supplier and offer are saved together or not at all.
       Admin only (Employees get 403 on the whole form); the form does not
       appear on "Edit material".
+    - Each row shows ONE supplier line ("Supplier: <name>"): the supplier it was last
+      bought from, otherwise the supplier of its active offer. Never a list. The "Last bought"
+      line appears only when a real received record exists; there is no "not bought yet" text
+      (decision 2026-11-26).
     - "Record used" and "Record received" buttons: everyone.
     - "Last bought" memory (decision 2026-11-24): each material row and the
       Record screens show who it was last bought from, how much, the date
@@ -1708,3 +1712,5 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   smaller so long material names show in full. No data, address, permission or script change. Checked in a browser at width 390 (Employee) with the
   longest material name: the box is inside the panel, the whole name is readable, no sideways page scroll. Full suite passes. | NOT DONE: the "Show by"
   box of Usage per material gets the same cap (it was never too wide). | None.
+
+2026-11-26 | Team request (Materials supplier display; done on claude/stinablis-supplier-display-r6vl64, touching Agent A and C files) | DONE: (1) Materials page: the text "Not bought through this app yet." is gone; "Last bought" shows only when a received record exists. (2) ONE supplier per material: new "Supplier: <name>" line (routes_materials.py get_offer_supplier_names and pick_material_supplier: last-bought supplier if it named one, else the active offer's supplier; with several offers the fastest, then cheapest, wins). (3) Sample data: suppliers.csv now S001-S010 (S011-S021 removed from the sample files; they stay in Git history), supplier_offers.csv has 39 offers, exactly one active per material, prices reused from the old rows. (4) New command "python app/setup_database.py sync-suppliers" makes an existing database match the sample files (adds/renames S001-S010, switches other offers on M001-M039 OFF, deletes nothing). Tests: 8 new in tests/test_adaptations.py; suite 467 pass, 2 skipped, 6 expected failures. | NOTE (R4): with one offer per material, the "Find supplier" ranking and the Delivery ranking show one supplier per item; this was requested by the team. The spool-care features (chips, Open Spool Today, Mark Dried Today, printer settings) are NOT in this repo or on GitHub; they were not touched or checked.
