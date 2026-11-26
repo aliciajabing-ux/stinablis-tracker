@@ -1684,3 +1684,13 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   Employee on all three pages: no sideways scroll for the page or the table box, labels read well. Full suite passes. | NOT DONE: phone numbers and
   emails are still plain text, not tappable (F-12, Agent D). The Find supplier page says "1 days" for a one-day lead time (small wording bug, Agent D).
   | None.
+
+2026-11-26 | Agent E (team request after the phone test) | DONE: on the Statistics page the colour key of the "Usage per material" and "Purchases per
+  material" charts no longer eats into the chart. CAUSE: Chart.js drew the key INSIDE the chart box (300 px tall); on a phone, with up to 8 materials,
+  the key took most of that height, squeezed the plot and ran into the Y axis. FIX (app/templates/stats.html only): the built-in key is switched
+  off for these two charts, and the same key is written as a plain list UNDER the chart: a colour square and the material name with its unit,
+  for example "ABS Grey (g)" (words still never rely on colour alone). The chart now keeps its full height, the Y axis is clear, and the list wraps
+  to as many lines as needed. Same on desktop (the key moved from above the chart to below it). Pop-ups, axis titles, data and permissions are
+  unchanged; both roles see these two charts. Checked in a browser at width 390 (Employee) and 1100 (Admin): no sideways page scroll, no script
+  errors, key lists match the materials. Full suite passes. | NOT DONE: the price comparison charts (Admin only) have their own legend; not touched
+  because the team did not report a problem there. | None.
