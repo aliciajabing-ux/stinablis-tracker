@@ -124,6 +124,10 @@ body .message { background: var(--eerie-light) !important; color: var(--text); b
 body .error { background: var(--smoky-black) !important; color: var(--orange-wheel) !important; border-left: 5px solid var(--hot-orange); padding: 10px 14px; border-radius: 12px; }
 body .waiting { background: var(--eerie-light) !important; color: var(--text); border-left: 5px solid var(--orange-wheel); border-radius: 12px; }
 
+/* "Last bought" notes (Record used page and Materials list): dark card, light text. */
+body .memo { background: var(--eerie-light) !important; color: var(--text) !important; border-left: 5px solid var(--moss); padding: 10px 14px; border-radius: 12px; }
+body td .memo, body .memo.small { background: transparent !important; border-left: 0; padding: 0; color: var(--moss) !important; }
+
 /* ---- Login page ---- */
 body .box h1 { margin-top: 0; }
 body .box button, body .content button[type=submit] {
