@@ -121,8 +121,8 @@ PowerShell window.
 
 | Username | Role | Can do |
 |---|---|---|
-| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics; download the statistics CSV; manage user accounts on the **Users** screen |
-| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the usage statistics. **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
+| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see everything on the **Stock** page; download the CSV; manage user accounts on the **Users** screen |
+| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings (the **Noti** list) and the **Stock** page (current stock and usage). **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
 
 The password for each account is the one you chose in step 4. Employees may *see* prices and money
 (team decision 2026-11-24) but only the Admin can *change* them.
@@ -138,7 +138,7 @@ After 5 wrong passwords an account is locked for 15 minutes.
 4. Log out, log in as `sample_employee`, and notice there are no Add / Change / Remove buttons.
    Type `/suppliers/new` after the web address: you get a "Forbidden" page.
 
-The **Statistics** page draws its charts with Chart.js loaded from the internet, so the computer
+The **Stock** page (it was called Statistics until 2026-11-26) draws its charts with Chart.js loaded from the internet, so the computer
 needs a connection to see the charts.
 
 ---
@@ -149,8 +149,8 @@ needs a connection to see the charts.
 python -m pytest tests
 ```
 
-This takes about a minute. On commit `6024c83` (2026-11-25, the final merge into `main`) it reported
-**384 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
+This takes about a minute. After Ryan's user-test fixes (2026-11-26) it reports
+**405 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
 known bug; see the status log). The tests use a temporary database and never touch
 `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves. (Re-run it before the demo;
 the numbers change whenever someone adds a test.)
@@ -173,7 +173,7 @@ the numbers change whenever someone adds a test.)
   shown together with the colour.
 * **Easy to tap.** Buttons and links on the new and changed screens are at least about 44 px tall, so a
   thumb can hit them on a phone. A shared dark theme (`app/static/theme.css`, Agent H) now styles every
-  screen; Agent H checked login, Home, Materials and Statistics in a browser, not every page.
+  screen; Agent H checked login, Home, Materials and Stock in a browser, not every page.
   **Still to check in a browser:** the top menu links get their size from `theme.css` (padding plus a small
   minimum height), so confirm on a phone that they are also about 44 px tall, as the screen controls are.
 * **Plain-English error pages.** If you have no permission (403), a page is missing (404) or a form has
@@ -184,7 +184,7 @@ the numbers change whenever someone adds a test.)
   Employee can still record received stock, without the money; if an Employee types money anyway the
   server answers 403 and saves nothing. Home's money box adds up the real totals for the current month,
   and the spending chart (Admin only) shows them per supplier. A low-stock event is saved each time a
-  "Record used" drops a material from OK to LOW or OUT, and the Statistics chart counts them per month.
+  "Record used" drops a material from OK to LOW or OUT. (Since 2026-11-26 no page draws a chart of these events; they are still saved.)
 
 ## Known problems (as of 2026-11-25; see the status log in `CLAUDE.md`)
 
@@ -194,19 +194,47 @@ the numbers change whenever someone adds a test.)
 * A database built before 2026-11-24 may be missing the new columns and the new table (and may have
   old-format dates). Build the database again (step 3): close the app, delete `data\tracker.db`, and run
   step 3 once more. This erases everything in the old file.
-* The statistics charts load Chart.js from the internet. With no connection at the printers the charts
+* The Stock page charts load Chart.js from the internet. With no connection at the printers the charts
   stay empty.
 * There is no activity-log screen (F9) and no one-click database backup yet. Every change is still
   written to the activity log table.
 * There is no screen to correct a wrong stock count.
 * **Open phone-test findings (from the status log, not re-tested in a browser by me):**
-  **F-11** the Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
-  columns; **F-12** supplier phone numbers and emails are plain text, not tappable `tel:` / `mailto:` links
-  (I also found no such links in the templates); **F-13** on the Statistics page the "Average delivery time
-  per supplier" chart is cut off on the left on a phone. Text size and buttons were fine in that test. No
-  fix for these is logged yet.
+  **F-11** the Suppliers and Supplier pages still need sideways scrolling on a phone (the **Materials** list
+  was fixed on 2026-11-26: each material is now a small card with its status word and buttons visible);
+  **F-12** supplier phone numbers and emails are plain text, not tappable `tel:` / `mailto:` links
+  (I also found no such links in the templates), still open; **F-13** is **closed**: the delivery-time chart
+  that was cut off on phones was replaced by the "Supplier speed ranking" list on 2026-11-26.
 * Six automatic tests are marked "expected failure" because they describe known bugs found by
   Agent F (see the status log).
+
+## Real user test with Ryan (2026-11-26)
+
+Ryan from Stinablis tested the app (Jacob was not available). He was timed.
+
+* **Baseline time: 7:16.** He got **stuck on steps 1 and 2**. (The test notes do not say which two steps
+  these were; ask the team who ran the test before quoting them.)
+* **His words, exactly:** "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
+* **What it means for us:** he will use it, but it must not be confusing, and the one thing that matters is
+  typing in one piece of data quickly.
+
+**The four highest-impact fixes made on 2026-11-26 (all permission rules unchanged, no table changed):**
+
+1. **Fast search at the top of Materials.** A big "Search by item name" box is the first thing on the
+   page, ready to type in, and the list narrows as you type. On a phone each material is now a small card,
+   so its status word and the Record buttons are visible without sideways scrolling.
+2. **Simpler navigation and Home.** The menu word "Statistics" is now **Stock**. Home shows **Current
+   stock** next to the quick shortcuts (**Record used** and **Record received** on every row). The "Show
+   only OK" button was removed as clutter.
+3. **Clearer status.** Lists show OK first, then LOW, then OUT. The OUT badge is now a calm dashed outline,
+   not an alarm colour (the word OUT is still written). "Needs attention" is now **Noti**.
+4. **Clearer charts.** The low-stock events chart and the average delivery time chart are gone (this also
+   closes F-13). The Stock page now has a **Current stock** chart where you choose the unit (grams,
+   millilitres or pieces), and a **Supplier speed ranking** list from fastest to slowest. No money appears
+   in either, so Admin and Employee both see them.
+
+**Not yet re-tested:** nobody has timed the app again after these changes. Ask Ryan (or another staff
+member) to repeat the same steps and write down the new time next to the 7:16 baseline.
 
 ## What is not built (do not demo these)
 
@@ -242,7 +270,7 @@ app/               the application (Python / Flask)
   permissions.py     the rules of who can do what (the only place roles are checked)
   routes_materials.py  materials screens, Record used / received, "Last bought" line
   routes_suppliers.py  suppliers screens and the "Find supplier" page
-  routes_stats.py      Home boxes, statistics, CSV download
+  routes_stats.py      Home boxes, Current stock, Stock page and its data, CSV download
   routes_users.py      the Users screen (Admin only)
   csrf.py              the hidden token that protects every form
   alerts.py          OK / LOW / OUT rule

@@ -210,6 +210,7 @@ SCREEN_MATRIX = {
     "/suggest/M1": (302, 200, 200),
     "/stats/": (302, 200, 200),
     "/stats/data/usage": (302, 200, 200),
+    "/stats/data/stock": (302, 200, 200),
     "/stats/data/low-stock": (302, 200, 200),
     "/stats/data/lead-times": (302, 200, 200),
     "/stats/data/spending": (302, 403, 200),

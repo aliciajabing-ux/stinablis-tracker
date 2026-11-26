@@ -1,4 +1,4 @@
-{# WHAT THIS FILE DOES: The Home dashboard: four number boxes and the "Needs attention" list.
+{# WHAT THIS FILE DOES: The Home dashboard: four number boxes, "Current stock" with Record used / Record received shortcuts, and the "Noti" list.
    WHO CAN USE IT: Both. The money box is drawn for Admin and Employee (the server decides, not this page). #}
 {% extends "base.html" %}
 {% block title %}Home - Stinablis Tracker{% endblock %}
@@ -12,15 +12,20 @@
   .attention li { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
                   padding:12px 0; border-bottom:1px solid; }
   .button { display:inline-block; padding:12px 18px; font-size:1rem; text-decoration:none; }
+  .board { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; align-items:start; }
+  .stocklist { max-height:640px; overflow:auto; }
+  .stocklist .shortcuts { display:flex; flex-wrap:wrap; gap:6px; }
+  .button.small { padding:10px 12px; font-size:.9rem; min-height:44px; box-sizing:border-box; }
   @media (max-width: 520px) { .tiles { grid-template-columns:minmax(0, 1fr); } }
+  @media (max-width: 800px) { .board { grid-template-columns:minmax(0, 1fr); } }
 </style>
 <section class="hero">
   <div class="hero-text">
     <h1>Welcome, {{ current_user['username'] }}</h1>
     <p>A quick look at your stock today. Numbers are for active materials only.</p>
     <div class="hero-buttons">
-      <a class="button" href="{{ url_for('materials.list_materials') }}">Open materials</a>
-      <a class="btn plain" href="{{ url_for('stats.statistics_page') }}">See statistics</a>
+      <a class="button" href="{{ url_for('materials.list_materials') }}">Search items</a>
+      <a class="btn plain" href="{{ url_for('stats.statistics_page') }}">See stock charts</a>
     </div>
   </div>
   <svg class="hero-art" viewBox="0 0 240 200" aria-hidden="true" focusable="false">
@@ -47,19 +52,39 @@
   </div>
   {% endif %}
 </div>
-<div class="attention">
-  <h2>Needs attention</h2>
-  <p>Materials that are LOW or OUT. Press "Find supplier" to see who can deliver.</p>
-  <ul>
-    {% for material in attention %}
-    <li>
-      <span><strong>{{ material['name'] }}{% if material['colour'] %} {{ material['colour'] }}{% endif %}</strong>
-        - <strong>{{ material['status'] }}</strong>: {{ material['quantity_on_hand']|round(2) }} {{ material['unit'] }} left
-        (reorder at {{ material['reorder_level']|round(2) }} {{ material['unit'] }})</span>
-      <a class="button" href="{{ url_for('suppliers.suggest_supplier', material_id=material['id']) }}">Find supplier</a>
-    </li>
-    {% else %}<li>Nothing needs attention. All materials are OK.</li>
-    {% endfor %}
-  </ul>
+<div class="board">
+  <div class="attention stocklist">
+    <h2>Current stock</h2>
+    <p>Everything we keep: OK first, then LOW, then OUT. Press a button to record it straight away.</p>
+    <ul>
+      {% for material in current_stock %}
+      <li>
+        <span><strong>{{ material['name'] }}{% if material['colour'] %} {{ material['colour'] }}{% endif %}</strong>
+          - {{ '%g'|format(material['quantity_on_hand']) }} {{ material['unit']|unit_word }}
+          <span class="tag tag-{{ material['status'] }}">{{ material['status'] }}</span></span>
+        <span class="shortcuts">
+          <a class="button small" href="{{ url_for('materials.record_stock', material_id=material['id'], kind='used') }}">Record used</a>
+          <a class="button small" href="{{ url_for('materials.record_stock', material_id=material['id'], kind='received') }}">Record received</a>
+        </span>
+      </li>
+      {% else %}<li>No materials yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="attention" id="noti">
+    <h2>Noti</h2>
+    <p>Items that are LOW or OUT. Press "Find supplier" to see who can deliver.</p>
+    <ul>
+      {% for material in attention %}
+      <li>
+        <span><strong>{{ material['name'] }}{% if material['colour'] %} {{ material['colour'] }}{% endif %}</strong>
+          - <strong>{{ material['status'] }}</strong>: {{ '%g'|format(material['quantity_on_hand']) }} {{ material['unit']|unit_word }} left
+          (reorder at {{ '%g'|format(material['reorder_level']) }} {{ material['unit']|unit_word }})</span>
+        <a class="button small" href="{{ url_for('suppliers.suggest_supplier', material_id=material['id']) }}">Find supplier</a>
+      </li>
+      {% else %}<li>Nothing to report. All items are OK.</li>
+      {% endfor %}
+    </ul>
+  </div>
 </div>
 {% endblock %}

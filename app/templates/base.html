@@ -24,7 +24,7 @@
       <a href="{{ url_for('home') }}"{% if here == 'home' %} class="active" aria-current="page"{% endif %}>Home</a>
       <a href="{{ url_for('materials.list_materials') }}"{% if here.startswith('materials.') %} class="active" aria-current="page"{% endif %}>Materials</a>
       <a href="{{ url_for('suppliers.supplier_list') }}"{% if here.startswith('suppliers.') %} class="active" aria-current="page"{% endif %}>Suppliers</a>
-      <a href="{{ url_for('stats.statistics_page') }}"{% if here.startswith('stats.') %} class="active" aria-current="page"{% endif %}>Statistics</a>
+      <a href="{{ url_for('stats.statistics_page') }}"{% if here.startswith('stats.') %} class="active" aria-current="page"{% endif %}>Stock</a>
       {% if can_manage_users(current_user) %}<a href="{{ url_for('users.list_users') }}"{% if here.startswith('users.') %} class="active" aria-current="page"{% endif %}>Users</a>{% endif %}
     </nav>
     <form method="post" action="{{ url_for('auth.logout') }}">

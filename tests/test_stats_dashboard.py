@@ -98,9 +98,11 @@ def test_home_boxes_show_counts_with_words(admin):
 
 def test_home_needs_attention_lists_low_and_out_with_find_supplier(employee):
     page = employee.get("/").get_data(as_text=True)
-    assert "PETG Clear" in page and "ABS Grey" in page and "PLA Basic" not in page
-    assert 'href="/suggest/M2"' in page and 'href="/suggest/M3"' in page
-    assert page.index("ABS Grey") < page.index("PETG Clear")     # OUT is listed before LOW
+    assert "Noti" in page and "Needs attention" not in page     # renamed after Ryan's user test (2026-11-26)
+    noti = page[page.index('id="noti"'):]                       # the Home page also lists every material under "Current stock"
+    assert "PETG Clear" in noti and "ABS Grey" in noti and "PLA Basic" not in noti
+    assert 'href="/suggest/M2"' in noti and 'href="/suggest/M3"' in noti
+    assert noti.index("ABS Grey") < noti.index("PETG Clear")     # OUT is listed before LOW
 
 
 def test_home_admin_sees_money_box(admin):
@@ -139,7 +141,8 @@ def test_admin_can_download_csv(admin):
 def test_employee_statistics_page_has_no_money_or_download(employee):
     page = employee.get("/stats/").get_data(as_text=True)
     assert "MYR" not in page and "Spending" not in page and "export.csv" not in page
-    assert "Usage per material" in page and "Average delivery time" in page
+    assert "Usage per material" in page and "Supplier speed ranking" in page and "Current stock" in page
+    assert "Average delivery time" not in page and "Low-stock events" not in page    # the two confusing charts are gone
 
 
 def test_admin_statistics_page_has_spending_and_download(admin):

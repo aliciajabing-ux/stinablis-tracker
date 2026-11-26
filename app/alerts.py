@@ -11,6 +11,15 @@ STATUS_LOW = "LOW"
 STATUS_OUT = "OUT"
 
 
+STATUS_ORDER = {STATUS_OK: 0, STATUS_LOW: 1, STATUS_OUT: 2}   # lists show OK first, then LOW, then OUT (Ryan's test)
+
+
+# Returns the materials (each with a "status" word) listed OK first, then LOW, then OUT, then by name and colour.
+def sort_ok_low_out(materials):
+    return sorted(materials, key=lambda m: (STATUS_ORDER[m["status"]], (m["name"] or "").lower(),
+                                            (m["colour"] or "").lower()))
+
+
 # Returns "OUT", "LOW" or "OK" for one material, from its quantity and its reorder level.
 def get_status(quantity_on_hand, reorder_level):
     if quantity_on_hand <= 0:

@@ -177,14 +177,21 @@ F2. HOME / DASHBOARD (the first screen after login)
         * Number of materials LOW on stock (shown in red)
         * Number of materials OUT of stock (shown in dark red)
         * Estimated money spent this month (Admin and Employee, view only)
-    - A "Needs attention" list: the low and out-of-stock materials, with
-      a button to see the suggested supplier.
+    - A "Noti" list (renamed from "Needs attention", 2026-11-26): the low and
+      out-of-stock materials, with a button to see the suggested supplier.
+    - A "Current stock" list next to the quick-action shortcuts on the same
+      landing view (decision 2026-11-26, Ryan's test): every active material
+      with its amount, status word, and "Record used" / "Record received"
+      shortcuts. Order: OK first, then LOW, then OUT.
 
 F3. MATERIALS SCREEN
     - A table of all materials: name, type (for example PLA, PETG, resin),
       colour, quantity left, unit (grams, millilitres, pieces), and
       status (OK / LOW / OUT).
-    - Search box and filter buttons (for example "show only LOW").
+    - A big search box at the very top of the list ("Search by item name"),
+      filtering as you type (decision 2026-11-26). Filter buttons: Show all,
+      Show only LOW, Show only OUT. The "Show only OK" button was removed as
+      clutter. Order of the list: OK first, then LOW, then OUT.
     - Add / edit / delete a material: ADMIN only.
     - "Record used" and "Record received" buttons: everyone.
     - "Last bought" memory (decision 2026-11-24): each material row and the
@@ -227,12 +234,19 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
     - Admin and Employee both see cost, supplier name, lead time, arrival
       date, and contact details (team decision 2026-11-24).
 
-F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
+F7. STOCK SCREEN (menu name "Stock", renamed from "Statistics" on 2026-11-26;
+    ADMIN sees everything; EMPLOYEE sees stock and usage only)
+    - Current stock chart: how much of each material is in stock, with a
+      choice of unit (g, ml or pieces) so staff can plan buying one unit
+      at a time. No money in it (Admin and Employee).
     - Usage per material per week or per month (bar chart).
-    - Number of low-stock events per month (line chart).
+    - Supplier speed ranking: a plain list of suppliers from fastest to
+      slowest average delivery time (replaces the delivery-time bar chart).
     - Spending per supplier (pie or bar chart) - ADMIN only.
-    - Average lead time per supplier.
     - Export to spreadsheet (CSV) - ADMIN only.
+    - Removed on 2026-11-26 (confusing for staff): the low-stock events line
+      chart and the average delivery time bar chart. The events are still
+      saved in the database; only the chart is gone.
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -313,7 +327,9 @@ All of these numbers are ESTIMATES. The screen must say so.
 ---------------------------------------------------------------------
 - Big, clear buttons with plain words: "Record used", "Find supplier",
   "Add material". Never use technical words on screen.
-- Use colours with words too: green = OK, orange = LOW, red = OUT.
+- Use colours with words too: green = OK, orange = LOW. OUT is shown in a
+  calm, muted outline (not red), because "none left" is a normal state for
+  some items and must not look like an emergency (Ryan's test, 2026-11-26).
   (Do not rely on colour alone; always write the word.)
 - Maximum 3 clicks to any common task.
 - Buttons and links are at least about 44 px tall so a thumb can tap them.
@@ -1214,3 +1230,24 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
       (Agent B could pass method="pbkdf2:sha256"). Use Homebrew Python.
 
 2026-11-25 | Agent G (documentation & presentation) | DOC SYNC after the final merge into main (commit 6024c83; I re-ran the suite: 384 passed, 2 skipped, 6 xfailed). Updated README.md, PRESENTATION_NOTES.md and one GLOSSARY.md entry: test count and commit; "Bought from" and "Total paid" on Record received are Admin only (can_record_purchase_cost; an Employee who sends them gets 403), while Employees still see "Last bought" under can_see_prices(); the shared dark theme (app/static/theme.css) is mentioned; the phone test findings F-11 and F-12 are stated honestly. | Before the demo: check in a browser that the top menu links (sized in theme.css by padding plus a small minimum height) are about 44 px tall like the other controls (Agent H). | PROBLEMS (R3, not mine): F-11 to F-13 from the phone test are still open (sideways-scrolling tables, phone numbers not tappable, delivery-time chart cut off); the merge repeated some older status-log entries in this file; the SupplyTrail figures still have no source (see the previous Agent G entry).
+
+2026-11-26 | Main Chat (team decision after the real user test with Ryan, done at the team's request across
+  Agent C, E, H and F files) | USER TEST: Ryan from Stinablis (Jacob was not available) tested the app
+  with a timer. Result: 7:16 baseline time; he got stuck on steps 1 and 2. His words: "Will use but need
+  improvements. (Don't want confusing) As long can key in one data, its good." DECISION: fix the four
+  highest-impact points. (1) A fast search box at the top of Materials. (2) Menu "Statistics" is now
+  "Stock"; Home shows Current stock next to the quick-action shortcuts; the "Show only OK" button is
+  removed. (3) Lists show OK first, then LOW, then OUT; the OUT badge is softened; "Needs attention" is
+  now "Noti". (4) The low-stock events chart and the average delivery time chart are replaced by a
+  Current stock chart with a unit choice (g, ml, pieces) and a Supplier speed ranking list (this also
+  closes phone finding F-13). Sections 5 (F2, F3, F7) and 8 updated FIRST. All permission rules are
+  unchanged (can_see_prices, can_manage_*, admin_required, CSV and spending still Admin only; no new
+  money anywhere). No table was changed. | Then: app/alerts.py (list order), routes_materials.py and
+  materials_list.html (search first, order, no Show OK), routes_stats.py + stats.html + home.html (Stock
+  page, Current stock, speed ranking), base.html and theme.css (menu word, softer OUT), tests, README and
+  PRESENTATION_NOTES. | CROSS-AGENT REQUESTS (R3, edits made at the team's request, please review): AGENT C
+  (alerts.py, routes_materials.py, materials_list.html), AGENT E (routes_stats.py, home.html, stats.html),
+  AGENT H (base.html menu word, theme.css OUT badge), AGENT F (menu word, matrix and new tests). The data
+  addresses /stats/data/low-stock and /stats/data/lead-times still answer (their tests still pass) but no
+  page draws them any more; the team may remove them later. | Ryan's quote is kept word for word in
+  README.md and PRESENTATION_NOTES.md. CLAUDE.md.txt was NOT touched.
