@@ -1321,3 +1321,9 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   as before: "price paid" is the typed total divided by the quantity, so shipping inside the total makes it look higher
   than the offer.
 
+2026-11-26 | Team decision (recorded by Agent E) | The statistics list for the Statistics page is COMPLETE. The supplier
+  price comparison chart was the last one wanted. NOT being built (dropped, not postponed): "price paid per unit over
+  time" and "one chart per unit for usage and purchases". Section 5 F7 already matches what is built, so no guide
+  change. | Only open item on this page: F-13 (the delivery-time chart is cut off on a phone), which is a fix, not a
+  new statistic. | None.
+
