@@ -94,7 +94,7 @@ def test_employee_sees_last_bought_supplier_and_price_on_list_and_record_pages(s
 
 def test_admin_sees_the_same_last_bought_line(sample_database_file):
     page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
-    assert "Last bought: 1000 g from" in page and "MYR 76.00" in page
+    assert "Last bought: 1000 g from" in page and "MYR 58.00" in page
 
 
 def test_material_never_bought_through_the_app_shows_no_last_bought_and_no_old_fallback_message(sample_database_file):
@@ -207,7 +207,7 @@ def test_materials_page_shows_one_supplier_line_per_material_and_never_a_list(sa
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
     lines = re.findall(r"Supplier: ([^<]+)</span>", page)
     assert len(lines) == 39
-    assert all("," not in line.replace("Hock Seng Hardware, Kuching", "").replace("Kuching Maker Hub, Kuching", "") for line in lines)
+    assert all("," not in line for line in lines)                      # one name, never a comma list
     assert "Supplier: Kuching 3D Filament Supply" in page and "Supplier: Pending Industrial Hardware" in page
 
 
@@ -219,18 +219,25 @@ def row_html(page, name_start):
 
 def test_a_named_last_purchase_wins_over_the_offer_supplier(sample_database_file):
     page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
-    assert "Supplier: 3D Gadgets Malaysia (Shopee)" in row_html(page, "pla basic white")   # M001: bought from S003
+    assert "Supplier: Kuching 3D Filament Supply" in row_html(page, "pla basic white")   # M001: bought from S001 and S001 sells it
+    connection = sqlite3.connect(sample_database_file)
+    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at, supplier_id, total_cost_myr) "
+                       "VALUES ('TX1','M001','RECEIVED',500,'later purchase','U001','2026-11-25 02:00:00','S002',40)")
+    connection.commit()
+    connection.close()
+    page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
+    assert "Supplier: Sarawak Maker &amp; Print Hub" in row_html(page, "pla basic white")   # the newest purchase wins
 
 
 def test_with_two_active_offers_only_the_fastest_supplier_is_shown(sample_database_file):
     connection = sqlite3.connect(sample_database_file)
     connection.execute("INSERT INTO supplier_offers VALUES ('OX1','S006','M002',1000,'g',50,1,0,9,1)")
-    connection.execute("INSERT INTO supplier_offers VALUES ('OX2','S007','M002',1000,'g',90,1,0,0,1)")
+    connection.execute("INSERT INTO supplier_offers VALUES ('OX2','S008','M002',1000,'g',90,1,0,0,1)")
     connection.commit()
     connection.close()
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
     row = row_html(page, "pla basic black")
-    assert row.count("Supplier: ") == 1 and "Supplier: Hock Seng Hardware, Kuching" in row
+    assert row.count("Supplier: ") == 1 and "Supplier: Tabuan Jaya Fasteners &amp; Hardware" in row
 
 
 def test_switched_off_supplier_or_offer_is_not_shown_as_the_supplier(sample_database_file):
@@ -258,3 +265,10 @@ def test_sync_suppliers_repairs_an_old_database_without_deleting_anything(sample
     per_material = sample_rows(sample_database_file,
         "SELECT COUNT(*) FROM supplier_offers WHERE is_active = 1 GROUP BY material_id")
     assert len(per_material) == 39 and all(count == 1 for (count,) in per_material)
+
+
+def test_every_sample_purchase_supplier_is_the_same_supplier_that_sells_that_material(sample_database_file):
+    mismatches = sample_rows(sample_database_file,
+        "SELECT t.id FROM stock_movements t JOIN supplier_offers o ON o.material_id = t.material_id AND o.is_active = 1 "
+        "WHERE t.supplier_id IS NOT NULL AND t.supplier_id <> o.supplier_id")
+    assert mismatches == []

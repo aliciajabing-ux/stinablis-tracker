@@ -175,9 +175,11 @@ def get_last_bought(database, material, show_money):
     if row is None:
         return None
     return {"supplier": row["supplier_name"] or "a supplier that was not named",
-            "supplier_named": row["supplier_name"] is not None,
             "amount": f"{row['quantity']:g} {unit_word(material['unit'])}", "when": to_malaysia_time(row["created_at"])[:11],
             "cost": row["total_cost_myr"] if show_money else None}
+
+
+NOT_NAMED_SUPPLIER = "a supplier that was not named"     # the words get_last_bought uses when a purchase has no supplier
 
 
 # Returns {material id: supplier name}: ONE supplier per material, from its active offers. If a material has
@@ -197,7 +199,7 @@ def get_offer_supplier_names(database):
 # one), otherwise the supplier of its active offer, otherwise None.
 def pick_material_supplier(material, offer_supplier_names):
     last_bought = material.get("last_bought")
-    if last_bought and last_bought["supplier_named"]:
+    if last_bought and last_bought["supplier"] != NOT_NAMED_SUPPLIER:
         return last_bought["supplier"]
     return offer_supplier_names.get(material["id"])
 

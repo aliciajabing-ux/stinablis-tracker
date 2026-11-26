@@ -18,7 +18,7 @@ FILES
                          magnets, fidget clicker kit, keychain rings) are DEMO items only:
                          the founder has not confirmed what hardware Stinablis tracks
                          (guide Section 2 and Section 16 Q1).
-- suppliers.csv        : 10 suppliers, S001-S010 (7 local in Kuching/Sarawak, 3 online). Names are the
+- suppliers.csv        : 10 suppliers, S001-S010 (5 local in Kuching/Sarawak, 5 online). Names are the
                          shops from the team's list; phones, emails, addresses and ALL prices are
                          invented placeholders, not real quotes.
 - supplier_offers.csv  : 39 offers. EVERY material has exactly ONE active supplier (one offer), so the
