@@ -42,10 +42,13 @@
   <a href="{{ url_for('materials.list_materials', q=search_text, status='OK') }}" class="{{ 'on' if status_filter == 'OK' }}">Show only OK</a>
 </p>
 
+{% for section_title, section_items in sections %}
+{% if section_items or not materials %}
+<h2>{{ section_title }} <small>({{ section_items|length }})</small></h2>
 <div class="table-wrap">
 <table>
   <tr><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
-  {% for material in materials %}
+  {% for material in section_items %}
   <tr>
     <td>{{ material.name }}
       {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
@@ -69,9 +72,10 @@
       {% endif %}
     </td>
   </tr>
-  {% else %}
-  <tr><td colspan="6">No materials found. Try a different search or filter.</td></tr>
   {% endfor %}
 </table>
 </div>
+{% endif %}
+{% endfor %}
+{% if not materials %}<p>No materials found. Try a different search or filter.</p>{% endif %}
 {% endblock %}
