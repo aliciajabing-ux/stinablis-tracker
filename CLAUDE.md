@@ -1673,3 +1673,14 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   "More" are all visible ("More" wraps under the buttons). | NOT DONE: the Suppliers and Supplier detail pages still use the wide-table
   layout on a phone (F-11 there; Agent D owns suppliers.html and supplier_detail.html); phone numbers are still not tappable (F-12,
   Agent D). | None.
+
+2026-11-26 | Agent E (team request; touches Agent D's suppliers.html, supplier_detail.html and suggest.html, and Agent H's theme.css) | DONE: the
+  supplier pages now FIT a phone screen (F-11 for these pages), the same way as Materials. THREE TABLES changed: the Suppliers list, "Materials
+  this supplier sells" on a supplier page, and the Find supplier table (suggest.html, which the Home Notifications buttons open). Markup only: the
+  table box got the class "cards", the header row the class "head", and every cell a data-label (Name, Type, Phone ...). On a screen 640 px or
+  narrower each row becomes a small card ("Name: ...", "Phone: ...") and the header row is hidden; on a bigger screen nothing changes. The CSS is
+  one shared block at the end of app/static/theme.css (".cards"). No link, form, csrf_token or permission check was touched: the Change / Switch
+  off buttons still show only under can_manage, the money cells only under show_prices (Rule C7). Checked in a browser at width 390 as Admin and
+  Employee on all three pages: no sideways scroll for the page or the table box, labels read well. Full suite passes. | NOT DONE: phone numbers and
+  emails are still plain text, not tappable (F-12, Agent D). The Find supplier page says "1 days" for a one-day lead time (small wording bug, Agent D).
+  | None.

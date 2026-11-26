@@ -192,3 +192,13 @@ body .box button:hover, body .content button[type=submit]:hover { background: va
   body .table-wrap td, body .table-wrap td:first-child, body .table-wrap td:last-child,
   body .table-wrap td:has(.row-more) { min-width: 0 !important; overflow-wrap: anywhere; }
 }
+
+/* Phone cards for the supplier pages (Suppliers list, one supplier's materials, Find supplier): a table with class "cards" becomes one
+   small card per row on a screen 640 px or narrower, like the Materials page (team request 2026-11-26). Each cell has a data-label. */
+@media (max-width: 640px) {
+  body .cards table, body .cards tbody, body .cards tr, body .cards td { display: block; width: 100%; min-width: 0 !important; box-sizing: border-box; }
+  body .cards tr.head { display: none; }
+  body .cards tr:not(.head) { margin-bottom: 12px; padding: 6px 4px; border: 2px solid var(--line); border-radius: 14px; }
+  body .cards td { border: 0 !important; padding: 4px 10px !important; overflow-wrap: anywhere; }
+  body .cards td[data-label]::before { content: attr(data-label) ": "; font-weight: 700; }
+}
