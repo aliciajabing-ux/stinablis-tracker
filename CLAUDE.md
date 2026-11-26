@@ -1662,3 +1662,14 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
   :root list, and the ".tile:nth-child(odd)" rule). THIS IS A COLOUR OUTSIDE THE 7-COLOUR PALETTE (like --out-red); the team picked it
   from options A to D, so it counts as confirmed. LOW and OUT words keep their own colours. | Agent H: please keep it. Team: anyone with
   a local edit to theme.css should drop it (git stash drop) to avoid a conflict. | None.
+
+2026-11-26 | Agent E (team request after the phone test; touches Agent H's theme.css) | DONE: the Materials page now FITS a phone screen
+  (F-11 for this page). CAUSE: on a phone each material is already a card (Agent C's 640 px layout), but theme.css still forced every
+  table to be at least 880 px wide ("body table { min-width: 880px }") and the Materials columns had their own minimums (200, 300 and
+  380 px), so each card was wider than the screen and the right side ("More", the end of the "Not bought through this app yet" note)
+  was cut off. FIX: a new block at the end of app/static/theme.css, only for screens 640 px or narrower: the table and its cells get no
+  minimum width and long words may wrap. Desktop and tablet are unchanged. Guide: no change (Section 8 already says mobile-friendly).
+  Checked in a browser at width 390 (Admin): the page and the card box do not scroll sideways, "Record used", "Record received" and
+  "More" are all visible ("More" wraps under the buttons). | NOT DONE: the Suppliers and Supplier detail pages still use the wide-table
+  layout on a phone (F-11 there; Agent D owns suppliers.html and supplier_detail.html); phone numbers are still not tappable (F-12,
+  Agent D). | None.
