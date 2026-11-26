@@ -12,7 +12,7 @@
   --eerie-black: #1C1B17;  /* the page sheet */
   --eerie-light: #282723;  /* raised parts, borders, inputs */
   --moss: #99A57D;         /* soft text, OK status */
-  --hot-orange: #EB4604;   /* main buttons, links (OUT is now calm and neutral, see .tag-OUT) */
+  --hot-orange: #EB4604;   /* main buttons, links (the OUT word is a clear red, see --out-red) */
   --orange-wheel: #F77E0D; /* hover, LOW, highlighted titles */
   --text: #ECE9DF;         /* main text (light, readable on dark); also the "light card" colour */
   --line: #3a3933;
@@ -73,9 +73,9 @@ body .tile:nth-child(odd) { background: var(--text) !important; color: var(--smo
              border-color: var(--smoky-black); }
 body .tile .number { font-family: var(--font-body); font-weight: 700; }
 /* The status word on a box is a highlighted tag, so it stays readable on light and dark cards. */
-body .tile .word { padding: 1px 10px; border-radius: 6px; color: var(--smoky-black) !important; }
+body .tile .word { padding: 1px 10px; border-radius: 6px; color: var(--smoky-black) !important; font-weight: 700; }
 body .tile.low .word { background: var(--orange-wheel); }
-body .tile.out .word { background: transparent; color: var(--text) !important; border: 2px dashed var(--moss); }   /* calm, not an alarm */
+body .tile.out .word { background: var(--out-red); color: var(--out-text) !important; border: 2px solid var(--out-red); }   /* the same red as the OUT tag on the Materials page */
 
 body table { background: var(--smoky-black) !important; color: var(--text); border-collapse: separate; border-spacing: 0;
              border: 2px solid var(--line); border-radius: var(--radius); box-shadow: var(--card-shadow); }
