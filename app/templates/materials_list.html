@@ -56,10 +56,13 @@
 <p class="legend"><strong>OK</strong> = enough in stock. <strong>LOW</strong> = at or below the reorder level, time to order.
    <strong>OUT</strong> = none left.</p>
 
+{% for section_title, section_items in sections %}
+{% if section_items %}
+<h2>{{ section_title }} <small>({{ section_items|length }})</small></h2>
 <div class="table-wrap">
 <table>
   <tr class="head"><th>Name</th><th>Type</th><th>Colour</th><th>Left</th><th>Status</th><th>Actions</th></tr>
-  {% for material in materials %}
+  {% for material in section_items %}
   <tr data-name="{{ (material.name ~ ' ' ~ (material.colour or '') ~ ' ' ~ (material.material_type or ''))|lower }}">
     <td data-label="Name">{{ material.name }}
       {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
@@ -90,11 +93,12 @@
       </div>
     </td>
   </tr>
-  {% else %}
-  <tr><td colspan="6">No materials found. Try a different search or filter.</td></tr>
   {% endfor %}
 </table>
 </div>
+{% endif %}
+{% endfor %}
+{% if not materials %}<p>No materials found. Try a different search or filter.</p>{% endif %}
 <script>
   // Filters the table rows while you type. (The Search button still works without JavaScript.)
   (function () {
