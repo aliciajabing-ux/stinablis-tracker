@@ -135,12 +135,12 @@ def test_home_needs_login(website):
 
 # ---------- Employee blocked pages (Section 4, 14) ----------
 
-@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/price-comparison"])
+@pytest.mark.parametrize("address", ["/stats/export.csv"])
 def test_employee_gets_403_on_money_addresses(employee, address):
     assert employee.get(address).status_code == 403
 
 
-@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/data/price-comparison", "/stats/", "/stats/data/usage"])
+@pytest.mark.parametrize("address", ["/stats/export.csv", "/stats/", "/stats/data/usage"])
 def test_not_logged_in_is_sent_to_login(website, address):
     assert website.test_client().get(address).status_code == 302
 
@@ -157,9 +157,9 @@ def test_employee_statistics_page_has_no_money_or_download(employee):
     assert "Usage per material" in page and "Delivery ranking" in page
 
 
-def test_admin_statistics_page_has_price_comparison_and_download(admin):
+def test_admin_statistics_page_has_spending_and_stock_value_and_download(admin):
     page = admin.get("/stats/").get_data(as_text=True)
-    assert "Supplier price comparison" in page and "/stats/export.csv" in page
+    assert "Spending &amp; stock value" in page and "/stats/export.csv" in page
 
 
 @pytest.mark.parametrize("address", ["/stats/data/usage", "/stats/data/delivery-ranking", "/stats/data/delivery-ranking?material=M1"])
@@ -328,51 +328,28 @@ def test_spending_per_material_adds_totals_of_the_last_six_months(database_file)
     assert chart["amounts"] == [150.0, 90.0] and chart["purchases"] == [2, 1]
 
 
-def test_price_comparison_chart_uses_the_newest_purchase_for_the_price_last_paid(database_file):
-    add_received_line(database_file, "A", "M1", 1000, "2026-11-01 02:00:00", "S1", 90)      # older line: ignored
-    add_received_line(database_file, "B", "M1", 2000, "2026-11-05 02:00:00", "S1", 150)     # newest: MYR 75 per kg
-    add_received_line(database_file, "C", "M2", 1000, "2026-11-06 02:00:00", "S1", 72)      # MYR 72 against offer 90
-    group = routes_stats.get_price_comparison_chart(open_database(database_file))["per_kg_litre"]
-    white, petg = group["labels"].index("PLA Basic White (per kg)"), group["labels"].index("PETG Clear (per kg)")
-    assert group["offer"][white] == 60.0 and group["paid"][white] == 75.0
-    assert group["offer"][petg] == 90.0 and group["paid"][petg] == 72.0
+def test_removed_procurement_addresses_are_gone_for_everybody(admin, employee):
+    for address in ("/stats/data/purchases", "/stats/data/price-comparison"):
+        assert admin.get(address).status_code == 404
+        assert employee.get(address).status_code == 404
 
 
-def test_procurement_data_addresses_follow_the_roles(admin, employee):
-    assert admin.get("/stats/data/purchases").status_code == 200
-    assert employee.get("/stats/data/purchases").status_code == 200                           # no money in it
-    assert admin.get("/stats/data/price-comparison").status_code == 200
-    assert employee.get("/stats/data/price-comparison").status_code == 403                    # money: Admin only
+def test_removed_procurement_panels_are_not_on_the_page(admin, employee):
+    for browser in (admin, employee):
+        page = browser.get("/stats/").get_data(as_text=True)
+        for gone in ("Purchases per material", "purchases-chart", "Supplier price comparison", "price-chart", "Cheapest supplier offer"):
+            assert gone not in page, gone
 
 
-def test_employee_purchases_data_has_no_money_keys(employee, database_file):
-    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
-    text = employee.get("/stats/data/purchases").get_data(as_text=True).lower()
-    assert "cost" not in text and "myr" not in text and "amount" not in text
-
-
-def test_employee_statistics_page_has_purchases_but_no_money_panels(employee):
+def test_employee_statistics_page_has_no_money_panels(employee):
     page = employee.get("/stats/").get_data(as_text=True)
-    assert "Purchases per material" in page and "Quantity received (g, ml or pcs)" in page
-    for money_word in ("MYR", "Spending", "Supplier price comparison", "per kg"):
+    for money_word in ("MYR", "Spending", "Stock value", "stock value", "export.csv"):
         assert money_word not in page, money_word
 
 
-def test_admin_statistics_page_has_every_procurement_panel(admin, database_file):
-    add_received_line(database_file, "A", "M1", 1000, "2026-11-05 02:00:00", "S1", 70)
-    page = admin.get("/stats/").get_data(as_text=True)
-    for words in ("Purchases per material", "Supplier price comparison",
-                  "Cheapest supplier offer", "per kg", "These are estimates"):
-        assert words in page, words
-
-
 def test_every_chart_names_its_unit_in_the_axis_title(employee, admin):
-    employee_page = employee.get("/stats/").get_data(as_text=True)
-    for words in ("Quantity used (g, ml or pcs)", "Quantity received (g, ml or pcs)", "Rank suppliers for"):
-        assert words in employee_page, words
-    admin_page = admin.get("/stats/").get_data(as_text=True)
-    for words in ("MYR per kg or per litre", "MYR per piece"):
-        assert words in admin_page, words
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert '"Quantity used (" + unit + ")"' in page and "Rank suppliers" in page or "Delivery ranking" in page
 
 
 def test_csv_lists_purchases_and_spending_per_material(admin, database_file):
@@ -380,43 +357,6 @@ def test_csv_lists_purchases_and_spending_per_material(admin, database_file):
     add_received_line(database_file, "A", "M1", 1000, yesterday, "S1", 70)
     text = admin.get("/stats/export.csv").get_data(as_text=True)
     assert "Purchased (received)" in text and "Spending per material (last 6 months)" in text
-
-
-def test_price_comparison_chart_numbers_per_kg_and_per_piece(database_file):
-    connection = sqlite3.connect(database_file)
-    connection.execute("INSERT INTO materials (id, name, colour, unit, quantity_on_hand, reorder_level) "
-                       "VALUES ('M4', 'Screws', 'Steel', 'pcs', 100, 20)")
-    connection.execute("INSERT INTO supplier_offers (id, supplier_id, material_id, pack_size, pack_unit, price_per_pack_myr, "
-                       "lead_time_days) VALUES ('O4', 'S1', 'M4', 100, 'pcs', 9.0, 2)")           # MYR 0.09 per piece
-    connection.commit()
-    connection.close()
-    add_received_line(database_file, "A", "M1", 2000, "2026-11-05 02:00:00", "S1", 150)        # MYR 75 per kg
-    add_received_line(database_file, "B", "M4", 100, "2026-11-06 02:00:00", "S2", 12)          # MYR 0.12 per piece
-    chart = routes_stats.get_price_comparison_chart(open_database(database_file))
-    weight, piece = chart["per_kg_litre"], chart["per_piece"]
-    assert "PLA Basic White (per kg)" in weight["labels"]
-    i = weight["labels"].index("PLA Basic White (per kg)")
-    assert weight["offer"][i] == 60.0 and weight["offer_supplier"][i] == "Web Store"
-    assert weight["paid"][i] == 75.0 and weight["paid_supplier"][i] == "Kuching Shop" and weight["paid_date"][i] == "05 Nov 2026"
-    assert "ABS Grey (per kg)" not in weight["labels"]                                           # no offer and never bought
-    assert piece["labels"] == ["Screws Steel (per piece)"]
-    assert piece["offer"] == [0.09] and piece["paid"] == [0.12] and piece["words"] == ["per piece"]
-
-
-def test_price_comparison_chart_keeps_an_offer_with_no_purchase_yet(database_file):
-    chart = routes_stats.get_price_comparison_chart(open_database(database_file))
-    weight = chart["per_kg_litre"]
-    i = weight["labels"].index("PETG Clear (per kg)")
-    assert weight["offer"][i] == 90.0 and weight["paid"][i] is None and weight["paid_supplier"][i] == ""
-
-
-def test_price_comparison_chart_is_admin_only_and_not_on_the_employee_page(admin, employee):
-    assert admin.get("/stats/data/price-comparison").status_code == 200
-    assert employee.get("/stats/data/price-comparison").status_code == 403
-    admin_page = admin.get("/stats/").get_data(as_text=True)
-    assert 'id="price-chart-weight"' in admin_page and 'id="price-chart-piece"' in admin_page
-    employee_page = employee.get("/stats/").get_data(as_text=True)
-    assert "price-chart" not in employee_page and "price-comparison" not in employee_page
 
 
 # ---------- Delivery ranking (guide F7, decision 2026-11-26) ----------
@@ -483,9 +423,9 @@ def test_delivery_days_are_written_in_the_singular_for_one_day(database_file):
     assert routes_stats.get_delivery_ranking(open_database(database_file), "")["rows"][0]["days_text"] == "1 day on average"
 
 
-def test_the_material_list_has_only_materials_a_supplier_sells(database_file):
+def test_the_material_list_has_only_materials_two_suppliers_sell(database_file):
     labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
-    assert labels == ["PETG Clear (g)", "PLA Basic White (g)"]           # ABS Grey has no offer
+    assert labels == ["PLA Basic White (g)"]           # PETG has one supplier, ABS has none
 
 
 def test_ranking_address_works_for_both_roles_and_has_no_money(admin, employee):
@@ -496,13 +436,31 @@ def test_ranking_address_works_for_both_roles_and_has_no_money(admin, employee):
     assert "myr" not in text and "price" not in text and "cost" not in text
 
 
-def test_the_page_offers_the_material_choice_and_the_old_delivery_chart_is_gone(admin, employee):
+def test_the_page_offers_the_material_choice_only_for_materials_with_two_suppliers(admin, employee):
     for browser in (admin, employee):
         page = browser.get("/stats/").get_data(as_text=True)
         assert 'id="ranking-material"' in page and "All materials (average)" in page
-        assert "PLA Basic White (g)" in page and "ABS Grey" not in page.split('id="ranking-material"')[1].split("</select>")[0]
+        chooser = page.split('id="ranking-material"')[1].split("</select>")[0]
+        assert "PLA Basic White (g)" in chooser and "PETG Clear" not in chooser and "ABS Grey" not in chooser
         assert "lead-chart" not in page and "Average delivery time per supplier" not in page
         assert browser.get("/stats/data/lead-times").status_code == 404
+
+
+def test_the_material_choice_is_hidden_when_no_material_has_two_suppliers(admin, employee, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("DELETE FROM supplier_offers WHERE id = 'O3'")             # PLA now has one supplier too
+    connection.commit()
+    connection.close()
+    for browser in (admin, employee):
+        page = browser.get("/stats/").get_data(as_text=True)
+        assert 'id="ranking-material"' not in page and "Rank suppliers for" not in page
+        assert 'id="ranking-list"' in page                                        # the overall ranking is still there
+
+
+def test_two_offers_of_one_supplier_do_not_count_as_two_suppliers(database_file):
+    add_offer(database_file, "O5", "S1", "M2", 9)                                 # same supplier again for PETG
+    labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
+    assert "PETG Clear (g)" not in labels
 
 
 # ---------- The Statistics sidebar (guide F7, decision 2026-11-26) ----------
@@ -511,36 +469,208 @@ def test_the_page_offers_the_material_choice_and_the_old_delivery_chart_is_gone(
 def sidebar_links(page):
     import re
     nav = re.search(r'<nav class="stats-nav".*?</nav>', page, re.S).group(0)
-    return [(href, re.sub(r"\s+", " ", words).strip()) for href, words in re.findall(r'<a [^>]*href="([^"]+)"[^>]*>(.*?)</a>', nav, re.S)]
+    import html
+    return [(href, html.unescape(re.sub(r"\s+", " ", words).strip())) for href, words in re.findall(r'<a [^>]*href="([^"]+)"[^>]*>(.*?)</a>', nav, re.S)]
 
 
 def test_employee_sidebar_lists_only_the_statistics_an_employee_may_open(employee):
     page = employee.get("/stats/").get_data(as_text=True)
-    assert sidebar_links(page) == [("#usage", "Usage per material"), ("#purchases", "Purchases per material"),
+    assert sidebar_links(page) == [("#usage", "Usage per material"), ("#days", "Days of stock left"),
                                    ("#ranking", "Delivery ranking")]
-    for gone in ("#price", "nav-price", "panel-price", "export.csv", "Supplier price comparison", "MYR"):
+    for gone in ("#spending", "nav-spending", "panel-spending", "export.csv", "MYR"):
         assert gone not in page, gone
 
 
-def test_admin_sidebar_also_lists_the_price_comparison_and_the_download(admin):
+def test_admin_sidebar_also_lists_spending_and_stock_value_and_the_download(admin):
     links = sidebar_links(admin.get("/stats/").get_data(as_text=True))
-    assert [words for _, words in links] == ["Usage per material", "Purchases per material", "Delivery ranking",
-                                             "Supplier price comparison", "Download spreadsheet (CSV)"]
-    assert links[3][0] == "#price" and links[4][0] == "/stats/export.csv"
+    assert [words for _, words in links] == ["Usage per material", "Days of stock left", "Delivery ranking",
+                                             "Spending & stock value", "Download spreadsheet (CSV)"]
+    assert links[3][0] == "#spending" and links[4][0] == "/stats/export.csv"
 
 
 def test_only_the_first_statistic_is_shown_when_the_page_opens(admin, employee):
     admin_page = admin.get("/stats/").get_data(as_text=True)
     assert 'id="panel-usage">' in admin_page                                   # shown
-    for hidden_one in ("panel-purchases", "panel-ranking", "panel-price"):
+    for hidden_one in ("panel-days", "panel-ranking", "panel-spending"):
         assert 'id="%s" hidden>' % hidden_one in admin_page, hidden_one
     employee_page = employee.get("/stats/").get_data(as_text=True)
     assert 'id="panel-usage">' in employee_page
-    assert 'id="panel-purchases" hidden>' in employee_page and 'id="panel-ranking" hidden>' in employee_page
+    assert 'id="panel-days" hidden>' in employee_page and 'id="panel-ranking" hidden>' in employee_page
 
 
 def test_the_sidebar_marks_the_first_statistic_and_a_script_switches_between_them(employee):
     page = employee.get("/stats/").get_data(as_text=True)
     assert 'id="nav-usage" href="#usage" class="active" aria-current="true"' in page
     assert "function showStatistic(" in page and 'addEventListener("hashchange"' in page
-    assert 'STATISTIC_NAMES = ["usage", "purchases", "ranking"]' in page          # an Employee's script knows no "price"
+    assert 'STATISTIC_NAMES = ["usage", "days", "ranking"]' in page              # an Employee's script knows no "spending"
+
+
+# ---------- Usage per unit (guide F7, decision 2026-11-27) ----------
+
+# Adds one extra material counted in the given unit (stock 100, reorder level 20).
+def add_material(database_file, material_id, name, unit):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO materials (id, name, unit, quantity_on_hand, reorder_level) VALUES (?, ?, ?, 100, 20)",
+                       (material_id, name, unit))
+    connection.commit()
+    connection.close()
+
+
+def test_usage_chart_defaults_to_grams_and_filters_by_unit(admin, employee, database_file):
+    add_material(database_file, "M6", "Standard Resin", "ml")
+    add_material(database_file, "M7", "Screws", "pcs")
+    add_movement(database_file, "A", "M1", "USED", 200, "2026-11-20 02:00:00")
+    add_movement(database_file, "B", "M6", "USED", 300, "2026-11-20 02:00:00")
+    add_movement(database_file, "C", "M7", "USED", 40, "2026-11-20 02:00:00")
+    for browser in (admin, employee):
+        default = browser.get("/stats/data/usage?period=month").get_json()
+        assert {d["unit"] for d in default["datasets"]} == {"g"}                       # one unit, one scale
+        for unit, name in (("g", "PLA Basic White"), ("ml", "Standard Resin"), ("pcs", "Screws")):
+            data = browser.get("/stats/data/usage?period=month&unit=" + unit).get_json()
+            assert [(d["name"], d["unit"]) for d in data["datasets"]] == [(name, unit)]
+        wrong = browser.get("/stats/data/usage?unit=banana").get_json()                  # unknown unit: back to grams
+        assert {d["unit"] for d in wrong["datasets"]} == {"g"}
+
+
+def test_usage_function_without_a_unit_still_includes_every_unit_for_the_csv(database_file):
+    add_material(database_file, "M7", "Screws", "pcs")
+    add_movement(database_file, "A", "M1", "USED", 200, "2026-11-20 02:00:00")
+    add_movement(database_file, "C", "M7", "USED", 40, "2026-11-20 02:00:00")
+    chart = routes_stats.get_usage_by_period(open_database(database_file), "month", NOW)
+    assert {d["unit"] for d in chart["datasets"]} == {"g", "pcs"}
+
+
+def test_usage_panel_has_the_unit_choice_with_filament_first(employee):
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert 'id="usage-unit"' in page
+    assert page.index("Filament (g)") < page.index("Resin (ml)") < page.index("Hardware (pcs)")
+    assert page.split('id="usage-unit"')[1].split("<option")[1].startswith(' value="g"')   # grams is the default
+
+
+# ---------- Days of stock left (guide F7, decision 2026-11-27) ----------
+
+def test_days_left_is_stock_divided_by_average_daily_use_over_30_days(database_file):
+    add_movement(database_file, "A", "M1", "USED", 150, "2026-11-10 02:00:00")      # inside the 30 days
+    add_movement(database_file, "B", "M1", "USED", 150, "2026-11-20 02:00:00")
+    add_movement(database_file, "C", "M1", "USED", 9999, "2026-09-01 02:00:00")     # older than 30 days: ignored
+    add_movement(database_file, "D", "M1", "RECEIVED", 500, "2026-11-15 02:00:00")  # received is not use
+    rows = routes_stats.get_days_of_stock_left(open_database(database_file), NOW)
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["name"] == "PLA Basic White" and row["unit"] == "g" and row["stock"] == 800
+    assert row["average_daily"] == 10.0 and row["days_left"] == 80.0                # 300 g / 30 days = 10 g a day; 800 / 10
+    assert row["lead_time_days"] == 1                                               # fastest active offer (Kuching Shop)
+
+
+def test_days_left_window_uses_malaysia_time(database_file):
+    # NOW is 23 Nov 10:00 Malaysia; 30 days back is 24 Oct 10:00 Malaysia = 24 Oct 02:00 UTC.
+    add_movement(database_file, "A", "M1", "USED", 30, "2026-10-24 01:59:00")       # just outside
+    assert routes_stats.get_days_of_stock_left(open_database(database_file), NOW) == []
+    add_movement(database_file, "B", "M1", "USED", 30, "2026-10-24 02:01:00")       # just inside
+    assert len(routes_stats.get_days_of_stock_left(open_database(database_file), NOW)) == 1
+
+
+def test_days_left_sorts_fewest_days_first_and_skips_unused_and_switched_off_materials(database_file):
+    add_movement(database_file, "A", "M1", "USED", 300, "2026-11-20 02:00:00")      # 800 g at 10 g/day = 80 days
+    add_movement(database_file, "B", "M2", "USED", 300, "2026-11-20 02:00:00")      # 240 g at 10 g/day = 24 days
+    add_movement(database_file, "C", "M3", "USED", 300, "2026-11-20 02:00:00")      # 0 g left = 0 days
+    rows = routes_stats.get_days_of_stock_left(open_database(database_file), NOW)
+    assert [r["name"] for r in rows] == ["ABS Grey", "PETG Clear", "PLA Basic White"]
+    connection = sqlite3.connect(database_file)
+    connection.execute("UPDATE materials SET is_active = 0 WHERE id = 'M2'")
+    connection.commit()
+    connection.close()
+    rows = routes_stats.get_days_of_stock_left(open_database(database_file), NOW)
+    assert [r["name"] for r in rows] == ["ABS Grey", "PLA Basic White"]
+
+
+def test_days_left_badges_order_now_low_and_ok():
+    assert routes_stats.days_left_badge(2, 3) == "Order now"
+    assert routes_stats.days_left_badge(3, 3) == "Order now"                        # equal to the lead time counts
+    assert routes_stats.days_left_badge(3.1, 3) == "Low"
+    assert routes_stats.days_left_badge(10, 3) == "Low"                             # lead time + 7 days margin
+    assert routes_stats.days_left_badge(10.1, 3) == ""
+    assert routes_stats.days_left_badge(0, None) == "Order now"                     # no supplier, nothing left
+    assert routes_stats.days_left_badge(5, None) == "Low"
+
+
+def test_days_left_with_no_supplier_says_so_and_ignores_switched_off_offers(database_file):
+    add_movement(database_file, "C", "M3", "USED", 30, "2026-11-20 02:00:00")       # ABS Grey has no offer at all
+    rows = routes_stats.get_days_of_stock_left(open_database(database_file), NOW)
+    assert rows[0]["lead_time_days"] is None
+    connection = sqlite3.connect(database_file)
+    connection.execute("UPDATE supplier_offers SET is_active = 0 WHERE id = 'O1'")  # Kuching Shop offer off: Web Store (7) remains
+    connection.commit()
+    connection.close()
+    add_movement(database_file, "D", "M1", "USED", 30, "2026-11-20 02:00:00")
+    by_name = {r["name"]: r for r in routes_stats.get_days_of_stock_left(open_database(database_file), NOW)}
+    assert by_name["PLA Basic White"]["lead_time_days"] == 7
+
+
+def test_days_left_page_shows_table_badges_and_no_money_for_both_roles(admin, employee, database_file):
+    recent = (routes_stats.utc_now() - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+    add_movement(database_file, "A", "M3", "USED", 300, recent)                     # ABS Grey is at 0 g: Order now
+    add_movement(database_file, "B", "M1", "USED", 300, recent)
+    for browser in (admin, employee):
+        page = browser.get("/stats/").get_data(as_text=True)
+        panel = page.split('id="panel-days"')[1].split('id="panel-ranking"')[0]
+        assert "Est. days left" in panel and "Supplier lead time" in panel and "Stock on hand" in panel
+        assert "Order now" in panel and "ABS Grey" in panel and "PLA Basic White" in panel
+        assert panel.index("ABS Grey") < panel.index("PLA Basic White")             # fewest days first
+        assert "No supplier yet" in panel and "MYR" not in panel and "price" not in panel.lower()
+
+
+def test_days_left_page_has_a_clear_empty_state(employee):
+    panel = employee.get("/stats/").get_data(as_text=True).split('id="panel-days"')[1].split('id="panel-ranking"')[0]
+    assert "No usage has been recorded in the last 30 days yet" in panel and "<table" not in panel
+
+
+# ---------- Spending & stock value (guide F7, decision 2026-11-27, Admin only) ----------
+
+def test_stock_value_is_stock_times_the_cheapest_active_price_per_unit(database_file):
+    value = routes_stats.get_stock_value(open_database(database_file))
+    # M1 800 g at the cheaper offer MYR 60 per 1000 g = 48.00; M2 240 g at MYR 90 per 1000 g = 21.60; M3 has no stock.
+    assert round(value["total"], 2) == 69.60 and value["priced"] == 2 and value["unpriced"] == 0
+
+
+def test_stock_value_leaves_out_materials_with_no_supplier_price_and_counts_them(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("UPDATE materials SET quantity_on_hand = 100 WHERE id = 'M3'")      # ABS Grey: stock but no offer
+    connection.execute("UPDATE supplier_offers SET is_active = 0 WHERE id = 'O3'")         # the cheaper PLA offer is off
+    connection.commit()
+    connection.close()
+    value = routes_stats.get_stock_value(open_database(database_file))
+    assert round(value["total"], 2) == round(0.8 * 80 + 0.24 * 90, 2) and value["priced"] == 2 and value["unpriced"] == 1
+
+
+def test_stock_value_ignores_offers_in_another_unit_and_switched_off_materials(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("UPDATE supplier_offers SET pack_unit = 'ml' WHERE id = 'O2'")      # PETG offer no longer in grams
+    connection.execute("UPDATE materials SET is_active = 0 WHERE id = 'M1'")
+    connection.commit()
+    connection.close()
+    value = routes_stats.get_stock_value(open_database(database_file))
+    assert value["total"] == 0 and value["priced"] == 0 and value["unpriced"] == 1
+
+
+def test_spending_panel_shows_this_months_total_with_a_breakdown_by_supplier(admin, database_file):
+    this_month = routes_stats.utc_now().strftime("%Y-%m-15 02:00:00")
+    add_purchase(database_file, "A", "S2", 120.5, this_month)
+    add_purchase(database_file, "B", "S1", 80, this_month)
+    add_purchase(database_file, "C", "S1", 999, "2020-01-05 02:00:00")                     # another month
+    panel = admin.get("/stats/").get_data(as_text=True).split('id="panel-spending"')[1]
+    assert "MYR 200.50" in panel and "Web Store" in panel and "MYR 120.50" in panel
+    assert panel.index("Web Store") < panel.index("Kuching Shop")                          # biggest first
+    assert "999" not in panel and "Estimated stock value on hand" in panel and "MYR 69.60" in panel
+
+
+def test_spending_panel_has_a_clear_empty_state(admin):
+    panel = admin.get("/stats/").get_data(as_text=True).split('id="panel-spending"')[1]
+    assert "MYR 0.00" in panel and "No purchases with a total paid have been recorded this month" in panel
+
+
+def test_employee_page_never_contains_the_spending_numbers(employee, database_file):
+    this_month = routes_stats.utc_now().strftime("%Y-%m-15 02:00:00")
+    add_purchase(database_file, "A", "S2", 123.45, this_month)
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert "123.45" not in page and "69.60" not in page and "panel-spending" not in page

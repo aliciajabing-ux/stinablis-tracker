@@ -1,13 +1,12 @@
 # WHAT THIS FILE DOES: The Home dashboard (three boxes and the "Notifications" list) and the Statistics screen
-#   (usage, purchases, the delivery ranking, the supplier price comparison, and the CSV download).
-# WHO CAN USE IT: Both. The price comparison and the CSV download are Admin only, checked on the server.
+#   (usage per unit, days of stock left, the delivery ranking, Admin-only spending and stock value, and the CSV download).
+# WHO CAN USE IT: Both. The spending and stock value panel and the CSV download are Admin only, checked on the server.
 #
 # Money spent = the "Total paid" typed on each "Record received" line (with its supplier), added up per month.
-# It feeds the CSV (the Home box that showed it was removed on 2026-11-26). Procurement statistics (decision 2026-11-26)
-# are built from the same lines: purchases per material (no money, both roles) and the supplier price comparison,
-# as two charts (Admin only).
-# REMOVED on 2026-11-26 (team decision): the low-stock events chart, the spending per supplier chart and the spending
-# per material chart. Low-stock events are still saved in low_stock_events (Agent C writes them); they are just not charted.
+# Stock value = stock on hand x the price per unit of the cheapest active supplier offer (an estimate, before shipping).
+# REMOVED on 2026-11-26 and 2026-11-27 (team decisions): the low-stock events chart, the spending charts, the purchases
+# chart and the price comparison charts. Low-stock events are still saved in low_stock_events; the CSV still lists
+# purchases and spending per material.
 
 import csv
 import io
@@ -26,6 +25,10 @@ SPENDING_METHOD_CONFIRMED = True       # money spent = real totals typed on "Rec
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 PERIODS_SHOWN = 6                      # how many weeks or months the charts show
 MOST_USED_MATERIALS_SHOWN = 8
+USAGE_UNITS = ("g", "ml", "pcs")       # the Unit choice on the usage chart; "g" (filament) is the default
+DEFAULT_USAGE_UNIT = "g"
+DAYS_LEFT_WINDOW_DAYS = 30             # average daily use is measured over the last 30 days
+DAYS_LEFT_CLOSE_MARGIN_DAYS = 7        # "Low" badge: days left is within this many days of the supplier lead time (team guess)
 SPREADSHEET_DANGER_STARTS = ("=", "+", "-", "@")
 
 
@@ -66,13 +69,18 @@ def period_label(start, period):
 
 # Returns the quantity of one kind of stock change (USED or RECEIVED) per material for each recent week or month.
 # Only quantities are read here, never any money. Each bar group carries its unit for the pop-up text.
-def get_quantity_by_period(database, movement_type, period, now=None):
+# With a unit ("g", "ml" or "pcs") only materials counted in that unit are read, so the bars share one scale.
+def get_quantity_by_period(database, movement_type, period, now=None, unit=None):
     now = now or malaysia_now()
     starts = recent_period_starts(period, now.date())
     totals = {}
-    rows = database.execute(
-        "SELECT m.id, m.name, m.colour, m.unit, s.quantity, s.created_at FROM stock_movements s "
-        "JOIN materials m ON m.id = s.material_id WHERE s.movement_type = ?", (movement_type,)).fetchall()
+    sql = ("SELECT m.id, m.name, m.colour, m.unit, s.quantity, s.created_at FROM stock_movements s "
+           "JOIN materials m ON m.id = s.material_id WHERE s.movement_type = ?")
+    values = [movement_type]
+    if unit:
+        sql += " AND m.unit = ?"
+        values.append(unit)
+    rows = database.execute(sql, values).fetchall()
     for row in rows:
         start = period_start(to_malaysia_time(row["created_at"]), period)
         if start in starts:
@@ -86,8 +94,9 @@ def get_quantity_by_period(database, movement_type, period, now=None):
 
 
 # Returns usage per material for each recent week or month, ready for the bar chart (no money inside).
-def get_usage_by_period(database, period, now=None):
-    return get_quantity_by_period(database, "USED", period, now)
+# With unit=None every unit is included (the CSV uses that); the chart always passes one unit.
+def get_usage_by_period(database, period, now=None, unit=None):
+    return get_quantity_by_period(database, "USED", period, now, unit)
 
 
 # Returns the stock received per material for each recent month, ready for the bar chart (no money inside).
@@ -95,12 +104,14 @@ def get_purchases_by_material(database, now=None):
     return get_quantity_by_period(database, "RECEIVED", "month", now)
 
 
-# Returns the materials that at least one active supplier sells, for the "choose a material" list (no prices read).
+# Returns the materials that TWO OR MORE different active suppliers sell, for the "choose a material" list (no prices
+# read). A material with one supplier would give a one-line "ranking", so it is not offered.
 def get_ranking_materials(database):
     rows = database.execute(
-        "SELECT DISTINCT m.id, m.name, m.colour, m.unit FROM materials m "
+        "SELECT m.id, m.name, m.colour, m.unit FROM materials m "
         "JOIN supplier_offers o ON o.material_id = m.id JOIN suppliers s ON s.id = o.supplier_id "
-        "WHERE m.is_active = 1 AND o.is_active = 1 AND s.is_active = 1 ORDER BY m.name, m.colour").fetchall()
+        "WHERE m.is_active = 1 AND o.is_active = 1 AND s.is_active = 1 "
+        "GROUP BY m.id HAVING COUNT(DISTINCT s.id) >= 2 ORDER BY m.name, m.colour").fetchall()
     return [{"id": r["id"], "label": " ".join(p for p in (r["name"], r["colour"]) if p) + " (" + r["unit"] + ")"} for r in rows]
 
 
@@ -184,13 +195,69 @@ def get_spending_by_material(database, now=None):
             "purchases": [e["purchases"] for _, e in ranked]}
 
 
-# Returns how to show a price per unit in plain words: (how many units one price covers, the words).
-def price_unit_words(unit):
-    if unit == "g":
-        return 1000, "per kg"
-    if unit == "ml":
-        return 1000, "per litre"
-    return 1, "per piece"
+# Returns the fastest delivery (days) of the active supplier offers for each material id, as {material id: days}.
+def get_fastest_lead_times(database):
+    rows = database.execute(
+        "SELECT o.material_id, MIN(o.lead_time_days) AS days FROM supplier_offers o "
+        "JOIN suppliers s ON s.id = o.supplier_id WHERE o.is_active = 1 AND s.is_active = 1 GROUP BY o.material_id").fetchall()
+    return {row["material_id"]: row["days"] for row in rows}
+
+
+# Returns the badge words for one material: "Order now" when the stock runs out no later than a delivery would arrive,
+# "Low" when it is within a week of that, otherwise "". A material with no supplier has lead time 0 here.
+def days_left_badge(days_left, lead_time_days):
+    lead = lead_time_days or 0
+    if days_left <= lead:
+        return "Order now"
+    if days_left <= lead + DAYS_LEFT_CLOSE_MARGIN_DAYS:
+        return "Low"
+    return ""
+
+
+# Returns active materials USED in the last 30 days (Malaysia time) with their estimated days of stock left, fewest first.
+# Average daily use = quantity used in the 30 days / 30. Days left = stock on hand / average daily use. No money.
+def get_days_of_stock_left(database, now=None):
+    now = now or malaysia_now()
+    window_start = now - timedelta(days=DAYS_LEFT_WINDOW_DAYS)
+    used = {}
+    rows = database.execute(
+        "SELECT material_id, quantity, created_at FROM stock_movements WHERE movement_type = 'USED'").fetchall()
+    for row in rows:
+        moment = to_malaysia_time(row["created_at"])
+        if window_start < moment <= now:
+            used[row["material_id"]] = used.get(row["material_id"], 0) + row["quantity"]
+    lead_times = get_fastest_lead_times(database)
+    result = []
+    materials = database.execute(
+        "SELECT id, name, colour, unit, quantity_on_hand FROM materials WHERE is_active = 1").fetchall()
+    for material in materials:
+        average_daily = used.get(material["id"], 0) / DAYS_LEFT_WINDOW_DAYS
+        if average_daily <= 0:
+            continue
+        days_left = material["quantity_on_hand"] / average_daily
+        lead_time = lead_times.get(material["id"])
+        result.append({"name": " ".join(p for p in (material["name"], material["colour"]) if p),
+                       "stock": material["quantity_on_hand"], "unit": material["unit"],
+                       "average_daily": average_daily, "days_left": days_left, "lead_time_days": lead_time,
+                       "badge": days_left_badge(days_left, lead_time)})
+    result.sort(key=lambda item: (item["days_left"], item["name"]))
+    return result
+
+
+# Returns the estimated value of all stock on hand in MYR (Admin only): stock x the price per unit of the cheapest active
+# supplier offer in the material's own unit (before shipping). Also says how many materials had no price and were left out.
+def get_stock_value(database):
+    total, priced, unpriced = 0.0, 0, 0
+    materials = database.execute(
+        "SELECT id, unit, quantity_on_hand FROM materials WHERE is_active = 1 AND quantity_on_hand > 0").fetchall()
+    for material in materials:
+        offer = find_cheapest_unit_offer(database, material["id"], material["unit"])
+        if offer is None:
+            unpriced += 1
+            continue
+        total += material["quantity_on_hand"] * offer["price_per_unit"]
+        priced += 1
+    return {"total": total, "priced": priced, "unpriced": unpriced}
 
 
 # Returns the cheapest active supplier offer for a material as (supplier name, MYR per single unit), or None.
@@ -202,49 +269,12 @@ def find_cheapest_unit_offer(database, material_id, unit):
         "ORDER BY price_per_unit LIMIT 1", (material_id, unit)).fetchone()
 
 
-# Returns the newest "Record received" line with a total paid for a material, or None.
-def find_last_paid(database, material_id):
-    return database.execute(
-        "SELECT s.quantity, s.total_cost_myr, s.created_at, sup.name AS supplier_name FROM stock_movements s "
-        "LEFT JOIN suppliers sup ON sup.id = s.supplier_id "
-        "WHERE s.material_id = ? AND s.movement_type = 'RECEIVED' AND s.total_cost_myr IS NOT NULL AND s.quantity > 0 "
-        "ORDER BY s.created_at DESC, s.rowid DESC LIMIT 1", (material_id,)).fetchone()
-
-
-# Returns one material's numbers for the price comparison chart, or None when it has neither an offer nor a purchase.
-# Prices are MYR per kg, per litre or per piece (Admin only; estimates, the offer is before shipping).
-def build_chart_point(database, material):
-    scale, words = price_unit_words(material["unit"])
-    offer = find_cheapest_unit_offer(database, material["id"], material["unit"])
-    paid = find_last_paid(database, material["id"])
-    if offer is None and paid is None:
-        return None
-    name = " ".join(part for part in (material["name"], material["colour"]) if part)
-    return {"group": "per_piece" if material["unit"] == "pcs" else "per_kg_litre",
-            "label": name + " (" + words + ")", "words": words,
-            "offer": round(offer["price_per_unit"] * scale, 2) if offer else None,
-            "offer_supplier": offer["supplier_name"] if offer else "",
-            "paid": round(paid["total_cost_myr"] / paid["quantity"] * scale, 2) if paid else None,
-            "paid_supplier": (paid["supplier_name"] or "supplier not typed") if paid else "",
-            "paid_date": to_malaysia_time(paid["created_at"]).strftime("%d %b %Y") if paid else ""}
-
-
-# Returns the price comparison chart numbers in two groups: per kg or litre, and per piece (their prices are on very
-# different scales, so each group gets its own chart). Admin only.
-def get_price_comparison_chart(database):
-    keys = ("labels", "words", "offer", "offer_supplier", "paid", "paid_supplier", "paid_date")
-    groups = {"per_kg_litre": {key: [] for key in keys}, "per_piece": {key: [] for key in keys}}
-    materials = database.execute(
-        "SELECT id, name, colour, unit FROM materials WHERE is_active = 1 ORDER BY name, colour").fetchall()
-    for material in materials:
-        point = build_chart_point(database, material)
-        if point is None:
-            continue
-        group = groups[point["group"]]
-        group["labels"].append(point["label"])
-        for key in keys[1:]:
-            group[key].append(point[key])
-    return groups
+# Returns the Admin-only "Spending & stock value" numbers: this month's spending by supplier (biggest first) and stock value.
+def get_spending_and_stock_value(database):
+    spending = get_month_spending(database) or {"by_supplier": {}, "total": 0}
+    by_supplier = sorted(spending["by_supplier"].items(), key=lambda item: (-item[1], item[0]))
+    return {"month": malaysia_now().strftime("%B %Y"), "spent_total": spending["total"],
+            "spent_by_supplier": by_supplier, "stock": get_stock_value(database)}
 
 
 # Returns the Admin-only spending numbers for this month, or None if the team has not confirmed the method.
@@ -269,31 +299,23 @@ def show_dashboard():
 @login_required
 def statistics_page():
     admin_tools = is_admin(get_current_user())
+    database = get_db()
     return render_template("stats.html", show_admin_tools=admin_tools,
                            now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
-                           ranking_materials=get_ranking_materials(get_db()))
+                           ranking_materials=get_ranking_materials(database),
+                           days_left_rows=get_days_of_stock_left(database),
+                           lead_margin_days=DAYS_LEFT_CLOSE_MARGIN_DAYS,
+                           money=get_spending_and_stock_value(database) if admin_tools else None)
 
 
-# Sends usage numbers (per week or month) to the bar chart.
+# Sends usage numbers (?period=week|month and ?unit=g|ml|pcs) to the bar chart. A wrong value falls back to month and g.
 @stats_blueprint.route("/data/usage")
 @login_required
 def usage_data():
     period = "week" if request.args.get("period") == "week" else "month"
-    return jsonify(get_usage_by_period(get_db(), period))
-
-
-# Sends the stock received per material per month to the purchases bar chart (quantities and units only, no money).
-@stats_blueprint.route("/data/purchases")
-@login_required
-def purchases_data():
-    return jsonify(get_purchases_by_material(get_db()))
-
-
-# Sends the supplier price comparison numbers to the two price charts. Admin only.
-@stats_blueprint.route("/data/price-comparison")
-@admin_required
-def price_comparison_data():
-    return jsonify(get_price_comparison_chart(get_db()))
+    unit = request.args.get("unit")
+    unit = unit if unit in USAGE_UNITS else DEFAULT_USAGE_UNIT
+    return jsonify(get_usage_by_period(get_db(), period, unit=unit))
 
 
 # Sends the delivery ranking (fastest supplier first) for the chosen material, or for all materials.

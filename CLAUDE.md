@@ -167,7 +167,7 @@ PERMISSION RULE (very important)
 SENSITIVE DATA (must never reach an employee account)
 - (Supplier prices, shipping costs and the "Last bought" total paid:
   employees may now SEE these, since 2026-11-24. They must still never be
-  able to CHANGE them. The price comparison charts and the CSV download
+  able to CHANGE them. The spending & stock value panel and the CSV download
   stay Admin only.)
 - User passwords (stored in scrambled form only; never shown).
 - Admin account details.
@@ -282,42 +282,50 @@ F6. SUPPLIER SUGGESTION (the main time-saver)
     - Admin and Employee both see cost, supplier name, lead time, arrival
       date, and contact details (team decision 2026-11-24).
 
-F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees usage only)
-    - Usage per material per week or per month (bar chart).
-    - Delivery ranking (decision 2026-11-26; it replaces the "average lead
-      time per supplier" bar chart): the suppliers ranked from the fastest
-      to the slowest delivery for a material the user chooses, or the
-      average over all materials. It shows the rank, the supplier, ONLINE or
-      LOCAL, the days, and the estimated arrival date (today + the days).
-      Suppliers with the same days share a rank. No money in it: Admin and
-      Employee both see it.
-    - REMOVED on 2026-11-26 (team decision): the "low-stock events per month"
-      line chart, the "spending per supplier this month" chart and the
-      "spending per material" chart are no longer on the Statistics screen.
-      (The Home box "money spent this month" stays. Low-stock events are still
-      saved in the database, they are just not charted.)
-    - Procurement statistics (decision 2026-11-26), all built from the
-      "Record received" lines:
-        * Purchases per material per month, with the unit (g, ml, pcs) -
-          Admin and Employee (no money in it).
-        * Supplier price comparison per material: cheapest supplier offer
-          next to the price last paid, per kg, per litre or per piece -
-          ADMIN only. Shown as two bar charts (per kg or litre, and per
-          piece, because their prices are on very different scales). The
-          table with the same numbers was removed on 2026-11-26 (team
-          decision: it repeated the charts). Estimates: the offer price is
-          before shipping.
+F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees no money and no CSV)
+    - Usage per material (decision 2026-11-27): a bar chart per week or per
+      month with a Unit choice: Filament (g), Resin (ml) or Hardware (pcs). It
+      starts on Filament (g), so every bar on the chart has the same unit and
+      scale. Admin and Employee.
+    - Days of stock left (decision 2026-11-27, new): a plain table of active
+      materials that had USED lines in the last 30 days (Malaysia time). Average
+      daily use = quantity used in the 30 days divided by 30. Days left = stock
+      on hand divided by average daily use. It shows the material, stock with
+      its unit, estimated days left, the supplier lead time (days, the fastest
+      active supplier) and a word badge: "Order now" when days left is at most
+      the lead time, "Low" when it is within 7 days more than the lead time
+      [CONFIRM WITH FOUNDER: the 7-day margin is a team guess]. Fewest days left
+      first. Admin and Employee (no money in it).
+    - Delivery ranking (decision 2026-11-26, simplified 2026-11-27): the
+      suppliers ranked from the fastest to the slowest delivery (average over
+      their active offers), with the rank, ONLINE or LOCAL, the days and the
+      estimated arrival date (today + the days). Same days share a rank. The
+      "Rank suppliers for" material list appears ONLY when at least one
+      material has two or more active suppliers (otherwise a per-material
+      ranking would be one line). No money: Admin and Employee.
+    - Spending & stock value (decision 2026-11-27, new, ADMIN only; it replaces
+      "Purchases per material" and the "Supplier price comparison" charts):
+      (a) total spent this month in MYR (the "Total paid" typed on "Record
+      received") with a breakdown by supplier; (b) estimated stock value on hand
+      in MYR = stock on hand x the price per unit of the cheapest active
+      supplier offer (before shipping), with a note of how many materials have
+      no supplier price and are left out. All figures are estimates.
+    - REMOVED on 2026-11-26 (team decision): "low-stock events per month",
+      "spending per supplier" and "spending per material" charts. REMOVED on
+      2026-11-27: "Purchases per material" and "Supplier price comparison"
+      (the data addresses /stats/data/purchases and /stats/data/price-comparison
+      answer 404). Low-stock events are still saved, just not charted.
     - Statistics sidebar (decision 2026-11-26): a menu on the left lists the
-      statistics (usage, purchases, delivery ranking, and for the Admin the
-      supplier price comparison). Clicking one shows only that statistic, so
-      nobody has to scroll down the page. The chosen one is marked, and the
-      address keeps it (for example /stats/#purchases) so a refresh or a
-      bookmark opens the same one. The Admin also finds the CSV download in
-      the sidebar. On a phone the menu is a row of buttons across the top.
+      statistics (usage, days of stock left, delivery ranking and, for the
+      Admin, spending & stock value). Clicking one shows only that statistic.
+      The address keeps the choice (for example /stats/#days). The Admin also
+      finds the CSV download in the sidebar. On a phone the menu is a row of
+      buttons across the top.
     - Every chart shows its unit (g, ml, pcs, days) or MYR in the axis title
       and in the pop-up text, never just a bare number.
-    - Export to spreadsheet (CSV) - ADMIN only (it also lists purchases and
-      spending per material, and the average delivery time per supplier).
+    - Export to spreadsheet (CSV) - ADMIN only, unchanged (it still lists
+      usage, purchases, spending per material and the average delivery time
+      per supplier).
 
 F8. USER MANAGEMENT (ADMIN only)
     - Add user, change role, reset password, disable account.
@@ -595,7 +603,7 @@ GLOSSARY.md must explain every technical word we use, for example:
 [ ] Two suppliers for one material: the one with the shorter lead time
     and lower total cost is listed first.
 [ ] Employee account: can see prices, cannot add or change a supplier.
-[ ] Admin account: sees prices and the supplier price comparison charts.
+[ ] Admin account: sees prices and the "Spending & stock value" panel.
 [ ] Estimated arrival date is correct for the lead time (today + days).
 [ ] Malaysia time (UTC+8) shows correctly on every date.
 
@@ -1783,3 +1791,5 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
 2026-11-27 | Agent D (Suppliers screen; team request, done on main) | DONE: checked every template, route and test for "Change supplier" used when editing a supplier. The visible texts were already "Edit supplier" (the card button on /suppliers/<id> and the heading of the edit page /suppliers/<id>/edit, since the commit before). Two small leftovers fixed: the browser tab title of the supplier form said "Supplier form" and now says "Edit supplier" or "Add supplier" like the heading, and a comment in routes_suppliers.py said "add/change supplier". The only remaining "Change supplier" text is in older dated log entries (history) and in a test that proves the words are NOT on the page. NOTE: a site still showing "Change supplier" is running old code (the live PythonAnywhere copy has not been updated yet). Files: app/templates/supplier_form.html, app/routes_suppliers.py (comment), tests/test_suppliers_suggest.py, CLAUDE.md. | None.
 
 2026-11-27 | Agent D / F (team request: "nothing changed on the page"; done on main) | DONE: full sweep for "Change supplier" / "Change suppliers" (any case, any file type, all tracked files and the folder on disk). RESULT: NO such wording exists in the app (templates, routes, JavaScript, CSS, SQL, deploy scripts). Every supplier edit control already says "Edit supplier": the card button on /suppliers/<id>, the in-card form heading, the standalone edit page heading and its browser tab title; the list buttons say "Edit". The only remaining matches are history or a different meaning: old dated log entries in this file, the permission line "Change supplier prices (costs)", the sentence "cannot change suppliers, offers or materials" in the role table, and tests that prove the words are absent. The per-material "Change" link in "Materials this supplier sells" is kept on purpose. TESTS added in tests/test_suppliers_suggest.py: no app source file matches the old wording; seven Admin pages (list, supplier, supplier with ?edit=1, edit page, add page, a switched-off supplier and its edit page) never contain it; every edit control says "Edit supplier" while the per-material "Change" stays; Employee pages have neither the old wording nor "Edit supplier". One test-case label in tests/test_review_agent_f.py was renamed from "change supplier" to "edit supplier". | NOTE: if a site still shows "Change supplier" it is running code from before commit 0bc4d12; the live PythonAnywhere copy must be updated and reloaded (and the browser page refreshed). | None.
+
+2026-11-27 | Agent E (Statistics page clean-up; team request, touches Agent F's and role tests) | DONE: guide F7 (and the two lines in Section 4 and 15) changed FIRST. (1) Usage per material: new Unit choice Filament (g) / Resin (ml) / Hardware (pcs), default g, so one scale per chart; /stats/data/usage accepts ?period=week|month&unit=g|ml|pcs (a wrong unit falls back to g). get_usage_by_period still includes every unit when no unit is passed (the CSV). (2) NEW "Days of stock left" (both roles, no money): active materials USED in the last 30 days (Malaysia time); average daily use = used / 30; days left = stock / average; shows stock with unit, days left, the fastest active supplier lead time, and a word badge "Order now" (days left <= lead time) or "Low" (within 7 days more; the 7 is a team guess, R4); fewest days first; empty state. Plain HTML table (cards on a phone), no chart. (3) Delivery ranking: the "Rank suppliers for" list now shows only materials with TWO OR MORE different active suppliers, and is hidden when there are none; the overall ranking list stays. (4) NEW Admin-only "Spending & stock value": total spent this month (existing month spending) with a by-supplier table, and estimated stock value (stock x cheapest active offer per unit, before shipping, with a count of materials left out for having no price). REMOVED: the "Purchases per material" tab and the price comparison charts; their addresses /stats/data/purchases and /stats/data/price-comparison now answer 404. The CSV is unchanged. Files: app/routes_stats.py, app/templates/stats.html, CLAUDE.md, ROLE_DIFFERENCES.md, tests/test_stats_dashboard.py (old procurement tests replaced, 20 new), tests/test_review_agent_f.py, tests/test_role_differences.py. | QUESTIONS (R4): the request text stopped in the middle of item 4(b) ("Estimated stock value on hand (MYR) -"); I built it as stock x cheapest active offer. If more was meant (items after 4b), please resend. Resin (ml) also contains isopropyl alcohol (same unit). | AGENT G: README, GLOSSARY and PRESENTATION_NOTES may still mention purchases per material and the price comparison charts.
