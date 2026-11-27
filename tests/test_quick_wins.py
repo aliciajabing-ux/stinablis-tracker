@@ -1,5 +1,5 @@
 # WHAT THIS FILE DOES: Checks the five "quick wins" of 2026-11-27: contact links, Find supplier for every material,
-#   "New sealed spool / bottle" on Record received, Admin-only Correct stock, and the kept search plus Quick log.
+#   "New sealed spool / bottle" on Record received, Admin-only Edit quantity (stock correction), and the kept search plus Quick log.
 # WHO CAN USE IT: Developers. Run from the project folder with: python -m pytest tests
 
 import os
@@ -226,8 +226,9 @@ def correct(client, material_id, new_quantity, reason="Physical shelf count"):
     return client.post(f"/materials/{material_id}/correct", data={"new_quantity": new_quantity, "reason": reason})
 
 
-def test_admin_can_open_the_correct_stock_page_and_it_has_a_help_sentence(admin):
+def test_admin_can_open_the_edit_quantity_page_and_it_has_a_help_sentence(admin):
     text = page(admin, "/materials/M1/correct")
+    assert "Edit quantity" in text and "Correct stock" not in text and "Save quantity" in text
     assert "Set stock to" in text and "Reason (required)" in text and "nothing is deleted" in text
 
 
@@ -286,9 +287,10 @@ def test_visitor_is_sent_to_login_and_nothing_changes(database_file):
     assert rows(database_file, "SELECT quantity_on_hand FROM materials WHERE id = 'M2'")[0]["quantity_on_hand"] == 900
 
 
-def test_correct_stock_button_is_only_drawn_for_the_admin(admin, employee):
-    assert "/materials/M1/correct" in page(admin, "/materials/")
-    assert "/correct" not in page(employee, "/materials/") and "Correct stock" not in page(employee, "/materials/")
+def test_edit_quantity_button_is_only_drawn_for_the_admin(admin, employee):
+    assert "/materials/M1/correct" in page(admin, "/materials/") and "Edit quantity" in page(admin, "/materials/")
+    assert "Correct stock" not in page(admin, "/materials/")
+    assert "/correct" not in page(employee, "/materials/") and "Edit quantity" not in page(employee, "/materials/")
 
 
 def test_correct_stock_for_a_missing_material_is_404(admin):

@@ -470,3 +470,20 @@ def test_employee_cannot_add_a_material_or_supplier_this_way(employee, database_
     assert reply.status_code == 403
     assert count_rows(database_file, "suppliers") == suppliers_before
     assert ask_database(database_file, "SELECT COUNT(*) FROM materials WHERE name = 'Nylon'") == 0
+
+
+# Layout guard (bug fix 2026-11-27): the Actions buttons on the Materials rows, including the ones under "More"
+# (Edit, Edit quantity, Remove), must be ONE vertical column of equal width, so "Edit quantity" is never cut off.
+def test_materials_row_buttons_are_one_stretched_column_in_the_css():
+    import re
+    css_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "static", "theme.css")
+    with open(css_file, encoding="utf-8") as css_text:
+        css = css_text.read()
+    for selector in (".row-actions", ".row-more", ".row-more-menu"):
+        rule = re.search(r"^" + re.escape(selector) + r" \{([^}]*)\}", css, re.MULTILINE)
+        assert rule is not None, selector
+        assert "flex-direction: column" in rule.group(1) and "align-items: stretch" in rule.group(1), selector
+    page_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "templates", "materials_list.html")
+    with open(page_file, encoding="utf-8") as page_text:
+        page = page_text.read()
+    assert "align-items: flex-start" not in page.split(".row-actions", 1)[1].split("}", 1)[0]    # the page rule must not undo the stretch

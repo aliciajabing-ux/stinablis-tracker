@@ -1,7 +1,7 @@
-{# WHAT THIS FILE DOES: The Admin-only "Correct stock" form: set the stock to the real count and say why.
+{# WHAT THIS FILE DOES: The Admin-only "Edit quantity" form: set the stock to the real count and say why.
    WHO CAN USE IT: Admin only (Employees get a 403 page before this is drawn). #}
 {% extends "base.html" %}
-{% block title %}Correct stock - Stinablis Tracker{% endblock %}
+{% block title %}Edit quantity - Stinablis Tracker{% endblock %}
 {% block content %}
 <style>
   label { display: block; margin-top: 12px; font-weight: bold; }
@@ -15,7 +15,7 @@
   .tag-LOW { background: #ffe5b4; color: #7a4100; }
   .tag-OUT { background: #f5c2c2; color: #7a0000; }
 </style>
-<h1>Correct stock: {{ material.name }}{% if material.colour %} ({{ material.colour }}){% endif %}</h1>
+<h1>Edit quantity: {{ material.name }}{% if material.colour %} ({{ material.colour }}){% endif %}</h1>
 <p>Use this when the shelf count and the app do not match. Type what you really count, and a short reason. It is saved in the history; nothing is deleted.</p>
 <p>The app says: <strong>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</strong>
    <span class="tag tag-{{ material.status }}">{{ material.status }}</span></p>
@@ -30,7 +30,7 @@
   <datalist id="reason-ideas">
     <option value="Physical shelf count"><option value="Damaged spool"><option value="Failed prints / waste"><option value="Lost or missing">
   </datalist>
-  <button class="btn" type="submit">Save correction</button>
+  <button class="btn" type="submit">Save quantity</button>
   <a class="btn plain" href="{{ back_address }}">Cancel</a>
 </form>
 {% endblock %}

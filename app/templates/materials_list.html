@@ -57,7 +57,7 @@
     .table-wrap th, .table-wrap td { padding-left: 12px; padding-right: 12px; }
     .table-wrap td { vertical-align: middle; padding-top: 16px; padding-bottom: 16px; }
     .table-wrap td:first-child, .table-wrap th:first-child { padding-left: 20px; }
-    .table-wrap .row-actions { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .table-wrap .row-actions { flex-direction: column; align-items: stretch; gap: 6px; }
     .table-wrap .row-actions .btn { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; margin: 0; }
     .table-wrap .row-more summary { min-height: 32px; padding: 4px 8px; }
     .table-wrap .spool .btn.small { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; }
@@ -144,7 +144,7 @@
           <summary>More</summary>
           <div class="row-more-menu">
             <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
-            <a class="btn" href="{{ url_for('materials.correct_stock_screen', material_id=material.id, q=search_text or None, status=status_filter or None) }}">Correct stock</a>
+            <a class="btn" href="{{ url_for('materials.correct_stock_screen', material_id=material.id, q=search_text or None, status=status_filter or None) }}">Edit quantity</a>
             <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
                   onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
