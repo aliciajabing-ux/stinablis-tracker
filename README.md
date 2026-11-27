@@ -18,6 +18,23 @@ Other files for the team:
 
 ---
 
+## Live demo (Galavate Innovation Challenge 2026)
+
+**Live site:** <https://stinablisdemo.pythonanywhere.com/>
+
+| Username | Role | Password |
+|---|---|---|
+| `admin` | Admin | `stinablis2026` |
+| `employee` | Employee | `stinablis2026` |
+
+These are **public presentation accounts** (the password is written in this public repository; guide rule C6,
+second exception). They are for the demo only: **switch them off or change the password before the site is
+ever used with real company data** (`python app/setup_database.py demo-users-off`, or
+`python app/auth.py set-password admin`). The live site holds invented sample data, not real Stinablis stock.
+To add these two accounts to an existing database, see the "Presentation accounts" part of step 4 below.
+
+---
+
 ## How to run it (Windows, PowerShell)
 
 Do these steps once, in order. Run every command from the project folder
@@ -177,10 +194,10 @@ the internet, so it needs a connection; the other three statistics are plain HTM
 python -m pytest tests
 ```
 
-This takes about a minute. After the group's final merge (2026-11-26) it reported
-**458 passed, 2 skipped, 6 expected failures** (an "expected failure" is a test that describes a
-known bug; see the status log). The tests use a temporary database and never touch
-`data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves. (Re-run it before the demo;
+This takes about three minutes. On `main` at commit `43979c1` (2026-11-27, with pull request #23 merged) it reported
+**711 passed, 2 skipped, 6 expected failures** (not "all tests pass": an "expected failure" is a test that
+describes a known bug, and 2 tests are skipped; see the status log). The tests use a temporary database and
+never touch `data/tracker.db`. [`TESTS.md`](TESTS.md) lists what each test proves. (Re-run it before the demo;
 the numbers change whenever someone adds a test.)
 
 ---
@@ -220,7 +237,7 @@ the numbers change whenever someone adds a test.)
   event is saved each time a "Record used" drops a material from OK to LOW or OUT (the Statistics page
   no longer draws a chart of them).
 
-## Known problems (as of 2026-11-26; see the status log in `CLAUDE.md`)
+## Known problems (as of 2026-11-27; see the status log in `CLAUDE.md`)
 
 * Received lines saved without a total (always the case when an Employee records them) count as MYR 0
   in the money numbers (Spending & stock value and the CSV). Low-stock events
@@ -232,14 +249,13 @@ the numbers change whenever someone adds a test.)
   empty (the other statistics are plain HTML).
 * There is no activity-log screen (F9) and no one-click database backup yet. Every change is still
   written to the activity log table.
-* There is no screen to correct a wrong stock count.
-* **Open phone-test findings (from the status log, not re-tested in a browser by me):**
-  **F-11** the Materials, Suppliers and Supplier pages need sideways scrolling on a phone to see the right
-  columns; **F-12** supplier phone numbers and emails are plain text, not tappable `tel:` / `mailto:` links
-  (I also found no such links in the templates); **F-13** (the "Average delivery time per supplier" chart cut off
-  on phones) was about a chart that has since been replaced by the "Delivery ranking" on the Statistics
-  page; I have not re-checked that page on a phone. Text size and buttons were fine in that test. F-11 and
-  F-12 have no fix logged yet.
+* A wrong stock count is corrected by the Admin with **Edit quantity** (in the row's **More** menu on Materials;
+  it needs a reason and is saved as an ADJUSTED history line). Employees cannot use it (403).
+* **Phone-test findings F-11, F-12 and F-13 are fixed** (details in the status log): on a screen 640 px or
+  narrower the Materials, Suppliers, supplier and Find supplier tables become one card per row; supplier phone
+  numbers and emails are tap-to-call (`tel:`), WhatsApp (`wa.me`) and `mailto:` links (since 2026-11-27); and the old
+  delivery-time chart was replaced by the Delivery ranking. Still open: between 641 and 720 px the table box
+  itself scrolls sideways (the theme's old 880 px table minimum); no button is cut off there.
 * Six automatic tests are marked "expected failure" because they describe known bugs found by
   Agent F (see the status log).
 
