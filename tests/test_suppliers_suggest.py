@@ -202,7 +202,7 @@ def test_employee_supplier_pages_show_prices_but_no_edit_buttons(employee):
 
 def test_admin_supplier_page_shows_prices(admin):
     page = admin.get("/suppliers/S1").get_data(as_text=True)
-    assert "MYR 72.00" in page and "Change supplier" in page
+    assert "MYR 72.00" in page and "Edit supplier" in page
 
 
 def test_employee_cannot_see_switched_off_supplier(employee, admin):
@@ -356,7 +356,7 @@ def test_employee_list_has_no_edit_button_and_no_actions_column(employee):
 
 def test_edit_form_shows_every_field_with_the_current_values_and_status(admin):
     page = admin.get("/suppliers/S4/edit").get_data(as_text=True)
-    assert "Change supplier" in page and 'value="Closed Shop"' in page and "082-444" in page
+    assert "Edit supplier" in page and 'value="Closed Shop"' in page and "082-444" in page
     for field in ["name", "supplier_type", "address", "phone", "email", "website", "notes", "is_active"]:
         assert f'name="{field}"' in page
     assert '<option value="0" selected>' in page                       # S4 is switched off, and the form says so
@@ -398,7 +398,7 @@ def test_a_bad_status_or_empty_name_is_refused_in_plain_words_and_changes_nothin
     before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")]
     bad_status = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "maybe"})
     assert bad_status.status_code == 400 and "Active or Switched off" in bad_status.get_data(as_text=True)
-    assert "Change supplier" in bad_status.get_data(as_text=True)      # still the Change form, not "Add supplier"
+    assert "Edit supplier" in bad_status.get_data(as_text=True)      # still the Edit form, not "Add supplier"
     empty_name = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "name": "  "})
     assert empty_name.status_code == 400
     assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")] == before
@@ -417,6 +417,105 @@ def test_editing_a_supplier_that_does_not_exist_says_not_found(admin):
     assert admin.post("/suppliers/S999/edit", data=FULL_SUPPLIER_FORM).status_code == 404
 
 
-def test_supplier_detail_page_still_has_change_supplier_and_switch_buttons_for_admin(admin):
+def test_supplier_detail_page_still_has_edit_supplier_and_switch_buttons_for_admin(admin):
     page = admin.get("/suppliers/S1").get_data(as_text=True)
-    assert "Change supplier" in page and "Switch off" in page and "/suppliers/S1/edit" in page
+    assert "Edit supplier" in page and "Switch off" in page and "/suppliers/S1?edit=1" in page
+
+
+# ---------- Edit a supplier from its own page (2026-11-27) ----------
+
+def test_detail_page_has_an_edit_supplier_button_that_opens_the_form_inside_the_card(admin):
+    list_page = admin.get("/suppliers").get_data(as_text=True)
+    assert 'href="/suppliers/S1/edit"' in list_page                                 # the list button is unchanged
+    page = admin.get("/suppliers/S1").get_data(as_text=True)
+    assert 'href="/suppliers/S1?edit=1"' in page and "Edit supplier" in page and "min-height: 44px" in page
+    assert "supplier-edit-form" not in page and "Change supplier" not in page        # closed until the button is pressed
+    page = admin.get("/suppliers/S1?edit=1").get_data(as_text=True)
+    card = page[page.index('id="supplier-card"'):page.index("Materials this supplier sells")]
+    for field in ["name", "supplier_type", "address", "phone", "email", "website", "notes"]:
+        assert f'name="{field}"' in card
+    assert 'value="Local Shop"' in card and "Save" in card and "Cancel" in card
+    assert 'action="/suppliers/S1/edit"' in card and 'name="csrf_token"' in card
+    assert "Materials this supplier sells" in page and "Add material this supplier sells" in page     # the offers table stays
+
+
+def test_inline_form_and_standalone_form_use_the_same_fields_and_validation(admin):
+    standalone = admin.get("/suppliers/S1/edit").get_data(as_text=True)
+    inline = admin.get("/suppliers/S1?edit=1").get_data(as_text=True)
+    for field in ["name", "supplier_type", "address", "phone", "email", "website", "notes"]:
+        assert f'name="{field}"' in standalone and f'name="{field}"' in inline
+    bad = {**FULL_SUPPLIER_FORM, "name": "  ", "from_detail": "1"}
+    response = admin.post("/suppliers/S1/edit", data=bad)
+    page = response.get_data(as_text=True)
+    assert response.status_code == 400 and "supplier-edit-form" in page and "Please fill in the" in page    # error shown inside the card
+    assert "Materials this supplier sells" in page and "Changed note" in page                        # typed values are kept
+    assert "Local Shop" in admin.get("/suppliers/S1").get_data(as_text=True)                         # nothing was saved
+
+
+def test_saving_from_the_detail_page_shows_fresh_details_a_saved_message_and_updates_the_list(admin):
+    response = admin.post("/suppliers/S1/edit", data=FULL_SUPPLIER_FORM)
+    assert response.status_code == 302 and response.headers["Location"].endswith("/suppliers/S1")
+    detail = admin.get("/suppliers/S1").get_data(as_text=True)
+    assert "Saved Renamed Shop." in detail and "<h1>Renamed Shop</h1>" in detail
+    assert "082-999" in detail and "new@shop.example" in detail and "Changed note" in detail and "ONLINE" in detail
+    assert "Saved Renamed Shop." not in admin.get("/suppliers/S1").get_data(as_text=True)       # the message shows once only
+    listing = admin.get("/suppliers").get_data(as_text=True)
+    assert "Renamed Shop" in listing and "082-999" in listing and "new@shop.example" in listing
+
+
+def test_the_status_box_on_the_same_form_switches_a_supplier_off_and_on_in_both_places(admin):
+    admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "0"})
+    assert "(Switched off)" in admin.get("/suppliers/S1").get_data(as_text=True)
+    assert "Switched off" in admin.get("/suppliers").get_data(as_text=True)
+    admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "1"})
+    assert "(Switched off)" not in admin.get("/suppliers/S1").get_data(as_text=True)
+
+
+def test_a_bad_edit_from_the_detail_page_keeps_the_form_and_the_data(admin):
+    response = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "name": "  "})
+    assert response.status_code == 400 and "Edit supplier" in response.get_data(as_text=True)
+    assert "Local Shop" in admin.get("/suppliers/S1").get_data(as_text=True)
+
+
+def test_cancel_on_the_edit_form_goes_back_to_that_supplier_page(admin):
+    page = admin.get("/suppliers/S1/edit").get_data(as_text=True)
+    assert 'href="/suppliers/S1">Cancel' in page
+    assert 'href="/suppliers">Cancel' in admin.get("/suppliers/new").get_data(as_text=True)
+
+
+def test_editing_a_supplier_never_touches_its_offers(admin, database_file):
+    offers_before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM supplier_offers ORDER BY id")]
+    admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "0"})
+    assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM supplier_offers ORDER BY id")] == offers_before
+
+
+def test_employee_still_gets_no_edit_option_on_the_detail_page_and_403_on_the_address(employee, database_file):
+    page = employee.get("/suppliers/S1").get_data(as_text=True)
+    assert "Edit supplier" not in page and "/edit" not in page and "Switch off" not in page
+    before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")]
+    assert employee.get("/suppliers/S1/edit").status_code == 403
+    assert employee.post("/suppliers/S1/edit", data=FULL_SUPPLIER_FORM).status_code == 403
+    assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")] == before
+
+
+def test_inline_save_keeps_you_on_the_supplier_page_and_leaves_status_alone(admin):
+    admin.post("/suppliers/S4/edit", data={k: v for k, v in FULL_SUPPLIER_FORM.items() if k != "is_active"} | {"from_detail": "1"})
+    detail = admin.get("/suppliers/S4").get_data(as_text=True)
+    assert "Saved Renamed Shop." in detail and "(Switched off)" in detail           # S4 stays switched off: no status box in the card
+    response = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "from_detail": "1"})
+    assert response.status_code == 302 and response.headers["Location"].endswith("/suppliers/S1")
+
+
+def test_employee_never_gets_the_inline_form_even_with_edit_in_the_address(employee, database_file):
+    page = employee.get("/suppliers/S1?edit=1").get_data(as_text=True)
+    assert "supplier-edit-form" not in page and 'name="phone"' not in page and "Edit supplier" not in page
+    assert "Switch off" not in page and "Materials this supplier sells" in page
+    before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")]
+    assert employee.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "from_detail": "1"}).status_code == 403
+    assert employee.post("/suppliers/S1/switch").status_code == 403
+    assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")] == before
+
+
+def test_offer_controls_below_the_card_still_work_while_the_card_is_in_edit_mode(admin):
+    page = admin.get("/suppliers/S1?edit=1").get_data(as_text=True)
+    assert "/offers/O1/edit" in page and "/offers/O1/switch" in page and "/suppliers/S1/switch" in page

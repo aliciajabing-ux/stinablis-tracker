@@ -4,25 +4,13 @@
 {% block title %}Supplier form - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
-<h1>{{ 'Change supplier' if editing else 'Add supplier' }}</h1>
+<h1>{{ 'Edit supplier' if editing else 'Add supplier' }}</h1>
 <p>Type the supplier name and contact details. Only the name is required.{% if editing %} "Switched off" hides the supplier from Employees and from the supplier suggestions; nothing is deleted.{% endif %}</p>
 {% if message %}<p class="error">{{ message }}</p>{% endif %}
 <form method="post" class="box">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <label>Supplier name <input name="name" maxlength="100" required value="{{ supplier['name'] if supplier else '' }}"></label>
-  <label>Type <select name="supplier_type">
-    {% for t in ['LOCAL', 'ONLINE'] %}<option value="{{ t }}" {{ 'selected' if supplier and supplier['supplier_type'] == t }}>{{ t }}</option>{% endfor %}
-  </select></label>
-  <label>Address <input name="address" maxlength="200" value="{{ (supplier['address'] if supplier else '') or '' }}"></label>
-  <label>Phone <input name="phone" maxlength="30" value="{{ (supplier['phone'] if supplier else '') or '' }}"></label>
-  <label>Email <input name="email" maxlength="100" value="{{ (supplier['email'] if supplier else '') or '' }}"></label>
-  <label>Website <input name="website" maxlength="200" value="{{ (supplier['website'] if supplier else '') or '' }}"></label>
-  <label>Notes <textarea name="notes" maxlength="500" rows="3">{{ (supplier['notes'] if supplier else '') or '' }}</textarea></label>
-  {% if editing %}<label>Status <select name="is_active">
-    <option value="1" {{ 'selected' if supplier['is_active'] in (1, '1') }}>Active</option>
-    <option value="0" {{ 'selected' if supplier['is_active'] in (0, '0') }}>Switched off</option>
-  </select></label>{% endif %}
+  {% with show_status = editing %}{% include "supplier_fields.html" %}{% endwith %}
   <p><button class="button" type="submit">Save supplier</button>
-     <a href="{{ url_for('suppliers.supplier_list') }}">Cancel</a></p>
+     <a href="{{ url_for('suppliers.supplier_detail', supplier_id=supplier['id']) if editing and supplier and supplier['id'] else url_for('suppliers.supplier_list') }}">Cancel</a></p>
 </form>
 {% endblock %}

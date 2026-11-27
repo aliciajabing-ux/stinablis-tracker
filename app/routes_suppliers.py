@@ -3,7 +3,7 @@
 
 import uuid
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
 from app.alerts import STATUS_OK, add_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
@@ -154,19 +154,25 @@ def supplier_list():
                            can_manage=admin_view)
 
 
-# Shows one supplier with contact details and the materials it sells.
+# Shows one supplier with contact details and the materials it sells. For an Admin, "?edit=1" opens the edit form inside
+# the details card (an Employee who types it just sees the normal page: the form is never drawn and the save is blocked).
 @suppliers_blueprint.route("/suppliers/<supplier_id>")
 @login_required
 def supplier_detail(supplier_id):
-    database = get_db()
-    supplier = get_supplier_or_404(database, supplier_id)
+    supplier = get_supplier_or_404(get_db(), supplier_id)
+    wants_edit = request.args.get("edit") == "1" and can_manage_suppliers(get_current_user())
+    return render_supplier_detail(get_db(), supplier, edit_form=supplier if wants_edit else None)
+
+
+# Draws the supplier page. edit_form is None (normal view) or the values to show in the in-card edit form (with message = a problem).
+def render_supplier_detail(database, supplier, edit_form=None, message=""):
     show_prices = can_see_prices(get_current_user())
     can_manage = can_manage_suppliers(get_current_user())
-    offers = get_offers_for_supplier(database, supplier_id, show_prices)
+    offers = get_offers_for_supplier(database, supplier["id"], show_prices)
     if not can_manage:
         offers = [offer for offer in offers if offer["is_active"] == 1]
-    return render_template("supplier_detail.html", supplier=supplier, offers=offers,
-                           show_prices=show_prices, can_manage=can_manage)
+    return render_template("supplier_detail.html", supplier=supplier, offers=offers, show_prices=show_prices,
+                           can_manage=can_manage, edit_form=edit_form if can_manage else None, message=message)
 
 
 # Admin only: shows the "Add supplier" form and saves a new supplier.
@@ -185,7 +191,7 @@ def supplier_new():
     return redirect(url_for("suppliers.supplier_detail", supplier_id=new_id))
 
 
-# Returns 1 (active) or 0 (switched off) from the Status box of the Change supplier form. A form without the box
+# Returns 1 (active) or 0 (switched off) from the Status box of the Edit supplier form. A form without the box
 # keeps the supplier as it is; any other value is refused in plain words.
 def read_supplier_status(form, supplier):
     value = form.get("is_active")
@@ -196,7 +202,8 @@ def read_supplier_status(form, supplier):
     return int(value)
 
 
-# Admin only: shows the "Change supplier" form and saves the changes.
+# Admin only: shows the "Edit supplier" form and saves the changes. The Edit button on the Suppliers list opens this page; the
+# in-card form on the supplier page posts here too, so both places always use the same fields, checks and save.
 @suppliers_blueprint.route("/suppliers/<supplier_id>/edit", methods=["GET", "POST"])
 @admin_required
 def supplier_edit(supplier_id):
@@ -208,6 +215,8 @@ def supplier_edit(supplier_id):
         fields = read_supplier_form(request.form)
         new_state = read_supplier_status(request.form, supplier)
     except FormProblem as problem:
+        if request.form.get("from_detail") == "1":      # sent from the in-card form: show the problem there, keep what was typed
+            return render_supplier_detail(database, supplier, edit_form=request.form, message=str(problem)), 400
         return render_template("supplier_form.html", supplier=request.form, message=str(problem), editing=True), 400
     database.execute("UPDATE suppliers SET name=:name, supplier_type=:supplier_type, address=:address, "
                      "phone=:phone, email=:email, website=:website, notes=:notes, is_active=:is_active, "
@@ -217,6 +226,7 @@ def supplier_edit(supplier_id):
         word = "SWITCHED_ON" if new_state else "SWITCHED_OFF"
         log_change(database, "SUPPLIER_" + word, "suppliers", supplier_id, f"Supplier {fields['name']} {word.lower()}")
     database.commit()
+    flash(f"Saved {fields['name']}.")
     return redirect(url_for("suppliers.supplier_detail", supplier_id=supplier_id))
 
 

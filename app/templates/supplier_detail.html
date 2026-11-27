@@ -6,7 +6,20 @@
 {% include "supplier_style.html" %}
 <p><a href="{{ url_for('suppliers.supplier_list') }}">&larr; All suppliers</a></p>
 <h1>{{ supplier['name'] }}</h1>
-<div class="box">
+{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
+<div class="box" id="supplier-card">
+  {% if edit_form %}
+  <form method="post" action="{{ url_for('suppliers.supplier_edit', supplier_id=supplier['id']) }}" id="supplier-edit-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="from_detail" value="1">
+    <h2>Edit supplier</h2>
+    <p>Change the details below and press Save. Only the name is required. Use "Switch off" if the supplier is no longer used.</p>
+    {% if message %}<p class="error">{{ message }}</p>{% endif %}
+    {% with supplier = edit_form, show_status = false %}{% include "supplier_fields.html" %}{% endwith %}
+    <p><button class="button" type="submit" style="min-height: 44px;">Save</button>
+       <a class="button" style="min-height: 44px; box-sizing: border-box;" href="{{ url_for('suppliers.supplier_detail', supplier_id=supplier['id']) }}">Cancel</a></p>
+  </form>
+  {% else %}
   <p><strong>Type:</strong> {{ supplier['supplier_type'] }}
      {% if supplier['is_active'] != 1 %}(Switched off){% endif %}</p>
   <p><strong>Address:</strong> {{ supplier['address'] or '-' }}</p>
@@ -14,8 +27,9 @@
   <p><strong>Email:</strong> {{ supplier['email'] or '-' }}</p>
   <p><strong>Website:</strong> {{ supplier['website'] or '-' }}</p>
   <p><strong>Notes:</strong> {{ supplier['notes'] or '-' }}</p>
+  {% endif %}
   {% if can_manage %}
-  <a class="button" href="{{ url_for('suppliers.supplier_edit', supplier_id=supplier['id']) }}">Change supplier</a>
+  {% if not edit_form %}<a class="button" style="min-height: 44px; box-sizing: border-box;" href="{{ url_for('suppliers.supplier_detail', supplier_id=supplier['id'], edit=1) }}">Edit supplier</a>{% endif %}
   <form method="post" action="{{ url_for('suppliers.supplier_switch', supplier_id=supplier['id']) }}" style="display:inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="button" type="submit">{{ 'Switch off' if supplier['is_active'] == 1 else 'Switch on' }}</button>
