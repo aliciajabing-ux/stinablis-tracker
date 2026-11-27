@@ -1,0 +1,91 @@
+{# WHAT THIS FILE DOES: "Quick log": search box, and one row per material with a number box and a "Record used" button that saves without leaving the page.
+   WHO CAN USE IT: Both (Admin and Employee). No money is shown here. #}
+{% extends "base.html" %}
+{% block title %}Quick log - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  .ql-search { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; align-items: center; }
+  .ql-search label { flex-basis: 100%; font-weight: bold; }
+  .ql-search input { flex: 1 1 260px; min-height: 48px; font-size: 1.1rem; box-sizing: border-box; }
+  .ql-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #ccc; }
+  .ql-row[hidden] { display: none !important; }
+  .ql-name { flex: 1 1 220px; font-weight: bold; }
+  .ql-left { flex: 0 0 auto; min-width: 120px; }
+  .ql-row form { display: flex; gap: 8px; align-items: center; margin: 0; }
+  .ql-row input[type=text] { width: 110px; min-height: 48px; font-size: 1.1rem; box-sizing: border-box; }
+  .ql-row .btn, .ql-link { min-height: 48px; box-sizing: border-box; padding: 10px 16px; font-size: 1rem; cursor: pointer; }
+  .tag { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+  .tag-OK { background: #d8f3dc; color: #1b4332; }
+  .tag-LOW { background: #ffe5b4; color: #7a4100; }
+  .tag-OUT { background: #f5c2c2; color: #7a0000; }
+  .ql-note { flex-basis: 100%; font-size: 0.9rem; min-height: 1.2em; }
+  .ql-note.bad { color: #a30000; font-weight: bold; }
+  .ql-note.good { color: #1b4332; font-weight: bold; }
+</style>
+<h1>Quick log</h1>
+<p>Type how much you used next to each item and press "Record used". The page stays here, so you can log the next one straight away.</p>
+<form class="ql-search" method="get" action="{{ url_for('quick_log.quick_log_page') }}" role="search">
+  <label for="ql-search-box">Search by item name</label>
+  <input id="ql-search-box" type="text" name="q" value="{{ search_text }}" placeholder="Type an item name, for example PLA" maxlength="100" autocomplete="off">
+  <button class="btn main" type="submit">Search</button>
+  <a class="btn" href="{{ url_for('materials.list_materials', q=search_text or None) }}">Back to Materials</a>
+</form>
+{% for message in get_flashed_messages() %}<div class="message">{{ message }}</div>{% endfor %}
+<div id="ql-list">
+{% for material in materials %}
+<div class="ql-row" data-name="{{ (material.name ~ ' ' ~ (material.colour or '') ~ ' ' ~ (material.material_type or ''))|lower }}">
+  <div class="ql-name">{{ material.name }}{% if material.colour %} ({{ material.colour }}){% endif %}</div>
+  <div class="ql-left"><span class="ql-left-text">{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</span>
+    <span class="tag tag-{{ material.status }}">{{ material.status }}</span></div>
+  <form method="post" action="{{ url_for('quick_log.quick_log_save', material_id=material.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="q" value="{{ search_text }}">
+    <label class="sr-only" for="qty-{{ material.id }}" style="position:absolute;left:-9999px">Used ({{ material.unit|unit_word }})</label>
+    <input id="qty-{{ material.id }}" name="quantity" type="text" inputmode="decimal" placeholder="{{ material.unit|unit_word }}" required>
+    <button class="btn main" type="submit">Record used</button>
+  </form>
+  <div class="ql-note" role="status" aria-live="polite"></div>
+</div>
+{% else %}<p>No materials found. Try a different search.</p>{% endfor %}
+</div>
+<script>
+  // Saves each row without reloading, and filters the rows while you type. Without JavaScript the forms still work.
+  (function () {
+    var token = {{ csrf_token()|tojson }};
+    var box = document.getElementById("ql-search-box");
+    var rows = document.querySelectorAll(".ql-row");
+    box.addEventListener("input", function () {
+      var text = box.value.trim().toLowerCase();
+      rows.forEach(function (row) { row.hidden = text !== "" && row.dataset.name.indexOf(text) === -1; });
+    });
+    rows.forEach(function (row) {
+      var form = row.querySelector("form"), note = row.querySelector(".ql-note"), button = form.querySelector("button");
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        button.disabled = true;
+        fetch(form.action, { method: "POST", body: new URLSearchParams(new FormData(form)),
+                             headers: { "Accept": "application/json", "X-CSRF-Token": token } })
+          .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data }; }); })
+          .then(function (result) {
+            button.disabled = false;
+            if (result.ok && result.data.ok) {
+              row.querySelector(".ql-left-text").textContent = result.data.left;
+              var tag = row.querySelector(".tag");
+              tag.textContent = result.data.status;
+              tag.className = "tag tag-" + result.data.status;
+              form.querySelector("input[name=quantity]").value = "";
+              note.className = "ql-note good"; note.textContent = result.data.message;
+            } else {
+              note.className = "ql-note bad";
+              note.textContent = (result.data.problems || ["Sorry, that did not save. Please try again."]).join(" ");
+            }
+          })
+          .catch(function () {
+            button.disabled = false;
+            note.className = "ql-note bad"; note.textContent = "No connection. Nothing was saved. Please try again.";
+          });
+      });
+    });
+  })();
+</script>
+{% endblock %}

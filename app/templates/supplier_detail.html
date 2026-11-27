@@ -1,6 +1,7 @@
 {# WHAT THIS FILE DOES: One supplier: contact details and the materials it sells (prices only when show_prices is true).
    WHO CAN USE IT: Both (Admin and Employee see prices; edit buttons are Admin only). #}
 {% extends "base.html" %}
+{% from "contact_links.html" import phone_links, email_link %}
 {% block title %}{{ supplier['name'] }} - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
@@ -23,8 +24,8 @@
   <p><strong>Type:</strong> {{ supplier['supplier_type'] }}
      {% if supplier['is_active'] != 1 %}(Switched off){% endif %}</p>
   <p><strong>Address:</strong> {{ supplier['address'] or '-' }}</p>
-  <p><strong>Phone:</strong> {{ supplier['phone'] or '-' }}</p>
-  <p><strong>Email:</strong> {{ supplier['email'] or '-' }}</p>
+  <p><strong>Phone:</strong> {% if supplier['phone'] %}{{ phone_links(supplier['phone']) }}{% else %}-{% endif %}</p>
+  <p><strong>Email:</strong> {% if supplier['email'] %}{{ email_link(supplier['email']) }}{% else %}-{% endif %}</p>
   <p><strong>Website:</strong> {{ supplier['website'] or '-' }}</p>
   <p><strong>Notes:</strong> {{ supplier['notes'] or '-' }}</p>
   {% endif %}

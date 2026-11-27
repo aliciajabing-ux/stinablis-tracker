@@ -35,6 +35,8 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 | Type the supplier and total paid on Record received | Yes | No | Admin only (Agent A design "Option B"). The boxes are not drawn for Employees, and typing the money anyway gets 403 and nothing is saved. |
 | See the Last bought note (supplier, date and money) | Yes | Yes | The money part follows the "see prices" rule. |
 | Add, edit or remove a material | Yes | No | "Remove" only switches a material off; its history stays. |
+| Correct stock (set stock to the real count, with a reason) | Yes | No | Admin only (2026-11-27). Saved as a "Stock correction" line plus an activity-log line; it never counts as usage or as a purchase. Employees get 403 on the page and on the save. |
+| Use Quick log to record stock used without leaving the page | Yes | Yes | Same rules as Record used (2026-11-27); no money on the page. |
 
 ### Suppliers
 

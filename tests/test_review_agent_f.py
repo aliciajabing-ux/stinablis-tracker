@@ -199,6 +199,9 @@ SCREEN_MATRIX = {
     "/materials/M1/record/used": (302, 200, 200),
     "/materials/M1/record/received": (302, 200, 200),
     "/materials/M1/remove": (405, 405, 405),
+    "/materials/M1/correct": (302, 403, 200),                   # Admin only: "Set stock to" (2026-11-27)
+    "/quick-log": (302, 200, 200),                             # Quick log: Admin and Employee (2026-11-27)
+    "/quick-log/M1": (405, 405, 405),                          # POST only
     "/materials/M1/spool/open": (405, 405, 405),               # spool care buttons are POST only (Admin and Employee, see tests/test_spool_care.py)
     "/suppliers": (302, 200, 200),
     "/suppliers/S1": (302, 200, 200),
@@ -431,7 +434,8 @@ def test_activity_log_times_are_stored_in_utc(admin, database_file):
 
 def test_no_address_can_edit_or_delete_the_activity_log(website):
     for rule in website.url_map.iter_rules():
-        assert "log" not in rule.rule.replace("login", "").replace("logout", ""), rule.rule
+        # "quick-log" (2026-11-27) is the Quick log page for recording stock used; it has nothing to do with the activity log.
+        assert "log" not in rule.rule.replace("login", "").replace("logout", "").replace("quick-log", ""), rule.rule
 
 
 # --- Number fields reject letters; text fields reject very long input ---

@@ -10,7 +10,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status, sort_ok_low_out
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
-from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
+from app.permissions import (admin_required, can_correct_stock, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
 from app.spool_care import (DAY_FORMAT, DRY_AFTER_HIGHEST, DRY_AFTER_LOWEST, DRYER_AFTER_DAYS, FILAMENT_UNIT, add_spool_care, has_open_date, is_filament, is_resin, parse_day,
                               today_malaysia)
@@ -31,6 +31,9 @@ MAX_NOTE_LENGTH = 200
 NUMBER_PATTERN = re.compile(r"^\d{1,7}(\.\d{1,2})?$")
 MOVEMENT_WORDS = {"USED": "Used", "RECEIVED": "Received", "ADJUSTED": "Starting stock"}
 KIND_TO_MOVEMENT = {"used": "USED", "received": "RECEIVED"}
+CORRECTION_PREFIX = "Stock correction"       # an ADJUSTED line that starts its note with this is a correction, not a starting stock
+CORRECTION_NOTE_PATTERN = re.compile(r"^" + CORRECTION_PREFIX + r": ([\d.]+) -> ([\d.]+)")
+STATUS_WORDS = (STATUS_OK, STATUS_LOW, STATUS_OUT)
 NUMBER_HELP = "Please type the {label} as a number, for example 200"
 FLOW_PATTERN = re.compile(r"^\d(\.\d{1,3})?$")      # EXPERIMENT 2026-11-26: for example 0.96
 SPOOL_ACTIONS = {"open": ("opened_date", "SPOOL_OPENED", "Opened"), "dried": ("last_dried_date", "SPOOL_DRIED", "Marked dried")}
@@ -61,6 +64,31 @@ def to_malaysia_time(utc_text):
         return ""
     local_time = datetime.strptime(utc_text, TIME_FORMAT) + timedelta(hours=8)
     return local_time.strftime("%d %b %Y %H:%M")
+
+
+# Returns the address of the Materials list with the same search words and filter the person had (from ?q= and ?status=).
+def get_list_address():
+    return url_for("materials.list_materials", **get_list_arguments())
+
+
+# Returns the search words and filter of this request as a small dictionary (to add to links that go to another page and back).
+def get_list_arguments():
+    arguments = {}
+    search_text = request.args.get("q", "").strip()[:MAX_TEXT_LENGTH]
+    if search_text:
+        arguments["q"] = search_text
+    if request.args.get("status") in STATUS_WORDS:
+        arguments["status"] = request.args["status"]
+    return arguments
+
+
+# Returns the plain word and the amount (with + or - for a correction) to show for one history line.
+def describe_movement(movement_type, quantity, note):
+    match = CORRECTION_NOTE_PATTERN.match(note or "") if movement_type == "ADJUSTED" else None
+    if match is None:
+        return MOVEMENT_WORDS[movement_type], f"{quantity:g}"
+    sign = "+" if float(match.group(2)) > float(match.group(1)) else "-"
+    return "Stock correction", f"{sign}{quantity:g}"
 
 
 # Writes one line to the activity log about a material (who, what, when).
@@ -175,7 +203,8 @@ def read_spool_dates(form):
 
 
 # Records stock used or received: changes the quantity AND writes the history row. Returns True if it worked.
-def record_stock_change(database, material, movement_type, quantity, note, user, supplier=None, total_cost=None):
+def record_stock_change(database, material, movement_type, quantity, note, user, supplier=None, total_cost=None,
+                        reset_spool=False):
     if movement_type == "USED":
         changed = database.execute(
             "UPDATE materials SET quantity_on_hand = ROUND(quantity_on_hand - ?, 2), updated_at = ? "
@@ -192,8 +221,19 @@ def record_stock_change(database, material, movement_type, quantity, note, user,
     movement_id = add_movement_rows(database, material, movement_type, quantity, note, user, supplier, total_cost)
     if movement_type == "USED":
         write_low_stock_event_if_needed(database, material, movement_id, user)
+    if reset_spool and movement_type == "RECEIVED" and has_open_date(material):
+        reset_spool_dates(database, material, user)
     database.commit()
     return True
+
+
+# Makes a spool or bottle "Sealed" again: clears the opened and dried dates and writes the activity-log line (no commit here).
+def reset_spool_dates(database, material, user):
+    database.execute("UPDATE materials SET opened_date = NULL, last_dried_date = NULL, updated_at = ? WHERE id = ?",
+                     (utc_now().strftime(TIME_FORMAT), material["id"]))
+    write_material_log(database, user["id"], "SPOOL_RESET", material["id"],
+                       f"New sealed {'bottle' if is_resin(material) else 'spool'} received: opened and dried dates of "
+                       f"{material['name']} {material['colour'] or ''} cleared.".replace("  ", " "))
 
 
 # Writes a low_stock_events row and an activity-log line if this material has just fallen from OK to LOW or OUT
@@ -531,6 +571,7 @@ def record_stock(material_id, kind):
     material = find_active_material(material_id)
     if request.method == "GET":
         return show_record_form(material, kind, [], "", {})
+    reset_spool = kind == "received" and has_open_date(material) and request.form.get("new_sealed") == "yes"
     quantity = read_number(request.form.get("quantity"), allow_zero=False)
     note = read_text(request.form.get("note"), MAX_NOTE_LENGTH)
     problems = check_record_input(material, kind, quantity, note)
@@ -542,12 +583,13 @@ def record_stock(material_id, kind):
         supplier, total_cost, purchase_problems = read_purchase_form(get_db(), request.form)
         problems += purchase_problems
     if not problems and not record_stock_change(get_db(), material, KIND_TO_MOVEMENT[kind], quantity, note, user,
-                                                supplier, total_cost):
+                                                supplier, total_cost, reset_spool):
         problems = [f"There is not enough {material['name']} in stock to take out {quantity:g} {material['unit']}."]
     if problems:
         return show_record_form(material, kind, problems, request.form.get("quantity", ""), request.form), 400
-    flash(f"{MOVEMENT_WORDS[KIND_TO_MOVEMENT[kind]]} {quantity:g} {material['unit']} of {material['name']}.")
-    return redirect(url_for("materials.list_materials"))
+    flash(f"{MOVEMENT_WORDS[KIND_TO_MOVEMENT[kind]]} {quantity:g} {material['unit']} of {material['name']}."
+          + (" Marked as a new sealed " + ("bottle." if is_resin(material) else "spool.") if reset_spool else ""))
+    return redirect(get_list_address())          # back to the SAME search the person had
 
 
 # Returns the plain-language problems with a "record stock" form (an empty list if it is fine).
@@ -594,10 +636,76 @@ def show_record_form(material, kind, problems, typed_quantity, typed_form):
         "SELECT m.movement_type, m.quantity, m.note, m.created_at, u.username FROM stock_movements m "
         "JOIN users u ON u.id = m.user_id WHERE m.material_id = ? ORDER BY m.created_at DESC, m.rowid DESC LIMIT 10",
         (material["id"],)).fetchall()
-    history_lines = [{"type": MOVEMENT_WORDS[row["movement_type"]], "quantity": row["quantity"], "note": row["note"],
-                      "when": to_malaysia_time(row["created_at"]), "who": row["username"]} for row in history]
+    history_lines = []
+    for row in history:
+        word, amount = describe_movement(row["movement_type"], row["quantity"], row["note"])
+        history_lines.append({"type": word, "amount": amount, "note": row["note"],
+                              "when": to_malaysia_time(row["created_at"]), "who": row["username"]})
     material_with_status = add_status(material)
     last_bought = get_last_bought(get_db(), material_with_status, can_see_prices(get_current_user()))
     return render_template("materials_record.html", material=material_with_status, kind=kind, problems=problems,
                            typed_quantity=typed_quantity, history=history_lines, typed=typed_form, last_bought=last_bought,
-                           can_enter_money=can_enter_money, suppliers=get_active_suppliers(get_db()) if can_enter_money else [])
+                           can_enter_money=can_enter_money, suppliers=get_active_suppliers(get_db()) if can_enter_money else [],
+                           can_reset_spool=kind == "received" and has_open_date(material),
+                           reset_is_resin=is_resin(material), back_address=get_list_address())
+
+
+
+# Returns the plain-language problems with the "Correct stock" form (an empty list if it is fine).
+def check_correction_input(material, new_quantity, reason):
+    problems = []
+    if new_quantity is None:
+        problems.append(NUMBER_HELP.format(label="real count") + " (0 or more).")
+    elif new_quantity == material["quantity_on_hand"]:
+        problems.append(f"The app already says {material['quantity_on_hand']:g} {material['unit']}. Nothing to correct.")
+    if not reason:
+        problems.append("Please type a short reason, for example \"Physical shelf count\".")
+    elif len(reason) > MAX_NOTE_LENGTH:
+        problems.append(f"The reason must be {MAX_NOTE_LENGTH} letters or fewer.")
+    return problems
+
+
+# Sets the stock to the real count: one ADJUSTED line (the size of the difference, the note says which way and why)
+# and one activity-log line. Returns False if the stock changed while the Admin was typing (nothing is saved then).
+def correct_stock(database, material, new_quantity, reason, user):
+    old_quantity = material["quantity_on_hand"]
+    difference = round(new_quantity - old_quantity, 2)
+    now_text = utc_now().strftime(TIME_FORMAT)
+    changed = database.execute("UPDATE materials SET quantity_on_hand = ?, updated_at = ? WHERE id = ? AND is_active = 1 "
+                               "AND quantity_on_hand = ?", (new_quantity, now_text, material["id"], old_quantity)).rowcount
+    if changed == 0:
+        database.rollback()
+        return False
+    note = (f"{CORRECTION_PREFIX}: {old_quantity:g} -> {new_quantity:g} {material['unit']} "
+            f"({difference:+g}). Reason: {reason}")
+    database.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at) "
+                     "VALUES (?, ?, 'ADJUSTED', ?, ?, ?, ?)",
+                     ("S" + uuid.uuid4().hex[:12], material["id"], abs(difference), note, user["id"], now_text))
+    write_material_log(database, user["id"], "STOCK_CORRECTED", material["id"],
+                       f"{material['name']} corrected from {old_quantity:g} to {new_quantity:g} {material['unit']} "
+                       f"({difference:+g}). Reason: {reason}")
+    database.commit()
+    return True
+
+
+# Shows the Admin-only "Correct stock" form ("Set stock to") and saves it. Employees get 403 (page and save).
+@materials_blueprint.route("/<material_id>/correct", methods=["GET", "POST"])
+@login_required
+def correct_stock_screen(material_id):
+    user = get_current_user()
+    if not can_correct_stock(user):
+        abort(403)
+    material = add_status(find_active_material(material_id))
+    if request.method == "GET":
+        return render_template("materials_correct.html", material=material, problems=[], typed={},
+                               back_address=get_list_address())
+    new_quantity = read_number(request.form.get("new_quantity"), allow_zero=True)
+    reason = (request.form.get("reason") or "").strip()
+    problems = check_correction_input(material, new_quantity, reason)
+    if not problems and not correct_stock(get_db(), material, new_quantity, reason, user):
+        problems = [f"The stock of {material['name']} changed while you were typing. Please check the number and try again."]
+    if problems:
+        return render_template("materials_correct.html", material=material, problems=problems, typed=request.form,
+                               back_address=get_list_address()), 400
+    flash(f"Stock of {material['name']} is now {new_quantity:g} {material['unit']}. The correction is saved in the history.")
+    return redirect(get_list_address())

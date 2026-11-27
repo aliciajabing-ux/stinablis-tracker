@@ -423,11 +423,6 @@ def test_delivery_days_are_written_in_the_singular_for_one_day(database_file):
     assert routes_stats.get_delivery_ranking(open_database(database_file), "")["rows"][0]["days_text"] == "1 day on average"
 
 
-def test_the_material_list_has_only_materials_two_suppliers_sell(database_file):
-    labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
-    assert labels == ["PLA Basic White (g)"]           # PETG has one supplier, ABS has none
-
-
 def test_ranking_address_works_for_both_roles_and_has_no_money(admin, employee):
     for browser in (admin, employee):
         data = browser.get("/stats/data/delivery-ranking?material=M1").get_json()
@@ -436,31 +431,115 @@ def test_ranking_address_works_for_both_roles_and_has_no_money(admin, employee):
     assert "myr" not in text and "price" not in text and "cost" not in text
 
 
-def test_the_page_offers_the_material_choice_only_for_materials_with_two_suppliers(admin, employee):
+# Returns the words of the ranking list (the <ol>) of a Statistics page, and the empty-message tag.
+def ranking_part(page):
+    after_list = page.split('id="ranking-list"')[1]
+    return after_list.split("</ol>")[0], after_list.split("</ol>")[1].split("</p>")[0]
+
+
+RANKING_SUBTITLE = ("Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. The days are what "
+                    "each supplier says; the arrival date is today plus those days (an estimate).")
+
+
+# Decision 2026-11-27: the "Rank suppliers for:" drop-down is ALWAYS there, with every active material A to Z.
+def test_the_dropdown_lists_every_active_material_a_to_z_without_units(database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO materials (id, name, colour, unit, quantity_on_hand, reorder_level, is_active) "
+                       "VALUES ('M9', 'AAA Retired', 'Red', 'g', 1, 1, 0)")
+    connection.commit()
+    connection.close()
+    labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
+    assert labels == ["ABS Grey", "PETG Clear", "PLA Basic White"]            # switched-off material left out, no "(g)"
+
+
+def test_the_page_has_the_subtitle_then_the_dropdown_then_the_list_for_both_roles(admin, employee):
     for browser in (admin, employee):
         page = browser.get("/stats/").get_data(as_text=True)
-        assert 'id="ranking-material"' in page and "All materials (average)" in page
+        panel = page.split('id="panel-ranking"')[1]
+        assert RANKING_SUBTITLE in panel
+        assert panel.index(RANKING_SUBTITLE) < panel.index("Rank suppliers for:") < panel.index('id="ranking-list"')
         chooser = page.split('id="ranking-material"')[1].split("</select>")[0]
-        assert "PLA Basic White (g)" in chooser and "PETG Clear" not in chooser and "ABS Grey" not in chooser
+        options = re.findall(r"<option value=\"([^\"]*)\"[^>]*>([^<]*)</option>", chooser)
+        assert options == [("", "All materials (average)"), ("M3", "ABS Grey"), ("M2", "PETG Clear"), ("M1", "PLA Basic White")]
         assert "lead-chart" not in page and "Average delivery time per supplier" not in page
         assert browser.get("/stats/data/lead-times").status_code == 404
 
 
-def test_the_material_choice_is_hidden_when_no_material_has_two_suppliers(admin, employee, database_file):
+def test_the_dropdown_is_there_even_when_no_material_has_two_suppliers(admin, employee, database_file):
     connection = sqlite3.connect(database_file)
     connection.execute("DELETE FROM supplier_offers WHERE id = 'O3'")             # PLA now has one supplier too
     connection.commit()
     connection.close()
     for browser in (admin, employee):
         page = browser.get("/stats/").get_data(as_text=True)
-        assert 'id="ranking-material"' not in page and "Rank suppliers for" not in page
-        assert 'id="ranking-list"' in page                                        # the overall ranking is still there
+        assert 'id="ranking-material"' in page and "Rank suppliers for:" in page and "PETG Clear" in page
 
 
-def test_two_offers_of_one_supplier_do_not_count_as_two_suppliers(database_file):
+def test_all_materials_ranks_every_supplier_by_average_days_for_both_roles(admin, employee):
+    for browser in (admin, employee):
+        page = browser.get("/stats/").get_data(as_text=True)
+        items, empty = ranking_part(page)
+        assert 'value="" selected' not in page and "<option value=\"\">All materials (average)</option>" in page
+        assert items.index("Kuching Shop") < items.index("Web Store")
+        assert "2 days on average, arrives about" in items and "7 days on average, arrives about" in items
+        assert "hidden" in empty                                                  # the "nobody sells this" line is hidden
+
+
+def test_one_material_shows_only_the_suppliers_that_sell_it_without_on_average(admin, employee):
+    for browser in (admin, employee):
+        pla = ranking_part(browser.get("/stats/?material=M1").get_data(as_text=True))[0]
+        assert pla.index("Kuching Shop") < pla.index("Web Store")                # fastest first
+        assert "1 day, arrives about" in pla and "7 days, arrives about" in pla and "on average" not in pla
+        petg_page = browser.get("/stats/?material=M2").get_data(as_text=True)
+        petg = ranking_part(petg_page)[0]
+        assert "Kuching Shop" in petg and "Web Store" not in petg                # Web Store sells no PETG
+        assert "3 days, arrives about" in petg and "on average" not in petg
+        assert '<option value="M2" selected>PETG Clear</option>' in petg_page    # the choice is kept in the dropdown
+
+
+def test_one_material_nobody_sells_says_so_and_an_unknown_material_means_all(admin, employee):
+    for browser in (admin, employee):
+        items, empty = ranking_part(browser.get("/stats/?material=M3").get_data(as_text=True))
+        assert "<li" not in items and "No supplier sells this yet." in empty and "hidden" not in empty
+        fallback = browser.get("/stats/?material=NOPE").get_data(as_text=True)
+        assert "on average" in ranking_part(fallback)[0]
+
+
+def test_ties_share_rank_one_both_get_fastest_and_the_next_is_number_three(admin, employee, database_file):
+    connection = sqlite3.connect(database_file)
+    connection.execute("INSERT INTO suppliers (id, name, supplier_type) VALUES ('S9', 'Slow Shop', 'ONLINE')")
+    connection.commit()
+    connection.close()
+    add_offer(database_file, "O8", "S2", "M2", 3)                  # Web Store ties with Kuching Shop (3 days) for PETG
+    add_offer(database_file, "O9", "S9", "M2", 5)
+    for browser in (admin, employee):
+        items = ranking_part(browser.get("/stats/?material=M2").get_data(as_text=True))[0]
+        numbers = re.findall(r'class="rank-number">(\d+)<', items)
+        assert numbers == ["1", "1", "3"] and items.count("Fastest") == 2
+        data = browser.get("/stats/data/delivery-ranking?material=M2").get_json()
+        assert [(r["rank"], r["supplier"]) for r in data["rows"]] == [(1, "Kuching Shop"), (1, "Web Store"), (3, "Slow Shop")]
+
+
+def test_the_data_address_matches_the_page_for_all_and_for_one_material(admin, employee):
+    for browser in (admin, employee):
+        everything = browser.get("/stats/data/delivery-ranking").get_json()
+        assert everything["is_average"] is True and everything["rows"][0]["days_text"] == "2 days on average"
+        one = browser.get("/stats/data/delivery-ranking?material=M1").get_json()
+        assert one["is_average"] is False and [r["days_text"] for r in one["rows"]] == ["1 day", "7 days"]
+        assert all(re.match(r"\d{2} \w{3}$", row["arrival"]) for row in one["rows"])
+
+
+def test_changing_the_dropdown_works_without_a_reload_and_has_a_plain_address_fallback(employee):
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert '<form method="get" action="/stats/#ranking" id="ranking-form">' in page
+    assert 'name="material"' in page and "<noscript><button" in page             # without script the button sends ?material=
+    assert 'addEventListener("change", loadRanking)' in page and "replaceState" in page
+
+
+def test_two_offers_of_one_supplier_still_show_one_line_for_that_supplier(database_file):
     add_offer(database_file, "O5", "S1", "M2", 9)                                 # same supplier again for PETG
-    labels = [m["label"] for m in routes_stats.get_ranking_materials(open_database(database_file))]
-    assert "PETG Clear (g)" not in labels
+    rows = routes_stats.get_delivery_ranking(open_database(database_file), "M2")["rows"]
+    assert [r["supplier"] for r in rows] == ["Kuching Shop"]                      # one line, its fastest offer (3 days)
 
 
 # ---------- The Statistics sidebar (guide F7, decision 2026-11-26) ----------

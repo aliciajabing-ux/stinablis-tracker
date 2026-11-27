@@ -14,6 +14,8 @@
   .tag-OK { background: #d8f3dc; color: #1b4332; }
   .tag-LOW { background: #ffe5b4; color: #7a4100; }
   .tag-OUT { background: #f5c2c2; color: #7a0000; }
+  .checkline { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-top: 12px; }
+  .checkline input { width: 24px; height: 24px; max-width: none; padding: 0; }
   .memo { background: #eef3fa; padding: 10px; border-radius: 6px; }
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; background: #fff; }
@@ -47,10 +49,15 @@
   <input id="total_cost" name="total_cost" type="text" inputmode="decimal" value="{{ typed.get('total_cost', '') }}">
   <p>Type what the invoice says, including shipping. It is used for the "money spent" numbers.</p>
   {% endif %}
+  {% if can_reset_spool %}
+  <p><label class="checkline"><input id="new_sealed" name="new_sealed" type="checkbox" value="yes"{% if typed.get('new_sealed') == 'yes' %} checked{% endif %}>
+     New sealed {{ 'bottle' if reset_is_resin else 'spool' }} (reset opened &amp; dried dates)</label></p>
+  <p>Tick this when the new stock is a sealed {{ 'bottle' if reset_is_resin else 'spool' }}, so an old "opened" or "put in dryer" warning goes away.</p>
+  {% endif %}
   <label for="note">Note (optional)</label>
   <input id="note" name="note" type="text" maxlength="200">
   <button class="btn" type="submit">{{ 'Record used' if kind == 'used' else 'Record received' }}</button>
-  <a class="btn plain" href="{{ url_for('materials.list_materials') }}">Cancel</a>
+  <a class="btn plain" href="{{ back_address }}">Cancel</a>
 </form>
 
 <h2>Latest history</h2>
@@ -58,7 +65,7 @@
 <table>
   <tr><th>When (Malaysia time)</th><th>What</th><th>Amount</th><th>Who</th><th>Note</th></tr>
   {% for line in history %}
-  <tr><td>{{ line.when }}</td><td>{{ line.type }}</td><td>{{ '%g'|format(line.quantity) }} {{ material.unit|unit_word }}</td>
+  <tr><td>{{ line.when }}</td><td>{{ line.type }}</td><td>{{ line.amount }} {{ material.unit|unit_word }}</td>
       <td>{{ line.who }}</td><td>{{ line.note or '' }}</td></tr>
   {% else %}
   <tr><td colspan="5">No history yet.</td></tr>

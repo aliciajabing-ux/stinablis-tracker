@@ -1,6 +1,7 @@
-{# WHAT THIS FILE DOES: "Find supplier" page: the best suppliers for one LOW or OUT material, best first.
+{# WHAT THIS FILE DOES: "Find supplier" page: the suppliers for any one material (LOW, OUT or OK), best first.
    WHO CAN USE IT: Both (money columns appear only when show_prices is true). #}
 {% extends "base.html" %}
+{% from "contact_links.html" import phone_links, email_link %}
 {% block title %}Find supplier - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
@@ -16,8 +17,9 @@
   </form>
 </div>
 {% if material['status'] == 'OK' %}
-  <p>This material is OK, so there is nothing to order right now.</p>
-{% elif not suggestions %}
+  <p>This material is OK, so there is nothing to order right now. The list below is only for comparing suppliers.</p>
+{% endif %}
+{% if not suggestions %}
   <p>No supplier can deliver this material{% if days_allowed is not none %} within {{ days_allowed }} {{ 'day' if days_allowed == 1 else 'days' }}{% endif %}. Try a longer time, or ask the Admin to add a supplier.</p>
 {% else %}
 <div class="scroll cards"><table>
@@ -31,7 +33,7 @@
     <td data-label="Lead time">{{ s['lead_time_days'] }} {{ 'day' if s['lead_time_days'] == 1 else 'days' }}</td>
     <td data-label="Estimated arrival">{{ s['arrival_date'].strftime('%d %b %Y') }} (estimate)</td>
     {% if show_prices %}<td data-label="Estimated cost">MYR {{ '%.2f' % s['estimated_cost_myr'] }} (estimate)</td>{% endif %}
-    <td data-label="Contact">{{ s['phone'] or '' }}<br>{{ s['email'] or '' }}<br>{{ s['website'] or '' }}</td>
+    <td data-label="Contact">{{ phone_links(s['phone']) }}<br>{{ email_link(s['email']) }}<br>{{ s['website'] or '' }}</td>
   </tr>
   {% endfor %}
 </table></div>

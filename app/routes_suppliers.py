@@ -5,7 +5,7 @@ import uuid
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
 
-from app.alerts import STATUS_OK, add_status
+from app.alerts import add_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import admin_required, can_manage_suppliers, can_see_prices, login_required
 from app.suggest import get_suggestions
@@ -309,7 +309,7 @@ def offer_switch(offer_id):
     return redirect(url_for("suppliers.supplier_detail", supplier_id=offer["supplier_id"]))
 
 
-# Shows the ranked supplier suggestions for one LOW or OUT material ("Find supplier").
+# Shows the ranked supplier suggestions for any one material ("Find supplier"): LOW, OUT and also OK (to compare prices).
 @suppliers_blueprint.route("/suggest/<material_id>")
 @login_required
 def suggest_supplier(material_id):
@@ -321,8 +321,6 @@ def suggest_supplier(material_id):
     days_text = request.args.get("days", "").strip()
     days_allowed = int(days_text) if days_text.isdigit() and int(days_text) < 1000 else None
     show_prices = can_see_prices(get_current_user())
-    suggestions = []
-    if material["status"] != STATUS_OK:
-        suggestions = get_suggestions(database, material, show_prices, days_allowed)
+    suggestions = get_suggestions(database, material, show_prices, days_allowed)
     return render_template("suggest.html", material=material, suggestions=suggestions,
                            show_prices=show_prices, days_allowed=days_allowed)

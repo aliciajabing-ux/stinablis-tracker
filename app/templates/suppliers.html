@@ -1,6 +1,7 @@
 {# WHAT THIS FILE DOES: The Suppliers list page.
    WHO CAN USE IT: Both (only Admin sees the Add button and switched-off suppliers). #}
 {% extends "base.html" %}
+{% from "contact_links.html" import phone_links, email_link %}
 {% block title %}Suppliers - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
@@ -17,7 +18,7 @@
   {% for s in suppliers %}
   <tr>
     <td data-label="Name"><a href="{{ url_for('suppliers.supplier_detail', supplier_id=s['id']) }}">{{ s['name'] }}</a></td>
-    <td data-label="Type">{{ s['supplier_type'] }}</td><td data-label="Phone">{{ s['phone'] or '' }}</td><td data-label="Email">{{ s['email'] or '' }}</td>
+    <td data-label="Type">{{ s['supplier_type'] }}</td><td data-label="Phone">{{ phone_links(s['phone']) }}</td><td data-label="Email">{{ email_link(s['email']) }}</td>
     <td data-label="Status">{{ 'Active' if s['is_active'] == 1 else 'Switched off' }}</td>
     {% if can_manage %}<td class="row-edit"><a class="button" href="{{ url_for('suppliers.supplier_edit', supplier_id=s['id']) }}">Edit<span class="sr-only"> {{ s['name'] }}</span></a></td>{% endif %}
   </tr>

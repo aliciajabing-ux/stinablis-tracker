@@ -40,6 +40,11 @@ def can_manage_materials(user):
     return is_admin(user)
 
 
+# Returns True if the user may correct the stock count of a material ("Set stock to X", Admin only).
+def can_correct_stock(user):
+    return is_admin(user)
+
+
 # Returns True if the user may add, change or remove suppliers and their offers (Admin only).
 def can_manage_suppliers(user):
     return is_admin(user)

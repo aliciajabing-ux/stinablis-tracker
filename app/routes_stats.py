@@ -104,15 +104,12 @@ def get_purchases_by_material(database, now=None):
     return get_quantity_by_period(database, "RECEIVED", "month", now)
 
 
-# Returns the materials that TWO OR MORE different active suppliers sell, for the "choose a material" list (no prices
-# read). A material with one supplier would give a one-line "ranking", so it is not offered.
+# Returns every active material for the "Rank suppliers for:" drop-down, A to Z (for example "ABS Grey", "PLA White").
+# No prices are read. A material nobody sells simply shows an empty ranking.
 def get_ranking_materials(database):
     rows = database.execute(
-        "SELECT m.id, m.name, m.colour, m.unit FROM materials m "
-        "JOIN supplier_offers o ON o.material_id = m.id JOIN suppliers s ON s.id = o.supplier_id "
-        "WHERE m.is_active = 1 AND o.is_active = 1 AND s.is_active = 1 "
-        "GROUP BY m.id HAVING COUNT(DISTINCT s.id) >= 2 ORDER BY m.name, m.colour").fetchall()
-    return [{"id": r["id"], "label": " ".join(p for p in (r["name"], r["colour"]) if p) + " (" + r["unit"] + ")"} for r in rows]
+        "SELECT id, name, colour FROM materials WHERE is_active = 1 ORDER BY lower(name), lower(colour), id").fetchall()
+    return [{"id": r["id"], "label": " ".join(p for p in (r["name"], r["colour"]) if p)} for r in rows]
 
 
 # Turns database rows (supplier, type, days) already sorted fastest first into ranked lines. Same days share a rank
@@ -300,9 +297,14 @@ def show_dashboard():
 def statistics_page():
     admin_tools = is_admin(get_current_user())
     database = get_db()
+    ranking_materials = get_ranking_materials(database)
+    chosen_material = request.args.get("material", "")
+    if chosen_material not in [material["id"] for material in ranking_materials]:
+        chosen_material = ""                  # an unknown ?material= falls back to "All materials (average)"
     return render_template("stats.html", show_admin_tools=admin_tools,
                            now_text=malaysia_now().strftime("%d %b %Y %H:%M"),
-                           ranking_materials=get_ranking_materials(database),
+                           ranking_materials=ranking_materials, chosen_material=chosen_material,
+                           ranking=get_delivery_ranking(database, chosen_material),
                            days_left_rows=get_days_of_stock_left(database),
                            lead_margin_days=DAYS_LEFT_CLOSE_MARGIN_DAYS,
                            money=get_spending_and_stock_value(database) if admin_tools else None)

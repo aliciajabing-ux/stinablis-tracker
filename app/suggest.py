@@ -1,4 +1,4 @@
-# WHAT THIS FILE DOES: Picks the best supplier to order from for a material that is LOW or OUT, and works out the estimated cost and arrival date.
+# WHAT THIS FILE DOES: Picks the best supplier to order from for a material (LOW, OUT, or OK for price comparison), and works out the estimated cost and arrival date.
 # WHO CAN USE IT: Both (Admin sees costs; Employee gets the same list with the money numbers removed).
 #
 # The rules (guide Sections 5 F6 and 7). All numbers are ESTIMATES.
