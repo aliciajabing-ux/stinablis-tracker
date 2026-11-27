@@ -20,7 +20,7 @@ he had three tasks: (1) find where we bought standard resin, (2) find which supp
 from stock information to supplier information was not direct. In his words: "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
 What we changed on `main`: a search box first on Materials, the list in OK, LOW, OUT order inside two
 sections ("Filament & Resin" and "Other materials"; resin gets "Open Bottle Today" tracking, filament gets spool care), 26 more sample materials so Test 2 can be run
-(PLA+ Orange, PETG Grey), a Statistics page with a delivery ranking, a simple Home page with a
+(PLA+ Orange, PETG Grey), a Statistics page (usage by unit, days of stock left, a delivery ranking and, for the Admin, spending & stock value), a simple Home page with a
 **Notifications** list. **Test 2** (PLA Orange, PETG Gray, add a new purchase) has **not** been timed or
 completed, so do not claim it is faster than 7:16. One honest gap: the "Find supplier" ranking still only
 appears for LOW or OUT items, so comparing suppliers for an OK item (like nuts) is not a one-step job yet.
@@ -91,8 +91,8 @@ Facts:
 | See "Last bought" (who, how much, date, total paid in MYR) | Yes | Yes (view only) |
 | Add / change / remove materials | Yes | **No** (403) |
 | Add / change / switch off suppliers and offers, change prices | Yes | **No** (403) |
-| Statistics: usage, purchases, delivery ranking (no money) | Yes | Yes |
-| Statistics: supplier price comparison, CSV download | Yes | **No** (403) |
+| Statistics: usage (Filament g / Resin ml / Hardware pcs), days of stock left, delivery ranking (no money) | Yes | Yes |
+| Statistics: spending & stock value (MYR), CSV download | Yes | **No** (403 on the CSV; the money tab is not even on the Employee page) |
 | Manage user accounts (Users screen: add user, change role, reset password, switch off) | Yes | **No** (403) |
 
 Facts:
@@ -103,7 +103,7 @@ Facts:
 - If in doubt, deny (guide Section 4).
 - Still open for the founder: should Employees see supplier phone numbers and emails? Today they
   can (our proposal); the founder has not confirmed.
-- Settled (guide Section 5, F7): the Statistics supplier price comparison and the CSV export are Admin only.
+- Settled (guide Section 5, F7): the Statistics "Spending & stock value" tab and the CSV export are Admin only.
 - Built: the Admin Users screen (F8). Not built yet: the activity-log screen (F9). Every change is
   still written to the activity log table.
 
@@ -155,7 +155,7 @@ STOCK_USED activity row appeared.
 an Admin** sees and can fill them. This is enforced on the server by `can_record_purchase_cost` in
 `permissions.py`: an Employee can still record received stock, but without money, and if an Employee
 sends supplier or total anyway the server answers **403** and saves nothing. What the Admin types becomes
-the new "Last bought" line and the prices paid used by the Admin-only price comparison. Employees can still
+the new "Last bought" line and the totals paid that the Admin-only "Spending & stock value" tab adds up. Employees can still
 **see** "Last bought" and its money, according to `can_see_prices()`, but cannot change it.
 
 **Sample data check (2026-11-25):** the sample file's date format bug is fixed. An automatic test
@@ -219,7 +219,7 @@ Both Admin and Employee see the same list, costs and contacts (team decision 202
 Facts (`app/permissions.py`):
 
 - `can_see_prices(user)` = active Admin **or** active Employee. Used for the money columns, the
-  suggestion costs and the Home money box.
+  suggestion costs and the "Last bought" money (the Home money box was removed on 2026-11-26).
 - `can_manage_materials`, `can_manage_suppliers`, `can_manage_users`, `can_view_activity_log` =
   active Admin only.
 - `can_record_stock` = Admin or Employee.
@@ -251,7 +251,7 @@ gets nothing). Seeing it changes nothing: typing the purchase cost is behind its
 `admin_required`, so an Employee who types an edit address still gets 403, now with a plain-English page
 and a **Back to Home** button.
 
-What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the supplier price comparison and the CSV export on
+What is **Admin only**: under `CLAUDE.md` Section 5 (F7), the "Spending & stock value" tab and the CSV export on
 the Statistics page are Admin only. This is settled, not an open question. (The 2026-11-24 decision
 covered seeing prices, not these.) The question still open for the founder is whether Employees
 should see supplier phone numbers and emails.
@@ -300,8 +300,8 @@ Facts:
 - Record used and Record received, with a history row and an activity-log row for each change.
 - "Last bought" memory (who, how much, date, total paid; money only for people allowed to see prices).
 - Find supplier: ranked by estimated total cost, then lead time, with estimated arrival dates.
-- Home with three boxes (total, LOW, OUT) and the Notifications list; a Statistics page with usage, purchases and a
-  delivery ranking (Admin only: supplier price comparison and the CSV download); a Materials list with a
+- Home with three boxes (total, LOW, OUT) and the Notifications list; a Statistics page with usage per material (Filament / Resin / Hardware),
+  days of stock left, and a delivery ranking (Admin only: spending & stock value and the CSV download); a Materials list with a
   search box and two sections (Filament & Resin, Other materials).
 - Roles (Admin and Employee), server-side permission checks, login lock, CSRF protection, the Admin
   Users screen, plain-English error pages, tap-friendly buttons.
@@ -339,7 +339,8 @@ point for questions.
 - **"What happens if someone types a forbidden address?"** 403 Forbidden, checked on the server.
 - **"How are passwords stored?"** Scrambled (hashed); nobody can read them back, not even us.
 - **"What if the internet is down?"** The app itself runs on our own computer. Only the Statistics
-  charts need the internet, because the chart library is loaded from the web.
+  usage chart needs the internet, because the chart library is loaded from the web (the other statistics are plain
+  HTML).
 - **"What can it not do yet?"** Email alerts, a manual stock correction screen (ADJUSTED), an
   activity-log screen, a one-click backup button, and the shared look across every screen (Agent H's
   job). Money spent and low-stock events now work. Received lines saved without a total count as MYR 0,

@@ -121,8 +121,8 @@ PowerShell window.
 
 | Username | Role | Can do |
 |---|---|---|
-| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics; download the statistics CSV; manage user accounts on the **Users** screen |
-| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the usage statistics. **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
+| `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics (including Spending & stock value); download the statistics CSV; manage user accounts on the **Users** screen |
+| `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the statistics without money (usage, days of stock left, delivery ranking). **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
 
 The demo passwords are in step 4 (or the one you chose with `set-password`). Employees may *see* prices and money
 (team decision 2026-11-24) but only the Admin can *change* them.
@@ -138,8 +138,22 @@ After 5 wrong passwords an account is locked for 15 minutes.
 4. Log out, log in as `sample_employee`, and notice there are no Add / Change / Remove buttons.
    Type `/suppliers/new` after the web address: you get a "Forbidden" page.
 
-The **Statistics** page draws its charts with Chart.js loaded from the internet, so the computer
-needs a connection to see the charts.
+The **Statistics** page has a menu on the left (a row of buttons on a phone) and shows one statistic at a time:
+
+1. **Usage per material** (Admin and Employee): a bar chart per week or per month. A **Unit** choice (Filament (g),
+   Resin (ml) or Hardware (pcs); it starts on Filament) keeps every bar on one scale.
+2. **Days of stock left** (Admin and Employee, no money): a table with *Material*, *In stock*, *Days left*, *Lead time*
+   and *Status*. Days left = stock on hand divided by the average daily use of the last 30 days. The Status pill is
+   **Order now** (stock may run out before a delivery arrives), **Low** (within 7 days of that) or **OK**.
+3. **Delivery ranking** (Admin and Employee, no money): the suppliers from the fastest to the slowest delivery, with
+   the days and an estimated arrival date. A "Rank suppliers for" material choice only appears when some material has
+   two or more suppliers.
+4. **Spending & stock value** (**Admin only**): the total spent this month (from the "Total paid" typed on "Record
+   received") with a breakdown by supplier, and the estimated value of the stock on hand (stock times the cheapest
+   supplier price per unit, before shipping).
+
+The Admin also gets a **Download spreadsheet (CSV)** link in the menu. The usage chart is drawn with Chart.js loaded from
+the internet, so it needs a connection; the other three statistics are plain HTML.
 
 ---
 
@@ -186,8 +200,8 @@ the numbers change whenever someone adds a test.)
 * **Prices paid and low-stock events now work.** On "Record received" **only an Admin** sees and can fill
   the two optional boxes "Bought from" and "Total paid (MYR)" (rule `can_record_purchase_cost`). An
   Employee can still record received stock, without the money; if an Employee types money anyway the
-  server answers 403 and saves nothing. The Admin-only supplier price comparison on the Statistics page
-  uses the prices paid. (Home no longer has a "money spent" box: the group removed it on 2026-11-26, so
+  server answers 403 and saves nothing. The Admin-only "Spending & stock value" tab on the Statistics page
+  adds up the totals paid this month. (Home no longer has a "money spent" box: the group removed it on 2026-11-26, so
   Home shows three boxes: total, LOW and OUT.) A low-stock
   event is saved each time a "Record used" drops a material from OK to LOW or OUT (the Statistics page
   no longer draws a chart of them).
@@ -195,13 +209,13 @@ the numbers change whenever someone adds a test.)
 ## Known problems (as of 2026-11-26; see the status log in `CLAUDE.md`)
 
 * Received lines saved without a total (always the case when an Employee records them) count as MYR 0
-  in the money numbers (price comparison and CSV). Low-stock events
+  in the money numbers (Spending & stock value and the CSV). Low-stock events
   are counted from the day the feature was switched on, so older drops have no event.
 * A database built before 2026-11-24 may be missing the new columns and the new table (and may have
   old-format dates). Build the database again (step 3): close the app, delete `data\tracker.db`, and run
   step 3 once more. This erases everything in the old file.
-* The statistics charts load Chart.js from the internet. With no connection at the printers the charts
-  stay empty.
+* The usage chart loads Chart.js from the internet. With no connection at the printers that chart stays
+  empty (the other statistics are plain HTML).
 * There is no activity-log screen (F9) and no one-click database backup yet. Every change is still
   written to the activity log table.
 * There is no screen to correct a wrong stock count.
@@ -240,8 +254,9 @@ Ryan from Stinablis tested the app (Jacob was not available). He was timed.
 3. **Two sections on Materials:** "Filament & Resin" (spools in grams and resin bottles) and "Other materials" (isopropyl alcohol, hardware). Filament has spool care (open, dry); resin has a simple "Open Bottle Today" chip with a check reminder after 180 days (no drying); nothing else has either.
    The OK, LOW, OUT order applies inside each section. The group added 26 more sample materials (M014 to
    M039) so Test 2 can be run: they include PLA+ Orange and PETG Grey.
-4. **The Statistics page** (the menu word stays "Statistics") has a delivery ranking per chosen material
-   (fastest to slowest, no prices). The Home page stays simple, with a **Notifications** list, and OUT
+4. **The Statistics page** (the menu word stays "Statistics") has four statistics: usage per material (with a
+   Filament / Resin / Hardware unit choice), days of stock left, a delivery ranking (fastest to slowest, no prices) and,
+   for the Admin only, spending & stock value (see the list above). The Home page stays simple, with a **Notifications** list, and OUT
    stays red. (An earlier idea to rename the page "Stock" and add a Current stock list on Home was **not**
    kept.)
 

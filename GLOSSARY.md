@@ -169,9 +169,10 @@ Every answer from the server starts with a number that says how it went.
 - **HTML:** the language that describes what is on a page (headings, tables, buttons).
 - **CSS:** the language that describes how a page looks (colours, sizes). In our files you see it
   inside `<style>`.
-- **JavaScript (JS):** code that runs inside the browser. We use a small amount, only to draw charts.
-- **Chart.js:** a free library that draws the bar and line charts. The Statistics page loads it from
-  the internet (from a **CDN**), so that page needs a connection to draw charts.
+- **JavaScript (JS):** code that runs inside the browser. We use a small amount, to draw the usage chart,
+  fill the delivery ranking and switch between statistics.
+- **Chart.js:** a free library that draws bar charts. The Statistics page loads it from the internet (from a
+  **CDN**) to draw the usage chart, so that chart needs a connection; the other statistics are plain HTML.
 - **CDN (content delivery network):** a public website that hosts shared library files for others
   to load.
 - **Responsive / mobile-friendly:** the page rearranges itself so it works on a phone at the printer.
@@ -225,11 +226,23 @@ Every answer from the server starts with a number that says how it went.
   the total paid in MYR. It is read from the newest "received" line that names a supplier or a cost. The
   money part is shown to Admin and Employee (view only, `can_see_prices`); changing prices is still
   Admin only and answers 403 to anyone else. Code: `get_last_bought` in `app/routes_materials.py`.
+- **Days of stock left:** a Statistics table: stock on hand divided by the average amount used per day over the
+  last 30 days (Malaysia time). It is an estimate, shown in whole days. Code: `get_days_of_stock_left` in
+  `app/routes_stats.py`.
+- **Order now / Low / OK (status pill):** the word in the last column of "Days of stock left". **Order now** means
+  the stock may run out no later than a delivery would arrive (days left is at most the supplier's lead time);
+  **Low** means it is within 7 days more than that (the 7 days is a team guess); **OK** means enough.
+- **Lead time:** how many days a supplier says it takes from ordering to arriving.
+- **Delivery ranking:** a Statistics list of suppliers from the fastest to the slowest delivery, with the days and an
+  estimated arrival date (today plus the days). Same days share a rank. No money in it.
+- **Spending & stock value:** the Admin-only Statistics tab: the total spent this month (with a breakdown by
+  supplier) and the **estimated stock value on hand** (stock times the cheapest supplier price per unit, before
+  shipping; materials with no supplier price are left out and counted). All figures are estimates.
 - **Total paid / Bought from:** two optional boxes on "Record received" that **only an Admin** sees and
   can fill (`can_record_purchase_cost` in `app/permissions.py`; an Employee who sends them anyway gets
   403). They feed the money numbers:
-  Home's money box adds up the real totals typed here for the current month, and the Admin-only spending
-  chart groups them per supplier. A received line with no total counts as MYR 0.
+  the Admin-only "Spending & stock value" tab on the Statistics page adds up the real totals typed here for
+  the current month and groups them per supplier. A received line with no total counts as MYR 0.
 - **Record used / Record received:** the two buttons that change stock. They are the only way the
   quantity changes.
 - **Low-stock event:** the moment a "Record used" drops a material from OK to LOW or OUT. One row is
@@ -279,7 +292,7 @@ Every answer from the server starts with a number that says how it went.
 |---|---|---|
 | Flask (and Werkzeug, Jinja) | The web framework, password scrambling, page templates | BSD-3-Clause |
 | pytest | Running the automatic tests | MIT |
-| Chart.js 4.4.1 (loaded from the jsDelivr CDN) | Drawing the statistics charts | MIT |
+| Chart.js 4.4.1 (loaded from the jsDelivr CDN) | Drawing the usage chart on the Statistics page | MIT |
 
 We **install or load** these libraries; we did not copy their source code into our files. As of
 2026-11-24 a search of `app/`, `tests/` and `sample_data/` finds no comment, link or notice that
