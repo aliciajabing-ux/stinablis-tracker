@@ -1,0 +1,36 @@
+{# WHAT THIS FILE DOES: The Admin-only "Correct stock" form: set the stock to the real count and say why.
+   WHO CAN USE IT: Admin only (Employees get a 403 page before this is drawn). #}
+{% extends "base.html" %}
+{% block title %}Correct stock - Stinablis Tracker{% endblock %}
+{% block content %}
+<style>
+  label { display: block; margin-top: 12px; font-weight: bold; }
+  input { padding: 10px; font-size: 1rem; width: 100%; max-width: 420px; box-sizing: border-box; }
+  .btn { display: inline-block; min-height: 44px; box-sizing: border-box; padding: 12px 18px; margin-top: 16px; border-radius: 6px; border: 1px solid #1a5fb4;
+         background: #1a5fb4; color: #fff; font-size: 1rem; text-decoration: none; cursor: pointer; }
+  .btn.plain { background: #fff; color: #1a5fb4; }
+  .problems { background: #f5c2c2; color: #7a0000; padding: 10px; border-radius: 6px; }
+  .tag { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+  .tag-OK { background: #d8f3dc; color: #1b4332; }
+  .tag-LOW { background: #ffe5b4; color: #7a4100; }
+  .tag-OUT { background: #f5c2c2; color: #7a0000; }
+</style>
+<h1>Correct stock: {{ material.name }}{% if material.colour %} ({{ material.colour }}){% endif %}</h1>
+<p>Use this when the shelf count and the app do not match. Type what you really count, and a short reason. It is saved in the history; nothing is deleted.</p>
+<p>The app says: <strong>{{ '%g'|format(material.quantity_on_hand) }} {{ material.unit|unit_word }}</strong>
+   <span class="tag tag-{{ material.status }}">{{ material.status }}</span></p>
+{% if problems %}<div class="problems"><ul>{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul></div>{% endif %}
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label for="new_quantity">Set stock to ({{ material.unit|unit_word }})</label>
+  <input id="new_quantity" name="new_quantity" type="text" inputmode="decimal" required value="{{ typed.get('new_quantity', '') }}">
+  <label for="reason">Reason (required)</label>
+  <input id="reason" name="reason" type="text" maxlength="150" required list="reason-ideas" value="{{ typed.get('reason', '') }}"
+         placeholder="For example: Physical shelf count">
+  <datalist id="reason-ideas">
+    <option value="Physical shelf count"><option value="Damaged spool"><option value="Failed prints / waste"><option value="Lost or missing">
+  </datalist>
+  <button class="btn" type="submit">Save correction</button>
+  <a class="btn plain" href="{{ back_address }}">Cancel</a>
+</form>
+{% endblock %}

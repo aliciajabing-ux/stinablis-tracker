@@ -152,6 +152,7 @@ ROLE 2: EMPLOYEE (general staff, for example operators at the printers)
   - Add, change, or delete suppliers.
   - Add, change, or delete materials.
   - Manage user accounts.
+  - Correct stock ("Set stock to", 2026-11-27).
   - Delete any records.
   [CONFIRM WITH FOUNDER] Whether employees may see supplier contact
   phone numbers and emails. Our proposal: yes, to make ordering easy,
@@ -238,6 +239,23 @@ F3. MATERIALS SCREEN
       temperature, bed temperature, flow rate, drying note) are typed by the Admin on Add /
       Edit material and shown as one line. Employees cannot change the settings (403).
     - "Record used" and "Record received" buttons: everyone.
+    - QUICK WINS from the 12-month review (decision 2026-11-27, all small, no new table):
+      (a) Every material row also has a "Find supplier" button (any status, see F6).
+      (b) The Record screens keep your search: the Materials list passes its search words (?q=) and filter (?status=) to
+      "Record used / received", and after saving you come back to the SAME search (not an empty list).
+      (c) "Quick log" (/quick-log, any logged-in user): one page with a search box and, per material, a quantity box and a
+      "Record used" button that saves WITHOUT leaving the page (the row's "Left" and status update at once; without
+      JavaScript it falls back to a normal form). It uses the same checks and the same history as Record used (cannot take
+      out more than is in stock). Admin and Employee.
+      (d) "Record received" on a filament spool or resin bottle has an optional tick box "New sealed spool / bottle (reset
+      opened & dried dates)". When ticked, opened_date and last_dried_date are cleared (the item is "Sealed" again), one
+      activity-log line SPOOL_RESET is written. Admin and Employee. Hardware and alcohol never show the box.
+      (e) "Correct stock" (Admin only, in the row's "More" menu, /materials/<id>/correct): the Admin types the REAL count
+      ("Set stock to") and a short reason (required, for example "Physical shelf count", "Damaged spool"). The quantity is set to
+      that number, one ADJUSTED line is written (quantity = the size of the difference; the note says the old and new count,
+      the direction and the reason) and the activity log gets STOCK_CORRECTED. ADJUSTED lines are NOT usage and NOT purchases:
+      "Days of stock left" only reads USED lines and "Spending & stock value" only reads RECEIVED lines, so a correction never
+      changes them. Employees get 403 on the page and on the save. A correction writes no low-stock event.
     - "Last bought" memory (decision 2026-11-24): each material row and the
       Record screens show who it was last bought from, how much, the date
       and (if typed) the total paid in MYR. It is read from the newest
@@ -255,6 +273,10 @@ F4. SUPPLIERS SCREEN (ADMIN can change; EMPLOYEE can only view)
       shown inside the card and nothing is saved; Switch off / Switch on stays its own button; Employees get none of it, 2026-11-27). The form changes name, type, address, phone, email,
       website, notes and Status (Active or Switched off). Nothing is deleted.
       Employees see no Edit button and get 403 on the address (decision 2026-11-26).
+    - Phone numbers are tap-to-call links (tel:), emails are tap-to-write links (mailto:), and each phone number has a
+      "WhatsApp" link next to it (https://wa.me/<digits>; Malaysian numbers starting with 0 become 60...) on the Suppliers
+      list, the supplier page and Find supplier (decision 2026-11-27). A value that does not look like a phone number or an email
+      stays plain text. Admin and Employee see the same links (seeing contact details is not changing them).
     - Each supplier has a list of materials they sell, with:
         * Price per unit (Admin and Employee can see; only Admin can change)
         * Minimum order quantity
@@ -271,7 +293,8 @@ F5. LOW-STOCK ALERTS
       send an email to the Admin.
 
 F6. SUPPLIER SUGGESTION (the main time-saver)
-    - For a LOW or OUT material, the system lists every supplier that
+    - For ANY material (decision 2026-11-27: also OK ones, so staff can compare prices any time; the page then says
+      "nothing to order right now" above the comparison), the system lists every supplier that
       sells it, sorted by the best choice.
     - Simple rule for "best":
         1. Only suppliers that can deliver in time (see lead time).
@@ -302,10 +325,19 @@ F7. STATISTICS SCREEN (ADMIN sees everything; EMPLOYEE sees no money and no CSV)
     - Delivery ranking (decision 2026-11-26, simplified 2026-11-27): the
       suppliers ranked from the fastest to the slowest delivery (average over
       their active offers), with the rank, ONLINE or LOCAL, the days and the
-      estimated arrival date (today + the days). Same days share a rank. The
-      "Rank suppliers for" material list appears ONLY when at least one
-      material has two or more active suppliers (otherwise a per-material
-      ranking would be one line). No money: Admin and Employee.
+      estimated arrival date (today + the days). Same days share a rank. A
+      "Rank suppliers for:" drop-down sits directly under the subtitle, ALWAYS
+      (decision 2026-11-27, it was hidden unless a material had two or more
+      suppliers): "All materials (average)" first (suppliers ranked by the
+      average days, "<X> days on average, arrives about <DD Mon>"), then one
+      option per active material, A to Z. A chosen material shows ONLY the
+      suppliers with an active offer for it, fastest offer first ("<X> days,
+      arrives about <DD Mon>"). Ties share a rank and the next one skips
+      (1, 1, 3); every rank 1 gets the "Fastest" word. The choice updates the
+      list without reloading and is also kept in the address
+      (/stats/?material=<id>#ranking), which the server draws too. A material
+      nobody sells says "No supplier sells this yet." No money: Admin and
+      Employee.
     - Spending & stock value (decision 2026-11-27, new, ADMIN only; it replaces
       "Purchases per material" and the "Supplier price comparison" charts):
       (a) total spent this month in MYR (the "Total paid" typed on "Record
@@ -1819,5 +1851,9 @@ Format: DATE | AGENT | WHAT WAS DONE | WHAT IS NEXT | PROBLEMS
 2026-11-27 | Agent C / A (per-filament "Dry after (days)"; team request) | DONE: guide F3 changed FIRST. HOW IT WAS: the dryer limit was one fixed number for every spool, DRYER_AFTER_DAYS = 21 in app/spool_care.py: from 21 days after the spool was opened or last dried (the later of the two) the chip says "Put in dryer before use" and the spool is listed on Home (get_dryer_alerts); "Dry box recommended" starts at 7 days; resin has its own 180 days. NOW: each filament (unit g) can have its own "Dry after (days)": new optional column materials.dry_after_days (INTEGER, empty or 1 to 365; schema.sql, and "python app/setup_database.py upgrade" adds it safely and can be repeated); get_dry_after_days(material) returns the saved number or the default 21, so existing data behaves exactly as before; get_spool_care uses it, and the Materials chips and the Home DRY lines both read get_spool_care, so they follow at once. The Admin types it in the "Saved printer settings" box of Add / Edit material (filament only; the form shows 21 when nothing is saved; an empty box means the default); 0, negative, a decimal, letters or more than 365 are refused in plain words and nothing is saved. Employees cannot open the form (403) or post it, and no Employee page shows the number. Hardware, alcohol and resin never show or save it (resin keeps its 180 days). The "Dry box recommended" step stays at 7 days (a setting below 7 simply skips it). Files: app/spool_care.py, app/routes_materials.py, app/templates/materials_form.html, app/schema.sql, app/setup_database.py, GLOSSARY.md, tests/test_spool_care.py (19 new). | NOTE: an existing database needs "python app/setup_database.py upgrade" once (adds the column). ROLE_DIFFERENCES.md was not changed: it already says only the Admin can add or edit a material. | None.
 
 2026-11-27 | Agent A / B (presentation demo accounts; team request) | DONE: guide rule C6 got a second written exception FIRST. New commands in app/setup_database.py: "python app/setup_database.py demo-users" adds or updates the users admin (ADMIN) and employee (EMPLOYEE), both with the demo password stinablis2026 (stored scrambled), in an EXISTING database such as the one on PythonAnywhere. It reactivates and unlocks them, touches only these two users, never changes materials, suppliers, stock or the sample accounts, and is safe to repeat; "demo-users-off" switches them off after the presentation (nothing deleted). They are NOT in fresh builds or in sample_data/users.csv, so sample_admin and sample_employee and all older tests are unchanged. README documents both commands; PRESENTATION_NOTES.md lists no credentials, so it was not changed. TESTS: tests/test_demo_users.py (8): fresh build has no demo users, roles, all four logins work, scrambled hashes, repeatable with every other table identical, repairs a changed or locked account, off command, no database is created. | NOTE: the password is public in a public repository; run demo-users-off after the presentation and never use it on a site with real data. | None.
+
+2026-11-27 | Agent C / D / E (five "quick wins" from the 12-month workshop review; team request, done on branch claude/sweet-allen-sechqd) | DONE: guide F3, F4, F6 and Section 4 changed FIRST. (1) Tap-able contact links: app/contact_links.py + app/templates/contact_links.html (phone = tel: link plus a "WhatsApp" link to https://wa.me/<digits>, email = mailto:), used on the Suppliers list, the supplier page and Find supplier; Malaysian numbers that start with 0 become 60... for WhatsApp; a value that is not a phone number (fewer than 8 or more than 15 digits) or an email stays plain text. (2) Find supplier for EVERY material: a "Find supplier" button on every Materials row; /suggest/<id> now lists the suppliers for OK materials too (the page still says "nothing to order right now" above the comparison). (3) Record received on a filament spool or resin bottle has "New sealed spool / bottle (reset opened & dried dates)": when ticked, opened_date and last_dried_date are cleared in the same save and the activity log gets SPOOL_RESET (hardware and alcohol never show the box and ignore it). (4) Admin-only "Correct stock" (/materials/<id>/correct, in the row's "More" menu; new permission can_correct_stock in permissions.py, Employees get 403 on the page and the save): set the real count plus a required reason; one ADJUSTED line (quantity = size of the difference; the note holds "Stock correction: old -> new unit (+/-difference). Reason: ...") and a STOCK_CORRECTED activity-log line; the history shows it as "Stock correction" with a + or - sign. "Days of stock left" reads USED lines only and "Spending & stock value" reads RECEIVED lines only, so corrections never change them (tests prove it). No low-stock event is written for a correction. (5) The search stays: the Materials list passes ?q= and ?status= to the Record screens and after saving you return to the SAME search; new page /quick-log (login required, Admin and Employee): search box, a quantity box and "Record used" per material, saved WITHOUT leaving the page (JSON answer, CSRF header X-CSRF-Token; without JavaScript it is a normal form that comes back with the same search); same checks and same history as Record used (note "Quick log"). NO SCHEMA CHANGE, so "python app/setup_database.py upgrade" is NOT needed on PythonAnywhere. Files: app/contact_links.py, app/routes_quick_log.py, app/routes_materials.py, app/routes_suppliers.py, app/permissions.py, app/__init__.py, templates (contact_links, quick_log, materials_correct, materials_list, materials_record, suppliers, supplier_detail, suggest, supplier_style), tests/test_quick_wins.py (55 new), ROLE_DIFFERENCES.md and tests/test_role_differences.py (2 rows), tests/test_review_agent_f.py (3 matrix rows; the "no address contains log" check now skips the word quick-log), tests/test_suppliers_suggest.py (the OK-material test now expects the supplier list). | NOTE (R4): the sign of a correction lives in its note text, because stock_movements.quantity cannot be negative (CHECK >= 0) and a schema change was not wanted; old "Starting stock" ADJUSTED lines are unchanged. Quick log only records USED (no "+" received). V2 ideas NOT built: per-spool tracking, price history, WhatsApp/email alerts.
+
+2026-11-27 | Agent E (Delivery ranking material choice; team request, done on branch claude/sweet-allen-sechqd) | DONE: guide F7 changed FIRST. The "Rank suppliers for:" drop-down on /stats/ (Delivery ranking) is now ALWAYS drawn, directly under the new subtitle ("Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. ..."). It lists "All materials (average)" and then EVERY active material A to Z by name and colour (for example "ABS Grey"; no unit, switched-off materials left out); before, it was hidden unless a material had two or more suppliers. The ranking logic itself (get_delivery_ranking, build_ranking_rows) was already built and is unchanged: all materials = suppliers by the average days ("2 days on average, arrives about 29 Nov"); one material = only the suppliers with an active offer for it, by their fastest offer ("3 days, arrives about 30 Nov", no "on average"); ties share a rank and the next skips (1, 1, 3) and every rank 1 shows "Fastest". NEW: the server also draws the list from ?material=<id> (statistics_page; an unknown id falls back to all materials) and the select sits in a GET form with a <noscript> "Show ranking" button; the script updates the list without reloading when the choice changes and keeps the choice in the address (/stats/?material=M2#ranking) with history.replaceState, so a refresh or a shared link opens the same ranking. A material nobody sells shows "No supplier sells this yet." No money anywhere (Admin and Employee see the same). Files: app/routes_stats.py, app/templates/stats.html, README.md, tests/test_stats_dashboard.py (the 4 tests of the old "hidden unless two suppliers" rule were replaced by 10 tests for both roles). Checked in a real browser at 1200 px and 390 px: switching, empty state, deep link, no sideways scroll, no script errors. | NOTE: the Statistics sidebar panels are still shown by script (existing design), so with JavaScript fully off the ranking panel stays hidden; the query-address fallback works for deep links and for the server-drawn list. | None.
 
 2026-11-27 | Agent A / E (sample delivery times; team request, so a fresh database matches the live demo) | DONE: sample_data/supplier_offers.csv only: all 9 offers of S008 Tabuan Jaya Fasteners & Hardware now have lead_time_days 1 (was 2) and the one offer of S006 Bambu Lab Official MY (Shopee) has 7 (was 1, realistic West Malaysia shipping). Nothing else in the file, and sample_data/users.csv was NOT touched (sample_admin and sample_employee stay). RESULT, Delivery ranking (all materials, average days): Tabuan Jaya 1.0 is now #1, then Pending Industrial Hardware 1.4, Kuching 3D Filament Supply 1.7, Sarawak Maker & Print Hub 1.8, then Kota Sentosa and Cytron 2.0, then the online shops at 6.5 to 7. TESTS: one new test in tests/test_sample_data.py proves that order from a database built from the real sample files; no older test asserted the old ranking (the tests that name S006 and S008 build their own offers). | TEAM: an EXISTING database keeps its old lead times until you run "python app/setup_database.py sync-suppliers" (safe to repeat; it also rewrites pack size, price and shipping of the sample offers from the CSV, switches other offers on those materials off, deletes nothing). | None.

@@ -160,8 +160,8 @@ The **Statistics** page has a menu on the left (a row of buttons on a phone) and
    and *Status*. Days left = stock on hand divided by the average daily use of the last 30 days. The Status pill is
    **Order now** (stock may run out before a delivery arrives), **Low** (within 7 days of that) or **OK**.
 3. **Delivery ranking** (Admin and Employee, no money): the suppliers from the fastest to the slowest delivery, with
-   the days and an estimated arrival date. A "Rank suppliers for" material choice only appears when some material has
-   two or more suppliers.
+   the days and an estimated arrival date. A "Rank suppliers for:" drop-down always offers "All materials (average)"
+   and every active material; a chosen material shows only the suppliers that sell it.
 4. **Spending & stock value** (**Admin only**): the total spent this month (from the "Total paid" typed on "Record
    received") with a breakdown by supplier, and the estimated value of the stock on hand (stock times the cheapest
    supplier price per unit, before shipping).

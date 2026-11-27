@@ -10,7 +10,7 @@ import os
 
 from flask import Flask, render_template
 
-from app import auth, csrf, routes_materials, routes_stats, routes_suppliers, routes_users
+from app import auth, contact_links, csrf, routes_materials, routes_quick_log, routes_stats, routes_suppliers, routes_users
 from app.permissions import can_manage_users, login_required
 
 
@@ -52,6 +52,8 @@ def create_app(test_settings=None):
     website.register_blueprint(routes_suppliers.suppliers_blueprint)   # Agent D: suppliers and suggestions
     website.register_blueprint(routes_stats.stats_blueprint)           # Agent E: statistics and dashboard
     website.register_blueprint(routes_users.users_blueprint)           # Users screen (F8, Admin only)
+    website.register_blueprint(contact_links.contact_blueprint)        # tap-able phone / WhatsApp / email links
+    website.register_blueprint(routes_quick_log.quick_log_blueprint)   # Quick log: record used without leaving the page
 
     for error_number in (400, 403, 404):
         website.register_error_handler(error_number, show_plain_error)

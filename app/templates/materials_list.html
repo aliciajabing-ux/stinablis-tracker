@@ -82,6 +82,7 @@
   {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
   <button class="btn main" type="submit">Search</button>
   {% if can_manage %}<a class="btn main" href="{{ url_for('materials.add_material') }}">Add material</a>{% endif %}
+  <a class="btn main" href="{{ url_for('quick_log.quick_log_page', q=search_text or None) }}">Quick log</a>
 </form>
 <p>Find the item, then press "Record used" when you take some from the shelf or "Record received" when new stock arrives.</p>
 
@@ -135,13 +136,15 @@
     <td data-label="Status"><span class="tag tag-{{ material.status }}">{{ material.status }}</span></td>
     <td>
       <div class="row-actions">
-        <a class="btn row-main" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used') }}">Record used</a>
-        <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='received') }}">Record received</a>
+        <a class="btn row-main" href="{{ url_for('materials.record_stock', material_id=material.id, kind='used', q=search_text or None, status=status_filter or None) }}">Record used</a>
+        <a class="btn" href="{{ url_for('materials.record_stock', material_id=material.id, kind='received', q=search_text or None, status=status_filter or None) }}">Record received</a>
+        <a class="btn" href="{{ url_for('suppliers.suggest_supplier', material_id=material.id) }}">Find supplier</a>
         {% if can_manage %}
         <details class="row-more">
           <summary>More</summary>
           <div class="row-more-menu">
             <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
+            <a class="btn" href="{{ url_for('materials.correct_stock_screen', material_id=material.id, q=search_text or None, status=status_filter or None) }}">Correct stock</a>
             <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
                   onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -153,9 +153,11 @@ def test_employee_suggestions_have_no_money_at_all(database_file):
 
 # ---------- The screens ----------
 
-def test_ok_material_gets_no_suggestion_screen_list(admin):
+# Changed 2026-11-27 (quick win 2): an OK material now ALSO lists its suppliers, so staff can compare prices any time.
+# The page still says there is nothing to order right now.
+def test_ok_material_says_nothing_to_order_but_still_lists_suppliers_to_compare(admin):
     page = admin.get("/suggest/M2").get_data(as_text=True)
-    assert "nothing to order" in page and "Local Shop" not in page
+    assert "nothing to order" in page and "Local Shop" in page
 
 
 def test_low_material_screen_shows_status_word_and_estimate(admin):

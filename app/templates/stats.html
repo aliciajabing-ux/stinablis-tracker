@@ -128,16 +128,25 @@
 </div>
 <div class="panel" id="panel-ranking" hidden>
   <h2>Delivery ranking</h2>
-  <p>Which supplier delivers fastest. The days are what each supplier says (the average over everything they sell); the arrival date is today plus those days (an estimate).</p>
-  {% if ranking_materials %}
-  <label for="ranking-material">Rank suppliers for: </label>
-  <select id="ranking-material">
-    <option value="">All materials (average)</option>
-    {% for material in ranking_materials %}<option value="{{ material.id }}">{{ material.label }}</option>{% endfor %}
-  </select>
-  {% endif %}
-  <ol class="ranking" id="ranking-list" aria-live="polite"></ol>
-  <p class="waiting" id="ranking-empty" hidden>No supplier sells this yet.</p>
+  <p>Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. The days are what each supplier says; the arrival date is today plus those days (an estimate).</p>
+  <form method="get" action="{{ url_for('stats.statistics_page') }}#ranking" id="ranking-form">
+    <label for="ranking-material">Rank suppliers for: </label>
+    <select id="ranking-material" name="material">
+      <option value="">All materials (average)</option>
+      {% for material in ranking_materials %}<option value="{{ material.id }}"{{ ' selected' if material.id == chosen_material }}>{{ material.label }}</option>{% endfor %}
+    </select>
+    <noscript><button type="submit" class="btn">Show ranking</button></noscript>
+  </form>
+  {# Drawn by the server first (so ?material=ID works as a plain address); the script redraws it when the choice changes. #}
+  <ol class="ranking" id="ranking-list" aria-live="polite">
+    {% for row in ranking.rows %}
+    <li{{ ' class="first"' if row.rank == 1 }}><span class="rank-number">{{ row.rank }}</span>
+      <span class="rank-name">{{ row.supplier }} ({{ row.type }})</span>
+      {% if row.rank == 1 %}<span class="rank-fastest">Fastest</span>{% endif %}
+      <span class="rank-meta">{{ row.days_text }}, arrives about {{ row.arrival }}</span></li>
+    {% endfor %}
+  </ol>
+  <p class="waiting" id="ranking-empty"{{ '' if not ranking.rows else ' hidden' }}>No supplier sells this yet.</p>
 </div>
 {% if show_admin_tools %}
 <div class="panel" id="panel-spending" hidden>
@@ -293,11 +302,13 @@
     var chooser = document.getElementById("ranking-material");
     var material = chooser ? chooser.value : "";
     fetch(urls.ranking + "?material=" + encodeURIComponent(material)).then(function (r) { return r.json(); }).then(showRanking);
+    // Keep the choice in the address, so a refresh or a shared link opens the same ranking.
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + (material ? "?material=" + encodeURIComponent(material) : "") + window.location.hash);
+    }
   }
-  if (document.getElementById("ranking-material")) {
-    document.getElementById("ranking-material").addEventListener("change", loadRanking);
-  }
-  loadRanking();
+  document.getElementById("ranking-material").addEventListener("change", loadRanking);
+  document.getElementById("ranking-form").addEventListener("submit", function (event) { event.preventDefault(); loadRanking(); });
   // The sidebar: show one statistic at a time (the address keeps the choice, for example /stats/#days).
   var STATISTIC_NAMES = ["usage", "days", "ranking"{% if show_admin_tools %}, "spending"{% endif %}];
   // Shows the statistic with this name, hides the others, and marks it in the sidebar. An unknown name shows the first one.

@@ -1,0 +1,10 @@
+{# WHAT THIS FILE DOES: Small shared pieces that draw a supplier's phone and email as tap-able links.
+   WHO CAN USE IT: Both (Admin and Employee). Anything that is not a phone number or an email stays plain text. #}
+{% macro phone_links(phone) -%}
+{%- if phone and (phone|tel_address) -%}
+<a class="contact-link" href="{{ phone|tel_address }}">{{ phone }}</a> <a class="contact-link whatsapp-link" href="{{ phone|whatsapp_address }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+{%- else -%}{{ phone or '' }}{%- endif -%}
+{%- endmacro %}
+{% macro email_link(email) -%}
+{%- if email and (email|mailto_address) -%}<a class="contact-link" href="{{ email|mailto_address }}">{{ email }}</a>{%- else -%}{{ email or '' }}{%- endif -%}
+{%- endmacro %}
