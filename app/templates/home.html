@@ -43,7 +43,7 @@
 </div>
 <div class="attention">
   <h2>Notifications</h2>
-  <p>Materials that are LOW or OUT. Press "Find supplier" to see who can deliver.</p>
+  <p>Materials that are LOW or OUT. Press "Find supplier" to see who can deliver. An opened filament spool that has been open too long is listed here too.</p>
   <ul>
     {% for material in attention %}
     <li>
@@ -54,8 +54,19 @@
         <a class="button" href="{{ url_for('suppliers.suggest_supplier', material_id=material['id']) }}">Find supplier</a>
       </span>
     </li>
-    {% else %}<li>No notifications. All materials are OK.</li>
     {% endfor %}
+    {% for material in dryer_alerts %}
+    <li>
+      <span><strong>{{ material['name'] }}{% if material['colour'] %} {{ material['colour'] }}{% endif %}</strong>
+        - <strong>DRY</strong>: open {{ material['care']['days'] }} days. Put in dryer before use.</span>
+      <form method="post" action="{{ url_for('materials.spool_action', material_id=material['id'], action='dried') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="back" value="home">
+        <button class="button" type="submit">Mark Dried Today</button>
+      </form>
+    </li>
+    {% endfor %}
+    {% if not attention and not dryer_alerts %}<li>No notifications. All materials are OK.</li>{% endif %}
   </ul>
 </div>
 {% endblock %}

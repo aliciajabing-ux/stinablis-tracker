@@ -50,6 +50,40 @@
   <label for="reorder_level">Reorder level (the material shows as LOW at or below this amount)</label>
   <input id="reorder_level" name="reorder_level" type="text" inputmode="decimal" required value="{{ form.reorder_level if form.reorder_level is not none else '' }}">
 
+  {# EXPERIMENT 2026-11-26: saved printer settings and spool dates, for filament only (never for pieces). #}
+  {% if not material or material.unit != 'pcs' %}
+  <fieldset id="filament-fields">
+    <legend>Saved printer settings (optional, filament only)</legend>
+    <p class="help">Type what works best for this filament. It is shown as one line on the Materials page.</p>
+    <label for="nozzle_temp">Nozzle temperature (&deg;C, for example 235)</label>
+    <input id="nozzle_temp" name="nozzle_temp" type="text" inputmode="numeric" maxlength="3" value="{{ form.nozzle_temp if form.nozzle_temp is not none else '' }}">
+    <label for="bed_temp">Bed temperature (&deg;C, for example 75)</label>
+    <input id="bed_temp" name="bed_temp" type="text" inputmode="numeric" maxlength="3" value="{{ form.bed_temp if form.bed_temp is not none else '' }}">
+    <label for="flow_rate">Flow rate (for example 0.96)</label>
+    <input id="flow_rate" name="flow_rate" type="text" inputmode="decimal" maxlength="5" value="{{ form.flow_rate if form.flow_rate is not none else '' }}">
+    <label for="drying_note">Drying note (for example 65 &deg;C / 6h)</label>
+    <input id="drying_note" name="drying_note" type="text" maxlength="100" value="{{ form.drying_note or '' }}">
+    {% if material %}
+    <label for="opened_date">Spool opened on (year-month-day, empty = sealed)</label>
+    <input id="opened_date" name="opened_date" type="text" inputmode="numeric" maxlength="10" placeholder="2026-11-20" value="{{ form.opened_date or '' }}">
+    <label for="last_dried_date">Last dried on (year-month-day)</label>
+    <input id="last_dried_date" name="last_dried_date" type="text" inputmode="numeric" maxlength="10" placeholder="2026-11-22" value="{{ form.last_dried_date or '' }}">
+    <p class="help">Normally use the "Open Spool Today" and "Mark Dried Today" buttons on the Materials page. Use these two boxes only to correct a mistake.</p>
+    {% endif %}
+  </fieldset>
+  {% if not material %}
+  <script>
+    // Hides the printer settings when the unit is pieces (hardware has none). Without JavaScript they stay visible and are ignored for pieces.
+    (function () {
+      var unit = document.getElementById("unit");
+      function update() { document.getElementById("filament-fields").hidden = (unit.value === "pcs"); }
+      unit.addEventListener("change", update);
+      update();
+    })();
+  </script>
+  {% endif %}
+  {% endif %}
+
   {% if not material %}
   <fieldset>
     <legend>Who sells it? (optional)</legend>

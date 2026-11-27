@@ -199,6 +199,7 @@ SCREEN_MATRIX = {
     "/materials/M1/record/used": (302, 200, 200),
     "/materials/M1/record/received": (302, 200, 200),
     "/materials/M1/remove": (405, 405, 405),
+    "/materials/M1/spool/open": (405, 405, 405),               # spool care buttons are POST only (Admin and Employee, see tests/test_spool_care.py)
     "/suppliers": (302, 200, 200),
     "/suppliers/S1": (302, 200, 200),
     "/suppliers/new": (302, 403, 200),
@@ -239,7 +240,8 @@ def test_matrix_lists_every_address_of_the_website(website):
         found.add(re.sub(r"<[^>]+>", "X", rule.rule))
     listed = set()
     for address in SCREEN_MATRIX:
-        listed.add(re.sub(r"/(M1|S1|O1|U2)\b", "/X", address.replace("/used", "/<kind>").replace("/received", "/<kind>")))
+        listed.add(re.sub(r"/(M1|S1|O1|U2)\b", "/X", address.replace("/used", "/<kind>").replace("/received", "/<kind>")
+                                                              .replace("/spool/open", "/spool/<kind>")))
     listed = {re.sub(r"<kind>", "X", item) for item in listed}
     found = {re.sub(r"X/X$", "X/X", item) for item in found}
     missing = {item for item in found if item not in listed}

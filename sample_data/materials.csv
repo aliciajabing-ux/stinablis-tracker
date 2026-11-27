@@ -1,40 +1,40 @@
-id,name,material_type,colour,unit,quantity_on_hand,reorder_level,is_active
-M001,PLA Basic,PLA,White,g,830,1000,yes
-M002,PLA Basic,PLA,Black,g,1450,1000,yes
-M003,PETG,PETG,Clear,g,240,500,yes
-M004,ABS,ABS,Grey,g,0,500,yes
-M005,TPU 95A,TPU,Black,g,380,300,yes
-M006,Standard Resin,Resin,Grey,ml,500,1000,yes
-M007,M3 Hex Nuts,Hardware,Steel,pcs,85,50,yes
-M008,Isopropyl Alcohol 99%,Cleaning,Clear,ml,900,1000,yes
-M009,SAMPLE M4 Socket Screws,Hardware,Steel,pcs,240,100,yes
-M010,SAMPLE Compression Springs 8mm,Hardware,Steel,pcs,40,50,yes
-M011,SAMPLE Magnets 6x3mm,Hardware,Silver,pcs,0,100,yes
-M012,SAMPLE Fidget Clicker Kit,Hardware,Black,pcs,25,20,yes
-M013,SAMPLE Keychain Rings 25mm,Hardware,Silver,pcs,300,100,yes
-M014,PLA+ 1.75mm,PLA+,Black,g,820,200,yes
-M015,PLA 1.75mm,PLA,White,g,340,200,yes
-M016,PETG 1.75mm,PETG,Grey,g,610,200,yes
-M017,PETG 1.75mm,PETG,Black,g,950,200,yes
-M018,PLA Silk 1.75mm,PLA Silk,Blue,g,150,200,yes
-M019,PLA+ 1.75mm,PLA+,Orange,g,1000,200,yes
-M020,M3x8 socket cap screw,Hardware,,pcs,140,100,yes
-M021,M3x12 socket cap screw,Hardware,,pcs,35,60,yes
-M022,M4x10 socket cap screw,Hardware,,pcs,210,80,yes
-M023,M4x20 socket cap screw,Hardware,,pcs,18,40,yes
-M024,M3 hex nut,Hardware,,pcs,300,100,yes
-M025,M4 hex nut,Hardware,,pcs,90,50,yes
-M026,M3 brass heat-set insert (4mm long),Hardware,,pcs,45,50,yes
-M027,M4 brass heat-set insert (5.7mm long),Hardware,,pcs,120,40,yes
-M028,608ZZ bearing,Hardware,,pcs,12,10,yes
-M029,LM8UU linear bearing,Hardware,,pcs,6,4,yes
-M030,Neodymium magnet 6x3 mm,Hardware,,pcs,40,20,yes
-M031,Neodymium magnet 8x3 mm,Hardware,,pcs,14,20,yes
-M032,Mechanical Clicker Switches,Hardware,,pcs,38,30,yes
-M033,Keychain Split Rings + Chain,Hardware,,pcs,85,40,yes
-M034,Swivel Lobster Clasps,Hardware,,pcs,40,20,yes
-M035,Jump Rings,Hardware,,pcs,160,60,yes
-M036,Mini Compression Springs,Hardware,,pcs,18,20,yes
-M037,Steel Hinge Pins,Hardware,,pcs,45,20,yes
-M038,Stick-On Rubber Feet,Hardware,,pcs,90,30,yes
-M039,Superglue & Activator,Hardware,,pcs,2,2,yes
+id,name,material_type,colour,unit,quantity_on_hand,reorder_level,is_active,opened_date,last_dried_date,nozzle_temp,bed_temp,flow_rate,drying_note
+M001,PLA Basic,PLA,White,g,830,1000,yes,2026-11-23,,210,60,0.98,45 °C / 4h
+M002,PLA Basic,PLA,Black,g,1450,1000,yes,,,210,60,0.98,45 °C / 4h
+M003,PETG,PETG,Clear,g,240,500,yes,2026-11-02,,235,75,0.96,65 °C / 6h
+M004,ABS,ABS,Grey,g,0,500,yes,2026-11-17,,250,100,0.95,80 °C / 4h
+M005,TPU 95A,TPU,Black,g,380,300,yes,2026-10-25,2026-11-22,225,50,1.00,55 °C / 6h
+M006,Standard Resin,Resin,Grey,ml,500,1000,yes,,,,,,
+M007,M3 Hex Nuts,Hardware,Steel,pcs,85,50,yes,,,,,,
+M008,Isopropyl Alcohol 99%,Cleaning,Clear,ml,900,1000,yes,,,,,,
+M009,SAMPLE M4 Socket Screws,Hardware,Steel,pcs,240,100,yes,,,,,,
+M010,SAMPLE Compression Springs 8mm,Hardware,Steel,pcs,40,50,yes,,,,,,
+M011,SAMPLE Magnets 6x3mm,Hardware,Silver,pcs,0,100,yes,,,,,,
+M012,SAMPLE Fidget Clicker Kit,Hardware,Black,pcs,25,20,yes,,,,,,
+M013,SAMPLE Keychain Rings 25mm,Hardware,Silver,pcs,300,100,yes,,,,,,
+M014,PLA+ 1.75mm,PLA+,Black,g,820,200,yes,2026-11-12,,215,60,0.97,50 °C / 4h
+M015,PLA 1.75mm,PLA,White,g,340,200,yes,,,210,60,0.98,45 °C / 4h
+M016,PETG 1.75mm,PETG,Grey,g,610,200,yes,2026-10-30,,235,75,0.96,65 °C / 6h
+M017,PETG 1.75mm,PETG,Black,g,950,200,yes,2026-11-24,,235,75,0.96,65 °C / 6h
+M018,PLA Silk 1.75mm,PLA Silk,Blue,g,150,200,yes,2026-11-18,,220,60,0.95,45 °C / 4h
+M019,PLA+ 1.75mm,PLA+,Orange,g,1000,200,yes,,,215,60,0.97,50 °C / 4h
+M020,M3x8 socket cap screw,Hardware,,pcs,140,100,yes,,,,,,
+M021,M3x12 socket cap screw,Hardware,,pcs,35,60,yes,,,,,,
+M022,M4x10 socket cap screw,Hardware,,pcs,210,80,yes,,,,,,
+M023,M4x20 socket cap screw,Hardware,,pcs,18,40,yes,,,,,,
+M024,M3 hex nut,Hardware,,pcs,300,100,yes,,,,,,
+M025,M4 hex nut,Hardware,,pcs,90,50,yes,,,,,,
+M026,M3 brass heat-set insert (4mm long),Hardware,,pcs,45,50,yes,,,,,,
+M027,M4 brass heat-set insert (5.7mm long),Hardware,,pcs,120,40,yes,,,,,,
+M028,608ZZ bearing,Hardware,,pcs,12,10,yes,,,,,,
+M029,LM8UU linear bearing,Hardware,,pcs,6,4,yes,,,,,,
+M030,Neodymium magnet 6x3 mm,Hardware,,pcs,40,20,yes,,,,,,
+M031,Neodymium magnet 8x3 mm,Hardware,,pcs,14,20,yes,,,,,,
+M032,Mechanical Clicker Switches,Hardware,,pcs,38,30,yes,,,,,,
+M033,Keychain Split Rings + Chain,Hardware,,pcs,85,40,yes,,,,,,
+M034,Swivel Lobster Clasps,Hardware,,pcs,40,20,yes,,,,,,
+M035,Jump Rings,Hardware,,pcs,160,60,yes,,,,,,
+M036,Mini Compression Springs,Hardware,,pcs,18,20,yes,,,,,,
+M037,Steel Hinge Pins,Hardware,,pcs,45,20,yes,,,,,,
+M038,Stick-On Rubber Feet,Hardware,,pcs,90,30,yes,,,,,,
+M039,Superglue & Activator,Hardware,,pcs,2,2,yes,,,,,,

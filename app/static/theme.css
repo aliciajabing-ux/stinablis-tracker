@@ -202,3 +202,11 @@ body .box button:hover, body .content button[type=submit]:hover { background: va
   body .cards td { border: 0 !important; padding: 4px 10px !important; overflow-wrap: anywhere; }
   body .cards td[data-label]::before { content: attr(data-label) ": "; font-weight: 700; }
 }
+
+/* ---- EXPERIMENT 2026-11-26: spool-care chips and saved printer settings (filament only; palette colours only) ---- */
+body .chip { font-family: var(--font-mono); background: transparent !important; border: 2px solid var(--line) !important; color: var(--text) !important; }
+body .chip-sealed { border-color: var(--moss) !important; color: var(--moss) !important; }
+body .chip-dry_box { border-color: var(--orange-wheel) !important; color: var(--orange-wheel) !important; }
+body .chip-dryer { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; color: var(--smoky-black) !important; }
+body .settings-line { color: var(--moss) !important; font-family: var(--font-mono); }
+body fieldset { border-color: var(--line); }

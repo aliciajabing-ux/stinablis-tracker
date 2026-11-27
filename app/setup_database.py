@@ -86,6 +86,23 @@ def add_column_if_missing(connection, table_name, column_name, column_definition
     print(f"Added column {table_name}.{column_name}")
 
 
+# EXPERIMENT 2026-11-26: the optional spool-care and printer-setting columns on materials (added only if missing).
+SPOOL_CARE_COLUMNS = [
+    ("opened_date", "TEXT"),
+    ("last_dried_date", "TEXT"),
+    ("nozzle_temp", "INTEGER CHECK (nozzle_temp IS NULL OR nozzle_temp BETWEEN 100 AND 400)"),
+    ("bed_temp", "INTEGER CHECK (bed_temp IS NULL OR bed_temp BETWEEN 0 AND 150)"),
+    ("flow_rate", "REAL CHECK (flow_rate IS NULL OR (flow_rate >= 0.5 AND flow_rate <= 1.5))"),
+    ("drying_note", "TEXT"),
+]
+
+
+# Adds the spool-care columns to an older materials table, one by one, only if they are missing.
+def add_spool_care_columns(connection):
+    for column_name, column_definition in SPOOL_CARE_COLUMNS:
+        add_column_if_missing(connection, "materials", column_name, column_definition)
+
+
 # Upgrades an existing database to the newest layout. Safe to run again and again. Deletes nothing.
 def upgrade_database(database_file=DATABASE_FILE):
     if not os.path.exists(database_file):
@@ -99,6 +116,8 @@ def upgrade_database(database_file=DATABASE_FILE):
         connection, "stock_movements", "total_cost_myr",
         "REAL CHECK (total_cost_myr IS NULL OR total_cost_myr >= 0)",
     )
+
+    add_spool_care_columns(connection)
 
     had_events_table = table_exists(connection, "low_stock_events")
     with open(SCHEMA_FILE, encoding="utf-8") as schema_file:

@@ -9,6 +9,10 @@
   .filters a.on, .btn.main { background: #1a5fb4; color: #fff; }
   .filters a, .btn { min-height: 44px; box-sizing: border-box; line-height: 22px; }   /* easy to tap on a phone */
   .memo { display: block; margin-top: 4px; font-size: 0.85rem; color: #444; }
+  /* EXPERIMENT 2026-11-26: spool-care chip, quick buttons and the saved printer settings line (filament only). */
+  .spool { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
+  .chip { display: inline-block; padding: 3px 10px; border-radius: 999px; border: 2px solid #1a5fb4; font-size: 0.85rem; font-weight: bold; }
+  .btn.small { min-height: 44px; padding: 8px 12px; font-size: 0.9rem; }
   .legend { font-size: 0.95rem; }
   .search-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
   .search-bar label { flex-basis: 100%; font-weight: bold; }
@@ -16,7 +20,9 @@
   tr[hidden] { display: none !important; }
   /* On a phone each material becomes a small card, so the status word and the buttons are visible without sideways scrolling. */
   @media (max-width: 640px) {
-    .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; box-sizing: border-box; }
+    .table-wrap table, .table-wrap tbody, .table-wrap tr, .table-wrap td { display: block; width: 100%; min-width: 0; box-sizing: border-box; }   /* min-width 0: the shared theme makes tables 880 px wide on phones, which pushed the cards and buttons off screen */
+    .spool { max-width: 100%; }
+    .settings-line { overflow-wrap: anywhere; }
     .table-wrap tr.head { display: none; }
     .table-wrap tr[data-name] { margin-bottom: 12px; padding: 6px 4px; border: 2px solid #3a3933; border-radius: 14px; }
     .table-wrap td { border: 0 !important; padding: 4px 10px !important; }
@@ -102,7 +108,26 @@
     <td data-label="Name"><span class="m-name">{{ material.name }}</span>
       {% if material.supplier_name %}<span class="memo">Supplier: {{ material.supplier_name }}</span>{% endif %}
       {% if material.last_bought %}<span class="memo">Last bought: {{ material.last_bought.amount }} from
-        {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>{% endif %}
+        {{ material.last_bought.supplier }}, {{ material.last_bought.when }}{% if material.last_bought.cost is not none %}, MYR {{ '%.2f'|format(material.last_bought.cost) }}{% endif %}</span>
+      {% endif %}
+      {% if material.care %}
+      <div class="spool">
+        <span class="chip chip-{{ material.care.state }}">{{ material.care.chip }}</span>
+        {% if material.care.can_open %}
+        <form class="inline" method="post" action="{{ url_for('materials.spool_action', material_id=material.id, action='open') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small" type="submit">Open Spool Today</button>
+        </form>
+        {% endif %}
+        {% if material.care.can_dry %}
+        <form class="inline" method="post" action="{{ url_for('materials.spool_action', material_id=material.id, action='dried') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small" type="submit">Mark Dried Today</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if material.settings_line %}<span class="memo settings-line">{{ material.settings_line }}</span>{% endif %}
     </td>
     <td data-label="Type">{{ material.material_type or '' }}</td>
     <td data-label="Colour">{{ material.colour or '' }}</td>

@@ -12,6 +12,7 @@ from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
+from app.spool_care import DAY_FORMAT, add_spool_care, is_filament, parse_day, today_malaysia
 from app.routes_suppliers import FormProblem, insert_offer, insert_supplier, read_offer_numbers, read_supplier_form
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
@@ -24,6 +25,8 @@ NUMBER_PATTERN = re.compile(r"^\d{1,7}(\.\d{1,2})?$")
 MOVEMENT_WORDS = {"USED": "Used", "RECEIVED": "Received", "ADJUSTED": "Starting stock"}
 KIND_TO_MOVEMENT = {"used": "USED", "received": "RECEIVED"}
 NUMBER_HELP = "Please type the {label} as a number, for example 200"
+FLOW_PATTERN = re.compile(r"^\d(\.\d{1,3})?$")      # EXPERIMENT 2026-11-26: for example 0.96
+SPOOL_ACTIONS = {"open": ("opened_date", "SPOOL_OPENED", "Opened"), "dried": ("last_dried_date", "SPOOL_DRIED", "Marked dried")}
 NEW_SUPPLIER = "new"      # the value of the "Who sells it?" drop-down for "a new supplier"
 SUPPLIER_FIELDS = ("name", "supplier_type", "address", "phone", "email", "website", "notes")
 
@@ -71,7 +74,7 @@ def find_active_material(material_id):
 
 
 # Reads the add / edit form. Returns (values, list of plain-language problems).
-def read_material_form(form, is_new):
+def read_material_form(form, is_new, unit=None):
     problems = []
     name = read_text(form.get("name"), MAX_TEXT_LENGTH)
     material_type = read_text(form.get("material_type"), MAX_TEXT_LENGTH)
@@ -91,7 +94,60 @@ def read_material_form(form, is_new):
             problems.append("Please choose a unit: grams, millilitres or pieces.")
         if values["starting_quantity"] is None:
             problems.append(NUMBER_HELP.format(label="starting quantity") + " (0 or more).")
+        unit = values["unit"]
+    if unit in UNITS and unit != "pcs":
+        extras, extra_problems = read_filament_extras(form, is_new)
+        values.update(extras)
+        problems += extra_problems
     return values, problems
+
+
+# Reads a whole number between low and high from a form box. Returns (number or None, True if the box was fine).
+def read_whole_number(text, low, high):
+    text = (text or "").strip()
+    if not text:
+        return None, True
+    if text.isdigit() and low <= int(text) <= high:
+        return int(text), True
+    return None, False
+
+
+# EXPERIMENT 2026-11-26: reads the optional saved printer settings (and, when editing, the two spool dates) of a filament item.
+def read_filament_extras(form, is_new):
+    problems = []
+    nozzle, nozzle_ok = read_whole_number(form.get("nozzle_temp"), 100, 400)
+    bed, bed_ok = read_whole_number(form.get("bed_temp"), 0, 150)
+    flow_text = (form.get("flow_rate") or "").strip()
+    flow = float(flow_text) if FLOW_PATTERN.match(flow_text) and 0.5 <= float(flow_text) <= 1.5 else None
+    note = read_text(form.get("drying_note"), MAX_TEXT_LENGTH)
+    for ok, message in ((nozzle_ok, "The nozzle temperature must be a whole number from 100 to 400, for example 235."),
+                        (bed_ok, "The bed temperature must be a whole number from 0 to 150, for example 75."),
+                        (flow is not None or not flow_text, "The flow rate must be a number from 0.5 to 1.5, for example 0.96."),
+                        (note is not None, f"The drying note must be {MAX_TEXT_LENGTH} letters or fewer.")):
+        if not ok:
+            problems.append(message)
+    extras = {"nozzle_temp": nozzle, "bed_temp": bed, "flow_rate": flow, "drying_note": note or None}
+    if not is_new:
+        date_values, date_problems = read_spool_dates(form)
+        extras.update(date_values)
+        problems += date_problems
+    return extras, problems
+
+
+# Reads the two optional spool dates typed on "Edit material" (empty = not set). Returns (values, problems).
+def read_spool_dates(form):
+    opened_text, dried_text = (form.get("opened_date") or "").strip(), (form.get("last_dried_date") or "").strip()
+    opened, dried = parse_day(opened_text), parse_day(dried_text)
+    problems = []
+    if (opened_text and opened is None) or (dried_text and dried is None):
+        problems.append("Please type the spool dates like 2026-11-20 (year-month-day), or leave them empty.")
+    elif opened and opened > today_malaysia() or dried and dried > today_malaysia():
+        problems.append("A spool date cannot be in the future.")
+    elif dried and not opened:
+        problems.append("Please type the date it was opened too, because drying only counts for an opened spool.")
+    elif dried and opened and dried < opened:
+        problems.append("The last dried date cannot be earlier than the date it was opened.")
+    return {"opened_date": opened_text or None, "last_dried_date": dried_text or None}, problems
 
 
 # Records stock used or received: changes the quantity AND writes the history row. Returns True if it worked.
@@ -220,6 +276,8 @@ def list_materials():
     if status_filter in (STATUS_OK, STATUS_LOW, STATUS_OUT):
         materials = [m for m in materials if m["status"] == status_filter]
     materials = sort_ok_low_out(materials)
+    today = today_malaysia()
+    materials = [add_spool_care(material, today) for material in materials]      # EXPERIMENT 2026-11-26: spool chip + settings line
     show_money = can_see_prices(get_current_user())
     offer_supplier_names = get_offer_supplier_names(get_db())
     for material in materials:
@@ -309,9 +367,11 @@ def save_new_material(database, values, user, commit=True):
     now_text = utc_now().strftime(TIME_FORMAT)
     database.execute(
         "INSERT INTO materials (id, name, material_type, colour, unit, quantity_on_hand, reorder_level, "
-        "is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 0, ?, 1, ?, ?)",
+        "is_active, created_at, updated_at, nozzle_temp, bed_temp, flow_rate, drying_note) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, 1, ?, ?, ?, ?, ?, ?)",
         (material_id, values["name"], values["material_type"], values["colour"], values["unit"],
-         values["reorder_level"], now_text, now_text))
+         values["reorder_level"], now_text, now_text, values.get("nozzle_temp"), values.get("bed_temp"),
+         values.get("flow_rate"), values.get("drying_note")))
     write_material_log(database, user["id"], "MATERIAL_ADDED", material_id,
                        f"Added {values['name']} ({values['unit']}), reorder level {values['reorder_level']:g}.")
     if values["starting_quantity"] > 0:
@@ -330,7 +390,7 @@ def edit_material(material_id):
     material = find_active_material(material_id)
     if request.method == "GET":
         return render_template("materials_form.html", material=material, form=material, problems=[], units=UNITS)
-    values, problems = read_material_form(request.form, is_new=False)
+    values, problems = read_material_form(request.form, is_new=False, unit=material["unit"])
     if problems:
         return render_template("materials_form.html", material=material, form=request.form, problems=problems, units=UNITS), 400
     save_material_changes(get_db(), material, values, get_current_user())
@@ -348,9 +408,21 @@ def save_material_changes(database, material, values, user):
     for field in ("name", "material_type", "colour", "reorder_level"):
         if material[field] != values[field]:
             changes.append(f"{field} from {material[field]} to {values[field]}")
+    changes += save_filament_extras(database, material, values)
     write_material_log(database, user["id"], "MATERIAL_CHANGED", material["id"],
                        "Changed " + (", ".join(changes) if changes else "nothing") + f" for {material['name']}.")
     database.commit()
+
+
+# EXPERIMENT 2026-11-26: saves the printer settings and spool dates of a filament item. Returns what changed (for the log).
+def save_filament_extras(database, material, values):
+    if not is_filament(material):
+        return []
+    fields = ("nozzle_temp", "bed_temp", "flow_rate", "drying_note", "opened_date", "last_dried_date")
+    database.execute("UPDATE materials SET nozzle_temp = ?, bed_temp = ?, flow_rate = ?, drying_note = ?, "
+                     "opened_date = ?, last_dried_date = ? WHERE id = ?",
+                     (*(values[field] for field in fields), material["id"]))
+    return [f"{field} from {material[field]} to {values[field]}" for field in fields if material[field] != values[field]]
 
 
 # Removes a material from the lists (Admin only). The row and its history stay; it is only switched off.
@@ -366,6 +438,41 @@ def remove_material(material_id):
     database.commit()
     flash(f"Removed {material['name']} from the list. Its history is kept.")
     return redirect(url_for("materials.list_materials"))
+
+
+# EXPERIMENT 2026-11-26: one-tap "Open Spool Today" / "Mark Dried Today" on a filament item (Admin and Employee).
+# It only saves today's Malaysia date and writes a line to the activity log. Hardware (pieces) is refused.
+@materials_blueprint.route("/<material_id>/spool/<action>", methods=["POST"])
+@login_required
+def spool_action(material_id, action):
+    user = get_current_user()
+    if not can_record_stock(user):
+        abort(403)
+    if action not in SPOOL_ACTIONS:
+        abort(404)
+    material = find_active_material(material_id)
+    if not is_filament(material):
+        abort(404)
+    back = url_for("home") if request.form.get("back") == "home" else url_for("materials.list_materials")
+    column, log_action, words = SPOOL_ACTIONS[action]
+    if column == "opened_date" and material["opened_date"]:
+        flash(f"{material['name']} was already opened on {material['opened_date']}. Nothing changed.")
+    elif column == "last_dried_date" and not material["opened_date"]:
+        flash(f"Press \"Open Spool Today\" first, then \"Mark Dried Today\" for {material['name']}.")
+    else:
+        save_spool_day(get_db(), material, column, log_action, words, user)
+        flash(f"{words} {material['name']} today.")
+    return redirect(back)
+
+
+# Saves today's date in one spool column and writes the activity-log line (this function does the commit).
+def save_spool_day(database, material, column, log_action, words, user):
+    today_text = today_malaysia().strftime(DAY_FORMAT)
+    database.execute(f"UPDATE materials SET {column} = ?, updated_at = ? WHERE id = ?",    # column comes from SPOOL_ACTIONS only
+                     (today_text, utc_now().strftime(TIME_FORMAT), material["id"]))
+    write_material_log(database, user["id"], log_action, material["id"],
+                       f"{words} {material['name']} {material['colour'] or ''} on {today_text}.".replace("  ", " "))
+    database.commit()
 
 
 # Shows the "Record used" / "Record received" form and saves it (Admin and Employee).

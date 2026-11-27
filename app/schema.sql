@@ -29,7 +29,14 @@ CREATE TABLE IF NOT EXISTS materials (
     reorder_level       REAL NOT NULL DEFAULT 0 CHECK (reorder_level >= 0),
     is_active           INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
     created_at          TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TEXT DEFAULT CURRENT_TIMESTAMP
+    updated_at          TEXT DEFAULT CURRENT_TIMESTAMP,
+    -- EXPERIMENT 2026-11-26 (filament only, all optional; hardware rows leave them empty):
+    opened_date         TEXT,     -- the day the spool was opened, YYYY-MM-DD (Malaysia date)
+    last_dried_date     TEXT,     -- the day it was last dried, YYYY-MM-DD
+    nozzle_temp         INTEGER CHECK (nozzle_temp IS NULL OR nozzle_temp BETWEEN 100 AND 400),
+    bed_temp            INTEGER CHECK (bed_temp IS NULL OR bed_temp BETWEEN 0 AND 150),
+    flow_rate           REAL CHECK (flow_rate IS NULL OR (flow_rate >= 0.5 AND flow_rate <= 1.5)),
+    drying_note         TEXT      -- for example "65 C / 6h"
 );
 
 -- Every shop or website we buy from, with contact details.
