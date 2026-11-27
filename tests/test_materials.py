@@ -473,7 +473,7 @@ def test_employee_cannot_add_a_material_or_supplier_this_way(employee, database_
 
 
 # Layout guard (bug fix 2026-11-27): the Actions buttons on the Materials rows, including the ones under "More"
-# (Edit, Correct stock, Remove), must be ONE vertical column of equal width, so "Correct stock" is never cut off.
+# (Edit, Edit quantity, Remove), must be ONE vertical column of equal width, so "Edit quantity" is never cut off.
 def test_materials_row_buttons_are_one_stretched_column_in_the_css():
     import re
     css_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app", "static", "theme.css")

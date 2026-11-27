@@ -144,7 +144,7 @@
           <summary>More</summary>
           <div class="row-more-menu">
             <a class="btn" href="{{ url_for('materials.edit_material', material_id=material.id) }}">Edit</a>
-            <a class="btn" href="{{ url_for('materials.correct_stock_screen', material_id=material.id, q=search_text or None, status=status_filter or None) }}">Correct stock</a>
+            <a class="btn" href="{{ url_for('materials.correct_stock_screen', material_id=material.id, q=search_text or None, status=status_filter or None) }}">Edit quantity</a>
             <form class="inline" method="post" action="{{ url_for('materials.remove_material', material_id=material.id) }}"
                   onsubmit="return confirm('Remove this material from the list? Its history is kept.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

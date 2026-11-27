@@ -109,8 +109,8 @@ body table td button.btn:not(.plain):hover, body table .btn:not(.plain):hover, b
 body td { vertical-align: middle; }
 
 /* Materials rows: "Record used" is the one filled button, "Record received" is outlined, Edit and Remove hide under "More". */
-/* One single column at every screen width (bug fix 2026-11-27: "Edit", "Correct stock" and "Remove" used to sit side by side and
-   "Correct stock" was cut off). Every button, including the ones inside "More", gets the same width, alignment and 6 px gap. */
+/* One single column at every screen width (bug fix 2026-11-27: "Edit", "Edit quantity" and "Remove" used to sit side by side and
+   the stock button was cut off). Every button, including the ones inside "More", gets the same width, alignment and 6 px gap. */
 .row-actions { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
 body table .btn.row-main { background: var(--hot-orange) !important; color: var(--smoky-black) !important; border-color: var(--hot-orange) !important; font-weight: bold; }
 body table .btn.row-main:hover { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; }

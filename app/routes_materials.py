@@ -651,7 +651,7 @@ def show_record_form(material, kind, problems, typed_quantity, typed_form):
 
 
 
-# Returns the plain-language problems with the "Correct stock" form (an empty list if it is fine).
+# Returns the plain-language problems with the "Edit quantity" form (an empty list if it is fine).
 def check_correction_input(material, new_quantity, reason):
     problems = []
     if new_quantity is None:
@@ -688,7 +688,7 @@ def correct_stock(database, material, new_quantity, reason, user):
     return True
 
 
-# Shows the Admin-only "Correct stock" form ("Set stock to") and saves it. Employees get 403 (page and save).
+# Shows the Admin-only "Edit quantity" form ("Set stock to") and saves it. Employees get 403 (page and save).
 @materials_blueprint.route("/<material_id>/correct", methods=["GET", "POST"])
 @login_required
 def correct_stock_screen(material_id):
