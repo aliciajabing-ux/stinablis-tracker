@@ -10,7 +10,7 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 - **Employees can see almost everything** they need to work: stock levels, suppliers, prices, the "Find supplier" suggestions and
   the usage statistics. They can **record stock used and received**.
 - **Employees cannot change anything about the business data**: no adding or editing materials, suppliers or prices, no user
-  accounts, no money chart (the supplier price comparison) and no spreadsheet download. **Only the Admin types what was paid** for a delivery.
+  accounts, no money panel (spending & stock value) and no spreadsheet download. **Only the Admin types what was paid** for a delivery.
 - Every rule is checked **on the server**, not just by hiding buttons. An Employee who types a forbidden web address still gets a
   plain "not allowed" page with a **Back to Home** button.
 
@@ -49,14 +49,14 @@ this page cannot say something the app does not do. Last checked: 2026-11-26.
 ### Statistics
 
 The Statistics page has a sidebar that lists only the statistics the role may open: three for an Employee, and for the Admin
-also the supplier price comparison and the spreadsheet download. Clicking one shows it on its own, so nobody scrolls.
+also spending & stock value and the spreadsheet download. Clicking one shows it on its own, so nobody scrolls.
 
 | What | Admin | Employee | Notes |
 |---|---|---|---|
 | See the usage per material chart | Yes | Yes | Each bar shows its own unit (g, ml or pcs). |
-| See the purchases per material chart (no money) | Yes | Yes | Quantities only, so it is safe for Employees. |
+| See days of stock left (no money) | Yes | Yes | A plain table: stock, estimated days left and supplier lead time, with an "Order now" or "Low" word. No money, so it is safe for Employees. |
 | See the delivery ranking of suppliers for a chosen material | Yes | Yes | Fastest supplier first, with the days and an estimated arrival date. No money in it. |
-| See the supplier price comparison charts | Yes | No | Admin only. Two bar charts (per kg or litre, and per piece) with the cheapest offer next to the price last paid. The Employee page does not even contain the word "MYR". |
+| See spending and stock value (MYR) | Yes | No | Admin only: total spent this month by supplier and the estimated value of the stock on hand. The Employee page does not even contain the word "MYR". |
 | Download the statistics spreadsheet (CSV) | Yes | No | Admin only. |
 
 ### Users
@@ -85,6 +85,7 @@ also the supplier price comparison and the spreadsheet download. Clicking one sh
 | 2026-11-24 | The "Last bought" note is shown to both roles (the money part follows the "see prices" rule). |
 | 2026-11-24 | The Users screen is Admin only. |
 | 2026-11-26 | Procurement statistics: **purchases per material is for both roles; the supplier price comparison (charts) is Admin only**. |
+| 2026-11-27 | **Statistics cleaned up:** usage has a Unit choice (g, ml, pcs); new "Days of stock left" for both roles (no money); "Purchases per material" and "Supplier price comparison" removed and replaced by the Admin-only "Spending & stock value". The CSV is unchanged. |
 | 2026-11-26 | **Removed from the Statistics page:** the low-stock events chart, the spending per supplier chart and the spending per material chart. The Home money box and the CSV download stay. |
 | 2026-11-26 | **Removed from the Home page:** the "estimated money spent this month" box (the team said it is not relevant any more). Home now has three boxes and no money for either role. |
 

@@ -1,7 +1,7 @@
-{# WHAT THIS FILE DOES: The Statistics page: usage and purchases charts, the delivery ranking and (Admin only) the supplier price
-   comparison. Every chart names its unit (g, ml, pcs, days) or MYR in the axis title and pop-up. (The low-stock events,
-   spending per supplier and spending per material charts were removed on 2026-11-26.)
-   WHO CAN USE IT: Both. Everything with money (price comparison) and the download button is only drawn for
+{# WHAT THIS FILE DOES: The Statistics page: usage chart (one unit at a time), days of stock left, the delivery ranking and
+   (Admin only) spending and stock value. Every chart names its unit (g, ml, pcs, days) or MYR in the axis title and pop-up.
+   (Purchases per material and the supplier price comparison were removed on 2026-11-27.)
+   WHO CAN USE IT: Both. Everything with money (spending and stock value) and the download button is only drawn for
    Admin (the guide keeps these Admin only); the server also blocks Employees.
    The sidebar shows one statistic at a time (decision 2026-11-26), so nobody scrolls down the page. #}
 {% extends "base.html" %}
@@ -50,6 +50,12 @@
   .rank-name { flex:1 1 220px; font-weight:700; }
   .rank-fastest { font-family:var(--font-mono); font-size:.85rem; color:var(--orange-wheel); font-weight:700; }
   .rank-meta { flex:0 1 auto; color:var(--moss); }
+  /* Days of stock left: a plain table; the Admin money panel uses big numbers. Colours come from the theme. */
+  .days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }
+  .days-table .badge-cell { min-width:7.5rem; }
+  .big-number { font-size:1.8rem; font-weight:700; margin:4px 0 2px; }
+  .money-block { margin-bottom:22px; }
+  .money-table td.num { text-align:right; white-space:nowrap; }
 </style>
 <h1>Statistics</h1>
 <p>Simple charts of how materials are used and bought. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
@@ -57,52 +63,79 @@
 <nav class="stats-nav" aria-label="Statistics menu">
   <p class="stats-nav-title">Choose a statistic</p>
   <a id="nav-usage" href="#usage" class="active" aria-current="true">Usage per material</a>
-  <a id="nav-purchases" href="#purchases">Purchases per material</a>
+  <a id="nav-days" href="#days">Days of stock left</a>
   <a id="nav-ranking" href="#ranking">Delivery ranking</a>
-  {% if show_admin_tools %}<a id="nav-price" href="#price">Supplier price comparison</a>
+  {% if show_admin_tools %}<a id="nav-spending" href="#spending">Spending &amp; stock value</a>
   <a class="stats-export" href="{{ url_for('stats.export_csv') }}">Download spreadsheet (CSV)</a>{% endif %}
 </nav>
 <div class="stats-main">
 <div class="panel" id="panel-usage">
   <h2>Usage per material</h2>
-  <p>How much was used in each week or month. Each bar shows its own unit (g, ml or pcs): point at a bar to read it.</p>
+  <p>How much was used in each week or month. Choose a unit so every bar uses the same scale: Filament (grams), Resin (millilitres) or Hardware (pieces). Point at a bar to read it.</p>
   <label for="period">Show by: </label>
   <select id="period"><option value="month">Month</option><option value="week">Week</option></select>
+  <label for="usage-unit">Unit: </label>
+  <select id="usage-unit"><option value="g">Filament (g)</option><option value="ml">Resin (ml)</option><option value="pcs">Hardware (pcs)</option></select>
   <div class="chart-area"><canvas id="usage-chart" aria-label="Usage per material bar chart"></canvas></div>
   <ul class="legend-list" id="usage-legend"></ul>
+  <p class="waiting" id="usage-empty" hidden>Nothing of this unit was used in this period.</p>
 </div>
-<div class="panel" id="panel-purchases" hidden>
-  <h2>Purchases per material</h2>
-  <p>How much stock was received (recorded with "Record received") in each of the last 6 months. Each bar shows its own unit (g, ml or pcs).</p>
-  <div class="chart-area"><canvas id="purchases-chart" aria-label="Purchases per material bar chart"></canvas></div>
-  <ul class="legend-list" id="purchases-legend"></ul>
-  <p class="waiting" id="purchases-empty" hidden>No stock was received in the last 6 months.</p>
+<div class="panel" id="panel-days" hidden>
+  <h2>Days of stock left</h2>
+  <p>An estimate for materials used in the last 30 days: stock on hand divided by the average amount used per day. "Order now" means the stock
+    may run out before a delivery could arrive; "Low" means it is within {{ lead_margin_days }} days of that. Fewest days left first.</p>
+  {% if days_left_rows %}
+  <div class="scroll cards"><table class="days-table">
+    <tr class="head"><th>Material</th><th class="num">Stock on hand</th><th class="num">Est. days left</th><th class="num">Supplier lead time</th><th>Action</th></tr>
+    {% for row in days_left_rows %}
+    <tr>
+      <td data-label="Material">{{ row.name }}</td>
+      <td class="num" data-label="Stock on hand">{{ '{:,.0f}'.format(row.stock) if row.stock == row.stock|round else '{:,.1f}'.format(row.stock) }} {{ row.unit }}</td>
+      <td class="num" data-label="Est. days left">{{ '{:,.1f}'.format(row.days_left) }} days</td>
+      <td class="num" data-label="Supplier lead time">{% if row.lead_time_days is none %}No supplier yet{% else %}{{ row.lead_time_days }} day{{ '' if row.lead_time_days == 1 else 's' }}{% endif %}</td>
+      <td class="badge-cell" data-label="Action">{% if row.badge == 'Order now' %}<span class="tag tag-OUT">Order now</span>{% elif row.badge == 'Low' %}<span class="tag tag-LOW">Low</span>{% else %}OK{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% else %}
+  <p class="waiting">No usage has been recorded in the last 30 days yet. Use "Record used" on the Materials page and the estimates will appear here.</p>
+  {% endif %}
 </div>
 <div class="panel" id="panel-ranking" hidden>
   <h2>Delivery ranking</h2>
-  <p>Which supplier delivers fastest. Choose a material to rank the suppliers that sell it. The days are what each supplier
-    says; the arrival date is today plus those days (an estimate).</p>
+  <p>Which supplier delivers fastest. The days are what each supplier says (the average over everything they sell); the arrival date is today plus those days (an estimate).</p>
+  {% if ranking_materials %}
   <label for="ranking-material">Rank suppliers for: </label>
   <select id="ranking-material">
     <option value="">All materials (average)</option>
     {% for material in ranking_materials %}<option value="{{ material.id }}">{{ material.label }}</option>{% endfor %}
   </select>
+  {% endif %}
   <ol class="ranking" id="ranking-list" aria-live="polite"></ol>
   <p class="waiting" id="ranking-empty" hidden>No supplier sells this yet.</p>
 </div>
 {% if show_admin_tools %}
-<div class="panel" id="panel-price" hidden>
-  <h2>Supplier price comparison</h2>
-  <p>For each material: the cheapest supplier offer next to the price you last paid, per kg, per litre or per piece.
-    Point at a bar to see the supplier and the date.</p>
-  <h3>Materials priced per kg or per litre</h3>
-  <div class="chart-area"><canvas id="price-chart-weight" aria-label="Price comparison per kg or per litre bar chart"></canvas></div>
-  <p class="waiting" id="price-chart-weight-empty" hidden>No offers or purchases for these materials yet.</p>
-  <h3>Materials priced per piece</h3>
-  <div class="chart-area"><canvas id="price-chart-piece" aria-label="Price comparison per piece bar chart"></canvas></div>
-  <p class="waiting" id="price-chart-piece-empty" hidden>No offers or purchases for these materials yet.</p>
-  <p class="note">These are estimates. The offer price is before shipping. The price paid is the total typed on "Record received"
-    (which may include shipping) divided by the quantity, so it can look higher.</p>
+<div class="panel" id="panel-spending" hidden>
+  <h2>Spending &amp; stock value</h2>
+  <p>Estimates in MYR. Spending is the "Total paid" typed on "Record received". Stock value is the stock on hand times the cheapest active supplier price per unit (before shipping).</p>
+  <div class="money-block">
+    <h3>Spent in {{ money.month }}</h3>
+    <p class="big-number">MYR {{ '{:,.2f}'.format(money.spent_total) }}</p>
+    {% if money.spent_by_supplier %}
+    <div class="scroll"><table class="money-table">
+      <tr><th>Supplier</th><th class="num">Spent (MYR)</th></tr>
+      {% for name, amount in money.spent_by_supplier %}<tr><td>{{ name }}</td><td class="num">MYR {{ '{:,.2f}'.format(amount) }}</td></tr>{% endfor %}
+    </table></div>
+    {% else %}
+    <p class="waiting">No purchases with a total paid have been recorded this month.</p>
+    {% endif %}
+  </div>
+  <div class="money-block">
+    <h3>Estimated stock value on hand</h3>
+    <p class="big-number">MYR {{ '{:,.2f}'.format(money.stock.total) }}</p>
+    <p class="note">Counted for {{ money.stock.priced }} material{{ '' if money.stock.priced == 1 else 's' }} that {{ 'has' if money.stock.priced == 1 else 'have' }} stock and a supplier price.
+      {% if money.stock.unpriced %}{{ money.stock.unpriced }} material{{ '' if money.stock.unpriced == 1 else 's' }} with stock but no supplier price {{ 'is' if money.stock.unpriced == 1 else 'are' }} left out.{% endif %}</p>
+  </div>
 </div>
 {% endif %}
 </div>
@@ -111,9 +144,7 @@
 <script>
   var urls = {
     usage: "{{ url_for('stats.usage_data') }}",
-    purchases: "{{ url_for('stats.purchases_data') }}",
-    ranking: "{{ url_for('stats.delivery_ranking_data') }}"{% if show_admin_tools %},
-    priceComparison: "{{ url_for('stats.price_comparison_data') }}"{% endif %}
+    ranking: "{{ url_for('stats.delivery_ranking_data') }}"
   };
   var charts = {};
   // Chart colours (team palette on the dark theme). Words (legend, labels, tooltips) always stay, never colour alone.
@@ -150,7 +181,7 @@
     var dataset = context.dataset;
     return (dataset.name || dataset.label) + ": " + formatNumber(context.parsed.y) + " " + (dataset.unit || "");
   }
-  // Returns the chart settings for the usage and purchases bar charts (axis titles and the unit in the pop-up).
+  // Returns the chart settings for the usage bar chart (axis titles and the unit in the pop-up).
   function quantityOptions(yText, xText) {
     return {scales: {y: {beginAtZero: true, title: axisTitle(yText)}, x: {title: axisTitle(xText)}},
             plugins: {legend: {display: false}, tooltip: {callbacks: {label: quantityTooltip}}}};
@@ -185,24 +216,21 @@
     var note = document.getElementById(noteId);
     if (note) { note.hidden = !isEmpty; }
   }
-  // Loads the usage numbers for the chosen period and draws the bar chart.
+  // Loads the usage numbers for the chosen period and unit and draws the bar chart (one unit, so one scale).
   function loadUsage() {
     var period = document.getElementById("period").value;
+    var unit = document.getElementById("usage-unit").value;
     var periodWords = period === "week" ? "Week (starting Monday)" : "Month";
-    fetch(urls.usage + "?period=" + period).then(function (r) { return r.json(); }).then(function (d) {
+    fetch(urls.usage + "?period=" + period + "&unit=" + encodeURIComponent(unit)).then(function (r) { return r.json(); }).then(function (d) {
+      showEmptyNote("usage-empty", d.datasets.length === 0);
       drawChart("usage-chart", {type: "bar", data: colourDatasets(d),
-                                options: quantityOptions("Quantity used (g, ml or pcs)", periodWords)});
+                                options: quantityOptions("Quantity used (" + unit + ")", periodWords)});
       drawLegend("usage-legend", d);
     });
   }
   document.getElementById("period").addEventListener("change", loadUsage);
+  document.getElementById("usage-unit").addEventListener("change", loadUsage);
   loadUsage();
-  fetch(urls.purchases).then(function (r) { return r.json(); }).then(function (d) {
-    showEmptyNote("purchases-empty", d.datasets.length === 0);
-    drawChart("purchases-chart", {type: "bar", data: colourDatasets(d),
-                                  options: quantityOptions("Quantity received (g, ml or pcs)", "Month")});
-    drawLegend("purchases-legend", d);
-  });
   // Draws the delivery ranking: one line per supplier, fastest first (the words come from the server, so they are set as plain text).
   function showRanking(ranking) {
     var list = document.getElementById("ranking-list");
@@ -234,47 +262,16 @@
   }
   // Loads the ranking for the chosen material (or all materials) and shows it.
   function loadRanking() {
-    var material = document.getElementById("ranking-material").value;
+    var chooser = document.getElementById("ranking-material");
+    var material = chooser ? chooser.value : "";
     fetch(urls.ranking + "?material=" + encodeURIComponent(material)).then(function (r) { return r.json(); }).then(showRanking);
   }
-  document.getElementById("ranking-material").addEventListener("change", loadRanking);
+  if (document.getElementById("ranking-material")) {
+    document.getElementById("ranking-material").addEventListener("change", loadRanking);
+  }
   loadRanking();
-  {% if show_admin_tools %}
-  // Returns money written the same way as the rest of the app, for example MYR 1,234.50.
-  function formatMoney(value) {
-    return "MYR " + Number(value).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  }
-  // Returns a short money label for an axis, for example MYR 1,200 (no cents, so the axis stays tidy).
-  function formatMoneyShort(value) {
-    return "MYR " + Number(value).toLocaleString("en-US", {maximumFractionDigits: 0});
-  }
-  // Draws one price comparison chart (cheapest offer next to the price last paid) for a group of materials. Small prices per piece keep their cents on the axis.
-  function drawPriceChart(canvasId, noteId, group, axisText, centsOnAxis) {
-    showEmptyNote(noteId, group.labels.length === 0);
-    document.getElementById(canvasId).parentNode.style.height = Math.max(220, group.labels.length * 52 + 120) + "px";
-    drawChart(canvasId, {type: "bar",
-      data: {labels: group.labels, datasets: [
-        {label: "Cheapest supplier offer", data: group.offer, backgroundColor: PALETTE[2]},
-        {label: "Price last paid", data: group.paid, backgroundColor: PALETTE[0]}]},
-      options: {indexAxis: "y",
-                scales: {x: {beginAtZero: true, title: axisTitle(axisText),
-                             ticks: {maxTicksLimit: 6, callback: function (value) { return centsOnAxis ? formatMoney(value) : formatMoneyShort(value); }}},
-                         y: {ticks: {autoSkip: false}}},
-                plugins: {tooltip: {callbacks: {label: function (context) {
-                  var i = context.dataIndex;
-                  var text = context.dataset.label + ": " + formatMoney(context.parsed.x) + " " + group.words[i];
-                  if (context.datasetIndex === 0) { return text + " (" + group.offer_supplier[i] + ")"; }
-                  return text + " (" + group.paid_supplier[i] + ", " + group.paid_date[i] + ")";
-                }}}}}});
-  }
-  // Loads the price comparison numbers and draws both charts.
-  fetch(urls.priceComparison).then(function (r) { return r.json(); }).then(function (d) {
-    drawPriceChart("price-chart-weight", "price-chart-weight-empty", d.per_kg_litre, "MYR per kg or per litre", false);
-    drawPriceChart("price-chart-piece", "price-chart-piece-empty", d.per_piece, "MYR per piece", true);
-  });
-  {% endif %}
-  // The sidebar: show one statistic at a time (the address keeps the choice, for example /stats/#purchases).
-  var STATISTIC_NAMES = ["usage", "purchases", "ranking"{% if show_admin_tools %}, "price"{% endif %}];
+  // The sidebar: show one statistic at a time (the address keeps the choice, for example /stats/#days).
+  var STATISTIC_NAMES = ["usage", "days", "ranking"{% if show_admin_tools %}, "spending"{% endif %}];
   // Shows the statistic with this name, hides the others, and marks it in the sidebar. An unknown name shows the first one.
   function showStatistic(name) {
     if (STATISTIC_NAMES.indexOf(name) === -1) { name = STATISTIC_NAMES[0]; }

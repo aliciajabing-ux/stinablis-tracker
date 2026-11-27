@@ -212,8 +212,8 @@ SCREEN_MATRIX = {
     "/stats/": (302, 200, 200),
     "/stats/data/usage": (302, 200, 200),
     "/stats/data/delivery-ranking": (302, 200, 200),           # no money: both roles
-    "/stats/data/purchases": (302, 200, 200),                 # quantities only, no money: both roles
-    "/stats/data/price-comparison": (302, 403, 200),          # money: Admin only
+    "/stats/data/purchases": (404, 404, 404),                 # removed on 2026-11-27 (404 for everybody)
+    "/stats/data/price-comparison": (404, 404, 404),          # removed on 2026-11-27 (404 for everybody)
     "/stats/export.csv": (302, 403, 200),
     "/users/": (302, 403, 200),
     "/users/add": (302, 403, 200),
@@ -635,11 +635,11 @@ def test_checklist_employee_can_see_prices_but_cannot_add_or_change_suppliers(em
     assert employee.post("/suppliers/new", data=GOOD_SUPPLIER).status_code == 403
 
 
-def test_checklist_admin_sees_prices_and_the_price_comparison_charts(admin):
-    # Section 15 line 6 changed on 2026-11-26: the spending charts were removed, the price comparison charts replace them.
+def test_checklist_admin_sees_prices_and_the_spending_and_stock_value_panel(admin):
+    # Section 15 line 6 changed on 2026-11-27: the price comparison charts were replaced by "Spending & stock value".
     assert "72.00" in admin.get("/suppliers/S1").get_data(as_text=True)
     page = admin.get("/stats/").get_data(as_text=True)
-    assert "Supplier price comparison" in page and 'id="price-chart-weight"' in page
+    assert "Spending &amp; stock value" in page and 'id="panel-spending"' in page
 
 
 def test_checklist_arrival_date_is_today_plus_lead_time_on_the_screen(admin, monkeypatch):
