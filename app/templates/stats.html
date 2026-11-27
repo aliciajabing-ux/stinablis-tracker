@@ -31,8 +31,9 @@
   .stats-nav a.active { background:var(--orange-wheel); color:var(--smoky-black); font-weight:700; }
   .stats-nav a.stats-export { margin-top:10px; border:2px solid var(--text); }
   .stats-nav a.stats-export:hover { background:var(--text); color:var(--smoky-black); }
-  .stats-main { min-width:0; }
-  @media (max-width: 720px) {
+  .stats-main { min-width:0; width:100%; }
+  .stats-layout > * { min-width:0; }   /* a grid or flex child never grows wider than its column, so tables cannot be clipped */
+  @media (max-width: 960px) {   /* the menu moves above the panel on a half-width window, so the panel gets the full width */
     .stats-layout { display:block; }
     .stats-nav { position:sticky; top:0; z-index:5; flex-direction:row; overflow-x:auto; gap:6px; padding:8px 0; margin-bottom:12px;
                  background:var(--eerie-black); }
@@ -52,13 +53,19 @@
   .rank-meta { flex:0 1 auto; color:var(--moss); }
   /* Days of stock left: a plain table; the Admin money panel uses big numbers. Colours come from the theme. */
   /* Days of stock left: roomy cells so headers and values never touch; numbers on the right, status centred in its own column. */
-  .days-table { width:100%; border-collapse:collapse; }
+  body .days-table { width:100%; min-width:0; max-width:100%; table-layout:auto; border-collapse:collapse; }   /* "body" beats the theme's table minimum width */
   .days-table th, .days-table td { padding:12px 14px; vertical-align:middle; }
-  .days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }
-  .days-table td.status-cell, .days-table th.status-cell { text-align:center; padding-left:28px; min-width:8.5rem; }
+  .days-table td:first-child { overflow-wrap:anywhere; }   /* long material names wrap */
+  .days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }   /* numbers stay on one line */
+  .days-table td.status-cell, .days-table th.status-cell { text-align:center; padding-left:28px; min-width:8.5rem; white-space:nowrap; }
   @media (max-width: 640px) { .days-table td.num, .days-table td.status-cell { text-align:left; padding-left:10px; } }   /* phone cards: label and value read left to right */
   .status-pill { display:inline-block; min-width:6.5rem; box-sizing:border-box; text-align:center; }
   .status-pill.status-ok { background:transparent !important; color:var(--moss) !important; border:2px solid var(--moss); font-weight:700; padding:1px 12px; border-radius:999px; }
+  @media (max-width: 960px) {   /* a narrower window: tighter cells so all five columns still fit */
+    .days-table th, .days-table td { padding:12px 10px; }
+    .days-table td.status-cell, .days-table th.status-cell { padding-left:10px; min-width:7rem; }
+    .days-table .status-pill { min-width:6rem; }
+  }
   .big-number { font-size:1.8rem; font-weight:700; margin:4px 0 2px; }
   /* Admin money panel: two KPI cards side by side (one column on a phone) and a supplier table that fills its box. */
   .kpi-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin:16px 0 24px; }
