@@ -735,3 +735,13 @@ def test_days_table_layout_rules_fit_a_half_width_window(employee):
     assert ".days-table td:first-child { overflow-wrap:anywhere; }" in page
     assert ".days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }" in page
     assert "white-space:nowrap; }" in page.split(".days-table td.status-cell")[1].split("\n")[0]
+
+
+def test_home_notification_rows_keep_their_buttons_on_the_right_above_640px(admin, employee):
+    # Above 640 px a row never wraps (a long name wraps in the left column), so no row's buttons jump below the others.
+    for browser in (admin, employee):
+        page = browser.get("/").get_data(as_text=True)
+        assert "flex-wrap:nowrap; align-items:center; justify-content:space-between; gap:16px;" in page
+        assert ".attention li > span:first-child { flex:1; min-width:0;" in page
+        assert ".attention li > .row-end, .attention li > form { flex-shrink:0; white-space:nowrap; }" in page
+        assert ".attention li { flex-direction:column; align-items:flex-start; }" in page.split("@media (max-width: 640px)")[1]
