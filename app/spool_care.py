@@ -15,7 +15,8 @@ from datetime import datetime, timedelta
 from app.auth import utc_now
 
 DRY_BOX_AFTER_DAYS = 7
-DRYER_AFTER_DAYS = 21
+DRYER_AFTER_DAYS = 21             # the default for "Dry after (days)"; an Admin can set another number per filament (1 to 365)
+DRY_AFTER_LOWEST, DRY_AFTER_HIGHEST = 1, 365
 FILAMENT_UNIT = "g"
 RESIN_UNIT = "ml"
 RESIN_WORD = "resin"
@@ -61,6 +62,15 @@ def _text(material, column):
         return ""
 
 
+# Returns the "Dry after (days)" of a filament spool: its own saved number, or the default 21 when nothing is saved.
+def get_dry_after_days(material):
+    try:
+        saved = material["dry_after_days"]
+    except (KeyError, IndexError):          # a database that has not been upgraded yet has no such column
+        saved = None
+    return saved if saved else DRYER_AFTER_DAYS
+
+
 # Returns True for anything that has a "Open ... Today" button: filament spools and resin bottles. Nothing else.
 def has_open_date(material):
     return is_filament(material) or is_resin(material)
@@ -93,7 +103,7 @@ def get_spool_care(material, today=None):
                 "needs_check": False, "can_open": True, "can_dry": False, "open_label": "Open Spool Today"}
     started = max(opened, parse_day(material["last_dried_date"]) or opened)
     days = max((today - started).days, 0)
-    state = "dryer" if days >= DRYER_AFTER_DAYS else "dry_box" if days >= DRY_BOX_AFTER_DAYS else "open"
+    state = "dryer" if days >= get_dry_after_days(material) else "dry_box" if days >= DRY_BOX_AFTER_DAYS else "open"
     advice = {"dryer": "Put in dryer before use", "dry_box": "Dry box recommended", "open": ""}[state]
     chip = f"Open {days}d {DOT} {advice}" if advice else f"Open {days}d"
     return {"kind": "filament", "state": state, "days": days, "chip": chip, "needs_dryer": state == "dryer",

@@ -63,6 +63,10 @@
     <input id="flow_rate" name="flow_rate" type="text" inputmode="decimal" maxlength="5" value="{{ form.flow_rate if form.flow_rate is not none else '' }}">
     <label for="drying_note">Drying note (for example 65 &deg;C / 6h)</label>
     <input id="drying_note" name="drying_note" type="text" maxlength="100" value="{{ form.drying_note or '' }}">
+    {% set saved_dry_days = form.dry_after_days %}
+    <label for="dry_after_days">Dry after (days): the spool shows "Put in dryer before use" this many days after it was opened or last dried</label>
+    <input id="dry_after_days" name="dry_after_days" type="text" inputmode="numeric" maxlength="3" value="{% if saved_dry_days is defined and saved_dry_days is not none %}{{ saved_dry_days }}{% else %}{{ default_dry_days }}{% endif %}">
+    <p class="help">A whole number from {{ dry_days_lowest }} to {{ dry_days_highest }}. Empty means {{ default_dry_days }} days.</p>
     {% if material %}
     <label for="opened_date">Spool opened on (year-month-day, empty = sealed)</label>
     <input id="opened_date" name="opened_date" type="text" inputmode="numeric" maxlength="10" placeholder="2026-11-20" value="{{ form.opened_date or '' }}">

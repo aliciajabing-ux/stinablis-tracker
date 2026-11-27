@@ -226,6 +226,10 @@ Every answer from the server starts with a number that says how it went.
   the total paid in MYR. It is read from the newest "received" line that names a supplier or a cost. The
   money part is shown to Admin and Employee (view only, `can_see_prices`); changing prices is still
   Admin only and answers 403 to anyone else. Code: `get_last_bought` in `app/routes_materials.py`.
+- **Dry after (days):** a setting on a filament spool (Admin only, on Add / Edit material): how many days after the spool was
+  opened or last dried it shows "Put in dryer before use" and appears in the Home Notifications. A whole number from 1 to 365;
+  empty means the default, 21 days. Resin bottles and hardware do not have it (resin keeps its own 180-day check). Code:
+  `get_dry_after_days` in `app/spool_care.py`, column `dry_after_days` in the `materials` table.
 - **Days of stock left:** a Statistics table: stock on hand divided by the average amount used per day over the
   last 30 days (Malaysia time). It is an estimate, shown in whole days. Code: `get_days_of_stock_left` in
   `app/routes_stats.py`.

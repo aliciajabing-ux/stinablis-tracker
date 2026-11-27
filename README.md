@@ -88,6 +88,20 @@ never with real company data. To choose your own password for any account, run
 `python app/auth.py set-password sample_admin` (at least 8 characters; the letters are hidden while you
 type). The `upgrade` and `sync-suppliers` commands never change a password.
 
+**Presentation accounts (existing database, for example PythonAnywhere).** Cleaner demo logins `admin` and
+`employee`, both with password `stinablis2026`, are added with one safe, repeatable command. It changes only
+these two users and never touches materials, suppliers or stock:
+
+```bash
+python app/setup_database.py demo-users
+```
+
+Switch them off after the presentation (nothing is deleted):
+
+```bash
+python app/setup_database.py demo-users-off
+```
+
 ### 5. Set the secret key
 
 The secret key signs the login cookie. The app refuses to start without it. Make up a long random

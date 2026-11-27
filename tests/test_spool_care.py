@@ -545,3 +545,142 @@ def test_resin_edit_page_has_only_the_bottle_date(admin, database_file):
 def test_filament_keeps_everything_it_had(admin):
     row = row_html(admin.get("/materials/").get_data(as_text=True), "pla basic white")
     assert "Mark Dried Today" in row and "Nozzle 210" in row and "Bottle" not in row
+
+
+# ---------- "Dry after (days)": the Admin sets when each filament spool needs the dryer (decision 2026-11-27) ----------
+
+EDIT_FILAMENT_FORM = {"name": "PLA Basic", "material_type": "PLA", "colour": "White", "reorder_level": "1000",
+                      "nozzle_temp": "210", "bed_temp": "60", "flow_rate": "0.97", "drying_note": "50 C / 4h"}
+
+
+# Returns the saved "Dry after (days)" of one material (None = the default).
+def saved_dry_days(database_file, material_id):
+    return read_material(database_file, material_id)["dry_after_days"]
+
+
+# Posts the Edit material form for the sample filament with this "Dry after" text. The real form always sends the spool dates
+# too (an empty box means sealed), so pass opened_date / last_dried_date when the spool must stay opened.
+def post_dry_days(browser, text, material_id=FILAMENT_ID, **more):
+    return browser.post(f"/materials/{material_id}/edit", data={**EDIT_FILAMENT_FORM, "dry_after_days": text, **more})
+
+
+def materials_page_chip(browser, words):
+    return words in browser.get("/materials/").get_data(as_text=True)
+
+
+def test_nothing_saved_means_the_old_default_of_21_days(database_file):
+    assert spool_care.DRYER_AFTER_DAYS == 21 and saved_dry_days(database_file, FILAMENT_ID) is None
+    assert spool_care.get_dry_after_days(read_material(database_file, FILAMENT_ID)) == 21
+    for days, state in ((20, "dry_box"), (21, "dryer")):
+        set_material(database_file, FILAMENT_ID, opened_date=days_ago(days), last_dried_date=None)
+        assert spool_care.get_spool_care(read_material(database_file, FILAMENT_ID))["state"] == state
+    assert spool_care.get_dry_after_days({"unit": "g"}) == 21                  # a row without the column (database not upgraded yet)
+
+
+def test_admin_lowers_dry_after_and_home_and_the_chip_follow_at_once(admin, employee, database_file):
+    seal_all_spools(database_file)
+    set_material(database_file, FILAMENT_ID, opened_date=days_ago(12))         # 12 days open: under the default 21
+    assert "open 12 days" not in admin.get("/").get_data(as_text=True)
+    assert not materials_page_chip(admin, "Open 12d &middot; Put in dryer") and not materials_page_chip(admin, "Put in dryer before use")
+    assert post_dry_days(admin, "10", opened_date=days_ago(12)).status_code == 302
+    assert saved_dry_days(database_file, FILAMENT_ID) == 10
+    for browser in (admin, employee):                                           # both roles see the effect
+        home = browser.get("/").get_data(as_text=True)
+        assert "DRY" in home and "open 12 days" in home and "Mark Dried Today" in home
+        assert materials_page_chip(browser, "Put in dryer before use")
+    assert "MATERIAL_CHANGED" in log_actions(database_file)
+
+
+def test_admin_raises_dry_after_and_the_dryer_warning_goes_away(admin, database_file):
+    seal_all_spools(database_file)
+    set_material(database_file, FILAMENT_ID, opened_date=days_ago(30))
+    assert "open 30 days" in admin.get("/").get_data(as_text=True)
+    assert post_dry_days(admin, "60", opened_date=days_ago(30)).status_code == 302
+    assert "open 30 days" not in admin.get("/").get_data(as_text=True)
+    assert not materials_page_chip(admin, "Put in dryer before use") and materials_page_chip(admin, "Dry box recommended")
+
+
+def test_dry_after_counts_from_the_last_drying_too(admin, database_file):
+    seal_all_spools(database_file)
+    post_dry_days(admin, "10")
+    set_material(database_file, FILAMENT_ID, opened_date=days_ago(40), last_dried_date=days_ago(4))
+    assert spool_care.get_spool_care(read_material(database_file, FILAMENT_ID))["state"] == "open"      # dried 4 days ago
+    set_material(database_file, FILAMENT_ID, last_dried_date=days_ago(10))
+    assert spool_care.get_spool_care(read_material(database_file, FILAMENT_ID))["needs_dryer"] is True  # 10 days = the limit
+
+
+def test_an_empty_box_goes_back_to_the_default_and_the_form_shows_the_current_number(admin, database_file):
+    page = admin.get(f"/materials/{FILAMENT_ID}/edit").get_data(as_text=True)
+    assert 'name="dry_after_days"' in page and 'value="21"' in page and "Empty means 21 days" in page
+    post_dry_days(admin, "14")
+    assert 'value="14"' in admin.get(f"/materials/{FILAMENT_ID}/edit").get_data(as_text=True)
+    assert post_dry_days(admin, "").status_code == 302 and saved_dry_days(database_file, FILAMENT_ID) is None
+
+
+@pytest.mark.parametrize("text", ["1", "21", "365"])
+def test_the_lowest_and_highest_allowed_numbers_are_saved(admin, database_file, text):
+    assert post_dry_days(admin, text).status_code == 302 and saved_dry_days(database_file, FILAMENT_ID) == int(text)
+
+
+@pytest.mark.parametrize("text", ["0", "-5", "abc", "366", "3.5", "1e2", "10 days", "99999"])
+def test_wrong_dry_after_values_are_refused_in_plain_words_and_nothing_is_saved(admin, database_file, text):
+    post_dry_days(admin, "30")
+    response = post_dry_days(admin, text)
+    page = response.get_data(as_text=True)
+    assert response.status_code == 400 and "whole number from 1 to 365" in page and "Dry after (days)" in page
+    assert f'value="{text}"' in page                                            # what was typed stays in the box
+    assert saved_dry_days(database_file, FILAMENT_ID) == 30
+
+
+def test_employee_cannot_see_or_change_dry_after(employee, database_file):
+    assert employee.get(f"/materials/{FILAMENT_ID}/edit").status_code == 403
+    assert post_dry_days(employee, "5").status_code == 403
+    assert saved_dry_days(database_file, FILAMENT_ID) is None
+    for address in ("/materials/", "/"):
+        assert "Dry after" not in employee.get(address).get_data(as_text=True) and "dry_after_days" not in employee.get(address).get_data(as_text=True)
+
+
+def test_a_wrong_edit_by_an_admin_keeps_the_old_dry_after(admin, database_file):
+    post_dry_days(admin, "12")
+    response = post_dry_days(admin, "15", reorder_level="abc")                 # another box is wrong: nothing at all is saved
+    assert response.status_code == 400 and saved_dry_days(database_file, FILAMENT_ID) == 12
+
+
+def test_dry_after_is_for_filament_only_hardware_and_resin_ignore_it(admin, database_file):
+    assert 'name="dry_after_days"' not in admin.get(f"/materials/{HARDWARE_ID}/edit").get_data(as_text=True)
+    hardware = {"name": "M3x8 screw", "material_type": "Hardware", "colour": "", "reorder_level": "10", "dry_after_days": "5"}
+    admin.post(f"/materials/{HARDWARE_ID}/edit", data=hardware)
+    assert saved_dry_days(database_file, HARDWARE_ID) is None
+    resin_page = admin.get("/materials/M006/edit").get_data(as_text=True)
+    assert 'name="dry_after_days"' not in resin_page
+    resin = {"name": "Standard Resin", "material_type": "Resin", "colour": "Grey", "reorder_level": "1000", "dry_after_days": "5"}
+    admin.post("/materials/M006/edit", data=resin)
+    assert saved_dry_days(database_file, "M006") is None
+    set_material(database_file, "M006", opened_date=days_ago(100))              # resin keeps its own 180-day check
+    care = spool_care.get_spool_care(read_material(database_file, "M006"))
+    assert care["needs_dryer"] is False and care["needs_check"] is False
+    set_material(database_file, "M006", opened_date=days_ago(180))
+    assert spool_care.get_spool_care(read_material(database_file, "M006"))["needs_check"] is True
+
+
+def test_a_new_filament_can_be_added_with_its_own_dry_after(admin, database_file):
+    page = admin.get("/materials/new").get_data(as_text=True)
+    assert 'name="dry_after_days"' in page
+    assert admin.post("/materials/new", data={**GOOD_NEW_FILAMENT, "dry_after_days": "7"}).status_code == 302
+    connection = sqlite3.connect(database_file)
+    assert connection.execute("SELECT dry_after_days FROM materials WHERE name = 'ASA Test'").fetchone()[0] == 7
+    connection.close()
+    assert admin.post("/materials/new", data={**GOOD_NEW_FILAMENT, "name": "ASA Two", "dry_after_days": "0"}).status_code == 400
+
+
+def test_the_dry_after_column_is_added_to_an_older_database_by_the_upgrade(tmp_path):
+    path = str(tmp_path / "old.db")
+    connection = sqlite3.connect(path)
+    connection.execute("CREATE TABLE materials (id TEXT PRIMARY KEY, name TEXT, unit TEXT)")
+    setup_database.add_spool_care_columns(connection)
+    setup_database.add_spool_care_columns(connection)                           # safe to run twice
+    columns = [row[1] for row in connection.execute("PRAGMA table_info(materials)")]
+    assert columns.count("dry_after_days") == 1
+    with pytest.raises(sqlite3.IntegrityError):
+        connection.execute("INSERT INTO materials (id, name, unit, dry_after_days) VALUES ('X', 'x', 'g', 0)")
+    connection.close()

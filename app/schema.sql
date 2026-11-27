@@ -36,7 +36,9 @@ CREATE TABLE IF NOT EXISTS materials (
     nozzle_temp         INTEGER CHECK (nozzle_temp IS NULL OR nozzle_temp BETWEEN 100 AND 400),
     bed_temp            INTEGER CHECK (bed_temp IS NULL OR bed_temp BETWEEN 0 AND 150),
     flow_rate           REAL CHECK (flow_rate IS NULL OR (flow_rate >= 0.5 AND flow_rate <= 1.5)),
-    drying_note         TEXT      -- for example "65 C / 6h"
+    drying_note         TEXT,     -- for example "65 C / 6h"
+    -- 2026-11-27 (filament only): days after opening (or drying) when "Put in dryer before use" starts. Empty = the default, 21.
+    dry_after_days      INTEGER CHECK (dry_after_days IS NULL OR dry_after_days BETWEEN 1 AND 365)
 );
 
 -- Every shop or website we buy from, with contact details.
