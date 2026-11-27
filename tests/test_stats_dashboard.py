@@ -696,3 +696,30 @@ def test_days_left_intro_is_short(employee):
     panel = employee.get("/stats/").get_data(as_text=True).split('id="panel-days"')[1].split('id="panel-ranking"')[0]
     intro = panel.split("<p>")[1].split("</p>")[0]
     assert len(intro) < 220 and "Estimated from the last 30 days" in intro
+
+
+def test_spending_panel_has_two_kpi_cards_and_a_supplier_table_that_fits_a_phone(admin, database_file):
+    this_month = routes_stats.utc_now().strftime("%Y-%m-15 02:00:00")
+    add_purchase(database_file, "A", "S2", 120.5, this_month)
+    page = admin.get("/stats/").get_data(as_text=True)
+    panel = page.split('id="panel-spending"')[1]
+    # two cards in a grid (one column on a phone), each with its heading and a big MYR figure
+    assert panel.count('class="kpi-card"') == 2 and 'class="kpi-grid"' in panel
+    assert "grid-template-columns:repeat(2, minmax(0, 1fr))" in page and "gap:16px" in page
+    assert "@media (max-width: 640px) { .kpi-grid { grid-template-columns:minmax(0, 1fr); } }" in page
+    assert ".kpi-card { background:var(--eerie-light); border:1px solid var(--line); border-radius:14px;" in page
+    first, second = panel.split('class="kpi-card"')[1:3]
+    assert "Spent in " in first and "big-number" in first and "MYR 120.50" in first
+    assert "Estimated stock value on hand" in second and "big-number" in second and 'class="note"' in second
+    # a subheading above the supplier table; the table overrides the theme's 880 px minimum and keeps the MYR column on one line
+    assert panel.index("kpi-grid") < panel.index("Spending by supplier") < panel.index('class="money-table"')
+    assert "body .money-table { width:100%; min-width:0; max-width:100%; border-collapse:collapse; table-layout:auto; }" in page
+    assert "padding:12px 14px; border:0; border-bottom:1px solid var(--line)" in page
+    assert "text-align:right; white-space:nowrap;" in page
+    assert '<th>Supplier</th><th class="num">Spent (MYR)</th>' in panel
+
+
+def test_spending_panel_intro_is_short(admin):
+    panel = admin.get("/stats/").get_data(as_text=True).split('id="panel-spending"')[1]
+    intro = panel.split("<p>")[1].split("</p>")[0]
+    assert len(intro) < 160 and "Estimates in MYR" in intro

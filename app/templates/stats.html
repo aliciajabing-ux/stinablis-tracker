@@ -60,8 +60,20 @@
   .status-pill { display:inline-block; min-width:6.5rem; box-sizing:border-box; text-align:center; }
   .status-pill.status-ok { background:transparent !important; color:var(--moss) !important; border:2px solid var(--moss); font-weight:700; padding:1px 12px; border-radius:999px; }
   .big-number { font-size:1.8rem; font-weight:700; margin:4px 0 2px; }
-  .money-block { margin-bottom:22px; }
-  .money-table td.num { text-align:right; white-space:nowrap; }
+  /* Admin money panel: two KPI cards side by side (one column on a phone) and a supplier table that fills its box. */
+  .kpi-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin:16px 0 24px; }
+  .kpi-card { background:var(--eerie-light); border:1px solid var(--line); border-radius:14px; padding:18px 20px; min-width:0; }
+  .kpi-card h3 { margin:0 0 6px; font-size:1rem; }
+  .kpi-card .big-number { margin:0; overflow-wrap:anywhere; }
+  .kpi-card .note { margin:8px 0 0; color:var(--moss); }
+  .money-subhead { margin:0 0 8px; }
+  @media (max-width: 640px) { .kpi-grid { grid-template-columns:minmax(0, 1fr); } }
+  /* "body" in front beats the theme's 880 px minimum on every table. */
+  body .money-table { width:100%; min-width:0; max-width:100%; border-collapse:collapse; table-layout:auto; }
+  body .money-table th, body .money-table td { padding:12px 14px; border:0; border-bottom:1px solid var(--line); vertical-align:top; }
+  body .money-table th, body .money-table td:first-child { text-align:left; overflow-wrap:anywhere; }
+  body .money-table th.num, body .money-table td.num { text-align:right; white-space:nowrap; width:1%; }
+  body .money-table tr:last-child td { border-bottom:0; }
 </style>
 <h1>Statistics</h1>
 <p>Simple charts of how materials are used and bought. All dates are Malaysia time. Numbers as of {{ now_text }}.</p>
@@ -123,25 +135,28 @@
 {% if show_admin_tools %}
 <div class="panel" id="panel-spending" hidden>
   <h2>Spending &amp; stock value</h2>
-  <p>Estimates in MYR. Spending is the "Total paid" typed on "Record received". Stock value is the stock on hand times the cheapest active supplier price per unit (before shipping).</p>
-  <div class="money-block">
-    <h3>Spent in {{ money.month }}</h3>
-    <p class="big-number">MYR {{ '{:,.2f}'.format(money.spent_total) }}</p>
-    {% if money.spent_by_supplier %}
-    <div class="scroll"><table class="money-table">
-      <tr><th>Supplier</th><th class="num">Spent (MYR)</th></tr>
-      {% for name, amount in money.spent_by_supplier %}<tr><td>{{ name }}</td><td class="num">MYR {{ '{:,.2f}'.format(amount) }}</td></tr>{% endfor %}
-    </table></div>
-    {% else %}
-    <p class="waiting">No purchases with a total paid have been recorded this month.</p>
-    {% endif %}
+  <p>Estimates in MYR. Spent = "Total paid" on "Record received". Stock value = stock x cheapest supplier price (before shipping).</p>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <h3>Spent in {{ money.month }}</h3>
+      <p class="big-number">MYR {{ '{:,.2f}'.format(money.spent_total) }}</p>
+    </div>
+    <div class="kpi-card">
+      <h3>Estimated stock value on hand</h3>
+      <p class="big-number">MYR {{ '{:,.2f}'.format(money.stock.total) }}</p>
+      <p class="note">Counted for {{ money.stock.priced }} material{{ '' if money.stock.priced == 1 else 's' }} with stock and a supplier price.
+        {% if money.stock.unpriced %}{{ money.stock.unpriced }} with no supplier price {{ 'is' if money.stock.unpriced == 1 else 'are' }} left out.{% endif %}</p>
+    </div>
   </div>
-  <div class="money-block">
-    <h3>Estimated stock value on hand</h3>
-    <p class="big-number">MYR {{ '{:,.2f}'.format(money.stock.total) }}</p>
-    <p class="note">Counted for {{ money.stock.priced }} material{{ '' if money.stock.priced == 1 else 's' }} that {{ 'has' if money.stock.priced == 1 else 'have' }} stock and a supplier price.
-      {% if money.stock.unpriced %}{{ money.stock.unpriced }} material{{ '' if money.stock.unpriced == 1 else 's' }} with stock but no supplier price {{ 'is' if money.stock.unpriced == 1 else 'are' }} left out.{% endif %}</p>
-  </div>
+  <h3 class="money-subhead">Spending by supplier</h3>
+  {% if money.spent_by_supplier %}
+  <table class="money-table">
+    <tr><th>Supplier</th><th class="num">Spent (MYR)</th></tr>
+    {% for name, amount in money.spent_by_supplier %}<tr><td>{{ name }}</td><td class="num">MYR {{ '{:,.2f}'.format(amount) }}</td></tr>{% endfor %}
+  </table>
+  {% else %}
+  <p class="waiting">No purchases with a total paid have been recorded this month.</p>
+  {% endif %}
 </div>
 {% endif %}
 </div>
