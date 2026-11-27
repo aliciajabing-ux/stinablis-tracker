@@ -84,6 +84,16 @@
   {% endif %}
   {% endif %}
 
+  {# Resin bottle: only the date it was opened (no printer settings, no drying). #}
+  {% if material is resin_bottle %}
+  <fieldset id="resin-fields">
+    <legend>Bottle opened (resin only)</legend>
+    <label for="opened_date">Bottle opened on (year-month-day, empty = sealed)</label>
+    <input id="opened_date" name="opened_date" type="text" inputmode="numeric" maxlength="10" placeholder="2026-11-20" value="{{ form.opened_date or '' }}">
+    <p class="help">Normally use the "Open Bottle Today" button on the Materials page. Use this box only to correct a mistake.</p>
+  </fieldset>
+  {% endif %}
+
   {% if not material %}
   <fieldset>
     <legend>Who sells it? (optional)</legend>

@@ -112,11 +112,11 @@
       {% endif %}
       {% if material.care %}
       <div class="spool">
-        <span class="chip chip-{{ material.care.state }}">{{ material.care.chip }}</span>
+        <span class="chip chip-{{ material.care.state }}{{ ' chip-dryer' if material.care.state == 'aged' }}">{{ material.care.chip }}</span>
         {% if material.care.can_open %}
         <form class="inline" method="post" action="{{ url_for('materials.spool_action', material_id=material.id, action='open') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button class="btn small" type="submit">Open Spool Today</button>
+          <button class="btn small" type="submit">{{ material.care.open_label }}</button>
         </form>
         {% endif %}
         {% if material.care.can_dry %}

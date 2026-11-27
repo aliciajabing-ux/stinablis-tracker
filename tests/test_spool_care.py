@@ -403,7 +403,8 @@ def test_employee_cannot_open_the_add_or_edit_forms_so_settings_stay_admin_only(
 
 # ---------- Only real filament (grams) gets spool care; resin, alcohol and hardware never do (2026-11-27) ----------
 
-LIQUID_IDS = {"M006": "standard resin", "M008": "isopropyl alcohol 99%"}      # both counted in ml
+LIQUID_IDS = {"M008": "isopropyl alcohol 99%"}      # alcohol: a liquid that is not resin, so no care at all
+RESIN_ID = "M006"                                   # Standard Resin (ml): bottle care only
 
 
 def test_only_grams_count_as_filament():
@@ -416,10 +417,10 @@ def test_only_grams_count_as_filament():
 @pytest.mark.parametrize("who", ["employee", "admin"])
 def test_materials_page_headings_and_isopropyl_alcohol_has_no_spool_care(who, request):
     page = request.getfixturevalue(who).get("/materials/").get_data(as_text=True)
-    assert "<h2>Filament <small>" in page and "<h2>Other materials <small>" in page
+    assert "<h2>Filament &amp; Resin <small>(12)</small>" in page and "<h2>Other materials <small>(27)</small>" in page
     assert "Filament &amp; other materials" not in page and "<h2>Hardware" not in page
     other = page[page.index("<h2>Other materials"):]
-    filament_part = page[page.index("<h2>Filament"):page.index("<h2>Other materials")]
+    filament_part = page[page.index("<h2>Filament &amp; Resin"):page.index("<h2>Other materials")]
     for name in LIQUID_IDS.values():
         assert f'<tr data-name="{name}' in other and f'<tr data-name="{name}' not in filament_part
         row = row_html(page, name)
@@ -441,7 +442,7 @@ def test_old_spool_dates_on_a_liquid_never_show_and_never_reach_home(admin, data
 
 
 @pytest.mark.parametrize("material_id", sorted(LIQUID_IDS))
-def test_liquids_refuse_the_spool_buttons_and_edit_page_has_no_printer_settings(admin, database_file, material_id):
+def test_alcohol_refuses_the_spool_buttons_and_edit_page_has_no_printer_settings(admin, database_file, material_id):
     assert admin.post(f"/materials/{material_id}/spool/open").status_code == 404
     assert admin.post(f"/materials/{material_id}/spool/dried").status_code == 404
     assert read_material(database_file, material_id)["opened_date"] is None
@@ -461,3 +462,86 @@ def test_saving_a_liquid_ignores_typed_printer_settings(admin, database_file):
 def test_the_add_form_shows_printer_settings_only_for_grams(admin):
     page = admin.get("/materials/new").get_data(as_text=True)
     assert 'unit.value !== "g"' in page
+
+
+# ---------- Resin bottles: "Open Bottle Today", never drying or printer settings (2026-11-27) ----------
+
+def test_is_resin_needs_a_liquid_with_the_word_resin():
+    assert spool_care.is_resin({"unit": "ml", "material_type": "Resin", "name": "x"})
+    assert spool_care.is_resin({"unit": "ml", "material_type": "", "name": "Tough RESIN 1L"})
+    assert not spool_care.is_resin({"unit": "ml", "material_type": "Cleaning", "name": "Isopropyl Alcohol 99%"})
+    assert not spool_care.is_resin({"unit": "pcs", "material_type": "Hardware", "name": "Resin clips"})
+    assert not spool_care.is_resin({"unit": "g", "material_type": "Resin", "name": "x"})        # grams = filament, never resin
+
+
+@pytest.mark.parametrize("days, state, chip", [(None, "sealed", "Sealed bottle"), (0, "open", "Bottle open 0d"),
+                                               (179, "open", "Bottle open 179d"), (180, "aged", "Open 180d \u2014 check resin"),
+                                               (400, "aged", "Open 400d \u2014 check resin")])
+def test_resin_chip_follows_the_180_day_limit(days, state, chip):
+    bottle = {"unit": "ml", "material_type": "Resin", "name": "Standard Resin", "nozzle_temp": 200, "drying_note": "65",
+              "opened_date": None if days is None else days_ago(days), "last_dried_date": days_ago(1)}
+    care = spool_care.get_spool_care(bottle, TODAY)
+    assert (care["state"], care["chip"]) == (state, chip) and not care["needs_dryer"] and not care["can_dry"]
+    assert spool_care.format_printer_settings(bottle) is None                  # no FDM settings for resin, even if the columns hold data
+
+
+@pytest.mark.parametrize("who", ["employee", "admin"])
+def test_resin_row_shows_bottle_chip_and_open_bottle_button_only(who, request, database_file):
+    page = request.getfixturevalue(who).get("/materials/").get_data(as_text=True)
+    row = row_html(page, "standard resin")
+    assert ">Sealed bottle<" in row and "Open Bottle Today" in row
+    for word in ["Open Spool Today", "Mark Dried Today", "Nozzle", "settings-line", "Dry box", "dryer"]:
+        assert word not in row
+
+
+def test_open_bottle_today_saves_the_date_once_writes_the_log_and_the_button_goes(admin, database_file):
+    response = admin.post(f"/materials/{RESIN_ID}/spool/open")
+    assert response.status_code == 302
+    assert read_material(database_file, RESIN_ID)["opened_date"] == TODAY.strftime("%Y-%m-%d")
+    assert "BOTTLE_OPENED" in log_actions(database_file)
+    row = row_html(admin.get("/materials/").get_data(as_text=True), "standard resin")
+    assert "Bottle open 0d" in row and "Open Bottle Today" not in row and "Mark Dried Today" not in row
+    admin.post(f"/materials/{RESIN_ID}/spool/open")                                           # a second press changes nothing
+    assert log_actions(database_file).count("BOTTLE_OPENED") == 1
+
+
+def test_employee_can_open_a_bottle_too(employee, database_file):
+    assert employee.post(f"/materials/{RESIN_ID}/spool/open").status_code == 302
+    assert read_material(database_file, RESIN_ID)["opened_date"] is not None
+
+
+@pytest.mark.parametrize("material_id", [RESIN_ID, "M008", HARDWARE_ID])
+def test_mark_dried_is_404_for_resin_alcohol_and_hardware(admin, database_file, material_id):
+    assert admin.post(f"/materials/{material_id}/spool/dried").status_code == 404
+    assert read_material(database_file, material_id)["last_dried_date"] is None
+
+
+@pytest.mark.parametrize("material_id", ["M008", HARDWARE_ID])
+def test_open_is_404_for_alcohol_and_hardware(admin, database_file, material_id):
+    assert admin.post(f"/materials/{material_id}/spool/open").status_code == 404
+    assert read_material(database_file, material_id)["opened_date"] is None
+
+
+def test_resin_never_gets_a_dry_alert_on_home_but_an_old_bottle_gets_a_resin_reminder(admin, database_file):
+    seal_all_spools(database_file)
+    set_material(database_file, RESIN_ID, opened_date=days_ago(100))
+    assert "DRY" not in admin.get("/").get_data(as_text=True) and "RESIN" not in admin.get("/").get_data(as_text=True).split("Notifications", 1)[1]
+    set_material(database_file, RESIN_ID, opened_date=days_ago(200), last_dried_date=days_ago(1), nozzle_temp=210)
+    home = admin.get("/").get_data(as_text=True)
+    assert "<strong>RESIN</strong>" in home and "open 200d" in home and "check before print" in home
+    assert "DRY" not in home and "Mark Dried Today" not in home
+
+
+def test_resin_edit_page_has_only_the_bottle_date(admin, database_file):
+    page = admin.get(f"/materials/{RESIN_ID}/edit").get_data(as_text=True)
+    assert "Bottle opened on" in page and "Saved printer settings" not in page and "nozzle_temp" not in page
+    response = admin.post(f"/materials/{RESIN_ID}/edit", data={"name": "Standard Resin", "material_type": "Resin", "colour": "Grey",
+                          "reorder_level": "1000", "opened_date": days_ago(10), "nozzle_temp": "230", "last_dried_date": days_ago(2)})
+    assert response.status_code == 302
+    row = read_material(database_file, RESIN_ID)
+    assert row["opened_date"] == days_ago(10) and row["nozzle_temp"] is None and row["last_dried_date"] is None
+
+
+def test_filament_keeps_everything_it_had(admin):
+    row = row_html(admin.get("/materials/").get_data(as_text=True), "pla basic white")
+    assert "Mark Dried Today" in row and "Nozzle 210" in row and "Bottle" not in row

@@ -66,7 +66,13 @@
       </form>
     </li>
     {% endfor %}
-    {% if not attention and not dryer_alerts %}<li>No notifications. All materials are OK.</li>{% endif %}
+    {% for material in resin_alerts %}
+    <li>
+      <span><strong>{{ material['name'] }}{% if material['colour'] %} {{ material['colour'] }}{% endif %}</strong>
+        - <strong>RESIN</strong>: open {{ material['care']['days'] }}d — check before print.</span>
+    </li>
+    {% endfor %}
+    {% if not attention and not dryer_alerts and not resin_alerts %}<li>No notifications. All materials are OK.</li>{% endif %}
   </ul>
 </div>
 {% endblock %}

@@ -12,7 +12,8 @@ from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
-from app.spool_care import DAY_FORMAT, FILAMENT_UNIT, add_spool_care, is_filament, parse_day, today_malaysia
+from app.spool_care import (DAY_FORMAT, FILAMENT_UNIT, add_spool_care, has_open_date, is_filament, is_resin, parse_day,
+                              today_malaysia)
 from app.routes_suppliers import FormProblem, insert_offer, insert_supplier, read_offer_numbers, read_supplier_form
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
@@ -99,6 +100,9 @@ def read_material_form(form, is_new, unit=None):
         extras, extra_problems = read_filament_extras(form, is_new)
         values.update(extras)
         problems += extra_problems
+    elif unit == "ml" and not is_new and "opened_date" in form:       # a resin bottle: only its opened date can be corrected
+        values["opened_date"], bottle_problems = read_bottle_date(form)
+        problems += bottle_problems
     return values, problems
 
 
@@ -132,6 +136,17 @@ def read_filament_extras(form, is_new):
         extras.update(date_values)
         problems += date_problems
     return extras, problems
+
+
+# Reads the optional "bottle opened on" date typed on "Edit material" for a resin bottle. Returns (date text or None, problems).
+def read_bottle_date(form):
+    text = (form.get("opened_date") or "").strip()
+    opened = parse_day(text)
+    if text and opened is None:
+        return None, ["Please type the date like 2026-11-20 (year-month-day), or leave it empty."]
+    if opened and opened > today_malaysia():
+        return None, ["The opened date cannot be in the future."]
+    return text or None, []
 
 
 # Reads the two optional spool dates typed on "Edit material" (empty = not set). Returns (values, problems).
@@ -214,6 +229,12 @@ def make_search_pattern(search_text):
     return "%" + safe_text + "%"
 
 
+# Template helper: True when a material row is a resin bottle (so its Edit form can show the "bottle opened on" box).
+@materials_blueprint.app_template_test("resin_bottle")
+def resin_bottle(material):
+    return bool(material) and is_resin(material)
+
+
 # Template word helper: shows "pcs" as the plain word "pieces" (g and ml stay as they are).
 @materials_blueprint.app_template_filter("unit_word")
 def unit_word(unit):
@@ -284,8 +305,9 @@ def list_materials():
         material["last_bought"] = get_last_bought(get_db(), material, show_money)
         material["supplier_name"] = pick_material_supplier(material, offer_supplier_names)
     # One Materials tab, two sections: only filament spools (grams) are "Filament"; resin, alcohol, hardware and the rest are "Other materials".
-    sections = [("Filament", [m for m in materials if is_filament(m)]),
-                ("Other materials", [m for m in materials if not is_filament(m)])]
+    top_section = [m for m in materials if is_filament(m) or is_resin(m)]
+    sections = [("Filament & Resin", top_section),
+                ("Other materials", [m for m in materials if m not in top_section])]
     return render_template("materials_list.html", materials=materials, sections=sections, search_text=search_text,
                            status_filter=status_filter, can_manage=can_manage_materials(get_current_user()))
 
@@ -416,6 +438,8 @@ def save_material_changes(database, material, values, user):
 
 # EXPERIMENT 2026-11-26: saves the printer settings and spool dates of a filament item. Returns what changed (for the log).
 def save_filament_extras(database, material, values):
+    if is_resin(material):
+        return save_bottle_date(database, material, values)
     if not is_filament(material):
         return []
     fields = ("nozzle_temp", "bed_temp", "flow_rate", "drying_note", "opened_date", "last_dried_date")
@@ -423,6 +447,14 @@ def save_filament_extras(database, material, values):
                      "opened_date = ?, last_dried_date = ? WHERE id = ?",
                      (*(values[field] for field in fields), material["id"]))
     return [f"{field} from {material[field]} to {values[field]}" for field in fields if material[field] != values[field]]
+
+
+# Saves the corrected "bottle opened on" date of a resin bottle (only when the Edit form sent it). Returns what changed.
+def save_bottle_date(database, material, values):
+    if "opened_date" not in values or material["opened_date"] == values["opened_date"]:
+        return []
+    database.execute("UPDATE materials SET opened_date = ? WHERE id = ?", (values["opened_date"], material["id"]))
+    return [f"opened_date from {material['opened_date']} to {values['opened_date']}"]
 
 
 # Removes a material from the lists (Admin only). The row and its history stay; it is only switched off.
@@ -441,7 +473,8 @@ def remove_material(material_id):
 
 
 # EXPERIMENT 2026-11-26: one-tap "Open Spool Today" / "Mark Dried Today" on a filament item (Admin and Employee).
-# It only saves today's Malaysia date and writes a line to the activity log. Anything that is not filament is refused.
+# It only saves today's Malaysia date and writes a line to the activity log. Resin bottles get "Open Bottle Today" only (no drying);
+# anything that is not filament or resin is refused (404).
 @materials_blueprint.route("/<material_id>/spool/<action>", methods=["POST"])
 @login_required
 def spool_action(material_id, action):
@@ -451,10 +484,12 @@ def spool_action(material_id, action):
     if action not in SPOOL_ACTIONS:
         abort(404)
     material = find_active_material(material_id)
-    if not is_filament(material):
-        abort(404)
+    if not (is_filament(material) if action == "dried" else has_open_date(material)):
+        abort(404)                      # "dried" is for filament only; "open" is for filament and resin only
     back = url_for("home") if request.form.get("back") == "home" else url_for("materials.list_materials")
     column, log_action, words = SPOOL_ACTIONS[action]
+    if is_resin(material):
+        log_action, words = "BOTTLE_OPENED", "Opened bottle of"
     if column == "opened_date" and material["opened_date"]:
         flash(f"{material['name']} was already opened on {material['opened_date']}. Nothing changed.")
     elif column == "last_dried_date" and not material["opened_date"]:

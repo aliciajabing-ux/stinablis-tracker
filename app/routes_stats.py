@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, Response, jsonify, render_template, request
 
 from app.alerts import count_materials_by_status, get_materials_needing_attention
-from app.spool_care import get_dryer_alerts
+from app.spool_care import get_dryer_alerts, get_resin_alerts
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import admin_required, is_admin, login_required
 
@@ -260,7 +260,8 @@ def show_dashboard():
     database = get_db()
     return render_template("home.html", counts=count_materials_by_status(database),
                            attention=get_materials_needing_attention(database),
-                           dryer_alerts=get_dryer_alerts(database))      # EXPERIMENT 2026-11-26: spools to dry before use
+                           dryer_alerts=get_dryer_alerts(database),      # EXPERIMENT 2026-11-26: spools to dry before use
+                           resin_alerts=get_resin_alerts(database))      # 2026-11-27: resin bottles open 180 days or more
 
 
 # Shows the Statistics page (the charts fetch their numbers from the data addresses below).

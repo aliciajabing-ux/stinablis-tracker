@@ -1,7 +1,7 @@
-# WHAT THIS FILE DOES: Works out "spool care" for filament items (how long a spool has been open, and whether it should go
-#   in a dry box or a dryer) and writes the one-line "saved printer settings" summary. Filament = only items counted in grams (spools).
-#   Resin, alcohol and other liquids (ml) and hardware (pieces) are never filament.
+# WHAT THIS FILE DOES: Works out "spool care" for filament spools (open, dry box, dryer) and "bottle care" for resin bottles
+#   (sealed, open, check after 180 days; never any drying), and writes the "saved printer settings" line (filament only).
 # WHO CAN USE IT: Both (Admin and Employee see the chips; the numbers are plain days, no money).
+# Filament = items in grams. Resin = a liquid (ml) with "resin" in its type or name. Alcohol and hardware get no care at all.
 #
 # EXPERIMENT (branch exp-spool-care-preview, 2026-11-26). The two day limits are a team guess, to be confirmed with the founder:
 #   Sealed (never opened)  -> "Sealed"
@@ -17,6 +17,10 @@ from app.auth import utc_now
 DRY_BOX_AFTER_DAYS = 7
 DRYER_AFTER_DAYS = 21
 FILAMENT_UNIT = "g"
+RESIN_UNIT = "ml"
+RESIN_WORD = "resin"
+RESIN_CHECK_AFTER_DAYS = 180      # an opened resin bottle is "check before print" from this many days (team guess, R4)
+DASH = "\u2014"
 DAY_FORMAT = "%Y-%m-%d"
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 DEGREE_C = "°C"
@@ -41,22 +45,59 @@ def is_filament(material):
     return material["unit"] == FILAMENT_UNIT
 
 
-# Returns the spool-care facts for one filament item, or None for anything else. "today" can be given for tests.
+# Returns True for resin bottles: a liquid (ml) with the word "resin" in its type or name. Isopropyl alcohol is NOT resin.
+def is_resin(material):
+    if material["unit"] != RESIN_UNIT:
+        return False
+    words = f"{_text(material, 'material_type')} {_text(material, 'name')}".lower()
+    return RESIN_WORD in words
+
+
+# Returns one text column of a material (row or dictionary), or "" when it is missing or empty.
+def _text(material, column):
+    try:
+        return material[column] or ""
+    except (KeyError, IndexError):
+        return ""
+
+
+# Returns True for anything that has a "Open ... Today" button: filament spools and resin bottles. Nothing else.
+def has_open_date(material):
+    return is_filament(material) or is_resin(material)
+
+
+# Returns the bottle facts for one resin item: sealed, open, or aged (opened 180 days ago or more). No drying for resin.
+def get_resin_care(material, today=None):
+    today = today or today_malaysia()
+    opened = parse_day(material["opened_date"])
+    if opened is None:
+        return {"kind": "resin", "state": "sealed", "days": None, "chip": "Sealed bottle", "needs_dryer": False,
+                "needs_check": False, "can_open": True, "can_dry": False, "open_label": "Open Bottle Today"}
+    days = max((today - opened).days, 0)
+    aged = days >= RESIN_CHECK_AFTER_DAYS
+    chip = f"Open {days}d {DASH} check resin" if aged else f"Bottle open {days}d"
+    return {"kind": "resin", "state": "aged" if aged else "open", "days": days, "chip": chip, "needs_dryer": False,
+            "needs_check": aged, "can_open": False, "can_dry": False, "open_label": "Open Bottle Today"}
+
+
+# Returns the spool-care facts for one filament spool or resin bottle, or None for anything else. "today" can be given for tests.
 def get_spool_care(material, today=None):
+    if is_resin(material):
+        return get_resin_care(material, today)
     if not is_filament(material):
         return None
     today = today or today_malaysia()
     opened = parse_day(material["opened_date"])
     if opened is None:
-        return {"state": "sealed", "days": None, "chip": "Sealed", "needs_dryer": False,
-                "can_open": True, "can_dry": False}
+        return {"kind": "filament", "state": "sealed", "days": None, "chip": "Sealed", "needs_dryer": False,
+                "needs_check": False, "can_open": True, "can_dry": False, "open_label": "Open Spool Today"}
     started = max(opened, parse_day(material["last_dried_date"]) or opened)
     days = max((today - started).days, 0)
     state = "dryer" if days >= DRYER_AFTER_DAYS else "dry_box" if days >= DRY_BOX_AFTER_DAYS else "open"
     advice = {"dryer": "Put in dryer before use", "dry_box": "Dry box recommended", "open": ""}[state]
     chip = f"Open {days}d {DOT} {advice}" if advice else f"Open {days}d"
-    return {"state": state, "days": days, "chip": chip, "needs_dryer": state == "dryer",
-            "can_open": False, "can_dry": True}
+    return {"kind": "filament", "state": state, "days": days, "chip": chip, "needs_dryer": state == "dryer",
+            "needs_check": False, "can_open": False, "can_dry": True, "open_label": "Open Spool Today"}
 
 
 # Returns the saved printer settings as one line, for example "Nozzle 235 C - Bed 75 C - Flow 0.96 - Dry 65 C / 6h".
@@ -90,3 +131,12 @@ def get_dryer_alerts(database, today=None):
         "SELECT * FROM materials WHERE is_active = 1 AND unit = 'g' AND opened_date IS NOT NULL").fetchall()
     cared = [add_spool_care(row, today) for row in rows]
     return sorted((m for m in cared if m["care"]["needs_dryer"]), key=lambda m: -m["care"]["days"])
+
+
+# Returns the active resin bottles that have been open 180 days or more (for the Home Notifications), longest open first.
+# This is NOT a drying alert: resin is never dried.
+def get_resin_alerts(database, today=None):
+    rows = database.execute(
+        "SELECT * FROM materials WHERE is_active = 1 AND unit = 'ml' AND opened_date IS NOT NULL").fetchall()
+    cared = [add_spool_care(row, today) for row in rows if is_resin(row)]
+    return sorted((m for m in cared if m["care"]["needs_check"]), key=lambda m: -m["care"]["days"])
