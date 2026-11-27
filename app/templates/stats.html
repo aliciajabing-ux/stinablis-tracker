@@ -51,8 +51,14 @@
   .rank-fastest { font-family:var(--font-mono); font-size:.85rem; color:var(--orange-wheel); font-weight:700; }
   .rank-meta { flex:0 1 auto; color:var(--moss); }
   /* Days of stock left: a plain table; the Admin money panel uses big numbers. Colours come from the theme. */
+  /* Days of stock left: roomy cells so headers and values never touch; numbers on the right, status centred in its own column. */
+  .days-table { width:100%; border-collapse:collapse; }
+  .days-table th, .days-table td { padding:12px 14px; vertical-align:middle; }
   .days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }
-  .days-table .badge-cell { min-width:7.5rem; }
+  .days-table td.status-cell, .days-table th.status-cell { text-align:center; padding-left:28px; min-width:8.5rem; }
+  @media (max-width: 640px) { .days-table td.num, .days-table td.status-cell { text-align:left; padding-left:10px; } }   /* phone cards: label and value read left to right */
+  .status-pill { display:inline-block; min-width:6.5rem; box-sizing:border-box; text-align:center; }
+  .status-pill.status-ok { background:transparent !important; color:var(--moss) !important; border:2px solid var(--moss); font-weight:700; padding:1px 12px; border-radius:999px; }
   .big-number { font-size:1.8rem; font-weight:700; margin:4px 0 2px; }
   .money-block { margin-bottom:22px; }
   .money-table td.num { text-align:right; white-space:nowrap; }
@@ -82,18 +88,18 @@
 </div>
 <div class="panel" id="panel-days" hidden>
   <h2>Days of stock left</h2>
-  <p>An estimate for materials used in the last 30 days: stock on hand divided by the average amount used per day. "Order now" means the stock
-    may run out before a delivery could arrive; "Low" means it is within {{ lead_margin_days }} days of that. Fewest days left first.</p>
+  <p>Estimated from the last 30 days of use. "Order now": stock may run out before a delivery arrives. "Low": within {{ lead_margin_days }} days of that.</p>
   {% if days_left_rows %}
   <div class="scroll cards"><table class="days-table">
-    <tr class="head"><th>Material</th><th class="num">Stock on hand</th><th class="num">Est. days left</th><th class="num">Supplier lead time</th><th>Action</th></tr>
+    <tr class="head"><th>Material</th><th class="num">In stock</th><th class="num">Days left</th><th class="num">Lead time</th><th class="status-cell">Status</th></tr>
     {% for row in days_left_rows %}
+    {% set whole_days = (row.days_left + 0.5) | int %}
     <tr>
       <td data-label="Material">{{ row.name }}</td>
-      <td class="num" data-label="Stock on hand">{{ '{:,.0f}'.format(row.stock) if row.stock == row.stock|round else '{:,.1f}'.format(row.stock) }} {{ row.unit }}</td>
-      <td class="num" data-label="Est. days left">{{ '{:,.1f}'.format(row.days_left) }} days</td>
-      <td class="num" data-label="Supplier lead time">{% if row.lead_time_days is none %}No supplier yet{% else %}{{ row.lead_time_days }} day{{ '' if row.lead_time_days == 1 else 's' }}{% endif %}</td>
-      <td class="badge-cell" data-label="Action">{% if row.badge == 'Order now' %}<span class="tag tag-OUT">Order now</span>{% elif row.badge == 'Low' %}<span class="tag tag-LOW">Low</span>{% else %}OK{% endif %}</td>
+      <td class="num" data-label="In stock">{{ '{:,.0f}'.format(row.stock) if row.stock == row.stock|round else '{:,.1f}'.format(row.stock) }} {{ row.unit }}</td>
+      <td class="num" data-label="Days left">{{ '{:,}'.format(whole_days) }} day{{ '' if whole_days == 1 else 's' }}</td>
+      <td class="num" data-label="Lead time">{% if row.lead_time_days is none %}No supplier{% else %}{{ row.lead_time_days }} day{{ '' if row.lead_time_days == 1 else 's' }}{% endif %}</td>
+      <td class="status-cell" data-label="Status">{% if row.badge == 'Order now' %}<span class="tag tag-OUT status-pill">Order now</span>{% elif row.badge == 'Low' %}<span class="tag tag-LOW status-pill">Low</span>{% else %}<span class="tag status-pill status-ok">OK</span>{% endif %}</td>
     </tr>
     {% endfor %}
   </table></div>

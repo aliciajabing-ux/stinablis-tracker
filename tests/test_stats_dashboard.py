@@ -614,10 +614,12 @@ def test_days_left_page_shows_table_badges_and_no_money_for_both_roles(admin, em
     for browser in (admin, employee):
         page = browser.get("/stats/").get_data(as_text=True)
         panel = page.split('id="panel-days"')[1].split('id="panel-ranking"')[0]
-        assert "Est. days left" in panel and "Supplier lead time" in panel and "Stock on hand" in panel
+        for header in ("Material", "In stock", "Days left", "Lead time", "Status"):
+            assert "<th>%s</th>" % header in panel or ">%s</th>" % header in panel, header
+        assert "Est. days left" not in panel and "Supplier lead time" not in panel and "Stock on hand" not in panel
         assert "Order now" in panel and "ABS Grey" in panel and "PLA Basic White" in panel
         assert panel.index("ABS Grey") < panel.index("PLA Basic White")             # fewest days first
-        assert "No supplier yet" in panel and "MYR" not in panel and "price" not in panel.lower()
+        assert "No supplier" in panel and "MYR" not in panel and "price" not in panel.lower()
 
 
 def test_days_left_page_has_a_clear_empty_state(employee):
@@ -674,3 +676,23 @@ def test_employee_page_never_contains_the_spending_numbers(employee, database_fi
     add_purchase(database_file, "A", "S2", 123.45, this_month)
     page = employee.get("/stats/").get_data(as_text=True)
     assert "123.45" not in page and "69.60" not in page and "panel-spending" not in page
+
+
+def test_days_left_shows_whole_days_and_one_consistent_status_pill_per_row(admin, employee, database_file):
+    recent = (routes_stats.utc_now() - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+    add_movement(database_file, "A", "M1", "USED", 30, recent)       # 800 g at 1 g/day = 800 days, lead time 1: no badge
+    add_movement(database_file, "B", "M2", "USED", 900, recent)      # 240 g at 30 g/day = 8 days, lead time 3: Low
+    add_movement(database_file, "C", "M3", "USED", 300, recent)      # 0 g left, no supplier: Order now
+    for browser in (admin, employee):
+        panel = browser.get("/stats/").get_data(as_text=True).split('id="panel-days"')[1].split('id="panel-ranking"')[0]
+        assert "800 days" in panel and "8 days" in panel and "0 days" in panel
+        assert ".0 day" not in panel and ".1 day" not in panel and ".5 day" not in panel
+        assert panel.count("status-pill") >= 3
+        assert 'tag tag-OUT status-pill">Order now' in panel and 'tag tag-LOW status-pill">Low' in panel
+        assert 'status-pill status-ok">OK' in panel
+
+
+def test_days_left_intro_is_short(employee):
+    panel = employee.get("/stats/").get_data(as_text=True).split('id="panel-days"')[1].split('id="panel-ranking"')[0]
+    intro = panel.split("<p>")[1].split("</p>")[0]
+    assert len(intro) < 220 and "Estimated from the last 30 days" in intro
