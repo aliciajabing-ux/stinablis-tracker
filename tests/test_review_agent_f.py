@@ -628,7 +628,7 @@ def test_checklist_only_suppliers_that_deliver_in_time(admin):
 def test_checklist_employee_can_see_prices_but_cannot_add_or_change_suppliers(employee, database_file):
     page = employee.get("/suppliers/S1").get_data(as_text=True)
     assert "72.00" in page
-    for button_text in ("Change", "Add", "Switch off", "Switch on"):
+    for button_text in ("Edit", "Add", "Switch off", "Switch on"):
         assert f">{button_text}" not in re.sub(r"\s+", "", page).replace("> ", ">") or True
     assert "/edit" not in page and "/switch" not in page and "/offers/new" not in page and "/suppliers/new" not in page
     assert "/suppliers/new" not in employee.get("/suppliers").get_data(as_text=True)

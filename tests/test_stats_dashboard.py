@@ -745,3 +745,44 @@ def test_home_notification_rows_keep_their_buttons_on_the_right_above_640px(admi
         assert ".attention li > span:first-child { flex:1; min-width:0;" in page
         assert ".attention li > .row-end, .attention li > form { flex-shrink:0; white-space:nowrap; }" in page
         assert ".attention li { flex-direction:column; align-items:flex-start; }" in page.split("@media (max-width: 640px)")[1]
+
+
+# ---------- Delivery ranking follows an edited delivery time (Admin edits the offer) ----------
+
+# The lead time is stored on each supplier offer ("supplier X sells material Y with this lead time"). The Admin edits it on the
+# offer form (the "Edit" link in "Materials this supplier sells"). The ranking reads the same column, so it must follow at once.
+OFFER_EDIT_FORM = {"material_id": "M1", "pack_unit": "g", "pack_size": "1000", "price_per_pack_myr": "60",
+                   "minimum_order_packs": "1", "shipping_cost_myr": "0", "lead_time_days": "1"}
+
+
+def ranking_pairs(browser, material=""):
+    rows = browser.get("/stats/data/delivery-ranking?material=" + material).get_json()["rows"]
+    return [(row["rank"], row["supplier"], row["days_text"]) for row in rows]
+
+
+def test_editing_an_offers_delivery_time_changes_the_delivery_ranking_at_once(admin, employee):
+    # Before: Kuching Shop 1 day, Web Store 7 days for PLA (M1).
+    assert ranking_pairs(admin, "M1") == [(1, "Kuching Shop", "1 day"), (2, "Web Store", "7 days")]
+    # The Admin makes Web Store (offer O3) slower: 9 days. The order stays, the days change.
+    assert admin.post("/offers/O3/edit", data={**OFFER_EDIT_FORM, "lead_time_days": "9"}).status_code == 302
+    assert ranking_pairs(admin, "M1") == [(1, "Kuching Shop", "1 day"), (2, "Web Store", "9 days")]
+    # The Admin makes Web Store faster than Kuching Shop: the ranking order flips, for both roles.
+    assert admin.post("/offers/O3/edit", data={**OFFER_EDIT_FORM, "lead_time_days": "0"}).status_code == 302
+    for browser in (admin, employee):
+        assert ranking_pairs(browser, "M1") == [(1, "Web Store", "0 days"), (2, "Kuching Shop", "1 day")]
+    # The "All materials (average)" ranking follows too: Kuching Shop averages (1 + 3) / 2 = 2 days, Web Store 0 days.
+    assert ranking_pairs(admin) == [(1, "Web Store", "0 days on average"), (2, "Kuching Shop", "2 days on average")]
+
+
+def test_the_statistics_page_ranking_is_read_fresh_each_time_and_is_not_cached(admin):
+    answer = admin.get("/stats/data/delivery-ranking?material=M1")
+    assert "max-age" not in (answer.headers.get("Cache-Control") or "") and "Expires" not in answer.headers
+    admin.post("/offers/O1/edit", data={**OFFER_EDIT_FORM, "lead_time_days": "5"})            # Kuching Shop: 5 days now
+    assert ranking_pairs(admin, "M1") == [(1, "Kuching Shop", "5 days"), (2, "Web Store", "7 days")]
+
+
+def test_the_supplier_edit_form_has_no_delivery_time_box_so_it_cannot_change_the_ranking(admin):
+    # A supplier has no single delivery time: each of its offers has one. The supplier form only changes contact details and status.
+    page = admin.get("/suppliers/S1/edit").get_data(as_text=True)
+    assert 'name="lead_time_days"' not in page
+    assert admin.get("/offers/O1/edit").get_data(as_text=True).count('name="lead_time_days"') == 1

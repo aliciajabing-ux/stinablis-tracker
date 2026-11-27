@@ -195,7 +195,7 @@ def test_employee_suggestion_page_shows_prices(employee):
 def test_employee_supplier_pages_show_prices_but_no_edit_buttons(employee):
     page = employee.get("/suppliers/S1").get_data(as_text=True)
     assert "MYR 72.00" in page and "Lead time" in page
-    for edit_control in ["Change", "Switch off", "Switch on", "Add material this supplier sells", "/edit"]:
+    for edit_control in [">Edit</a>", "Change", "Switch off", "Switch on", "Add material this supplier sells", "/edit"]:
         assert edit_control not in page
     assert "Add supplier" not in employee.get("/suppliers").get_data(as_text=True)
 
@@ -552,10 +552,21 @@ def test_every_supplier_edit_control_says_edit_supplier(admin):
     assert "<h1>Edit supplier</h1>" in standalone and "<title>Edit supplier - Stinablis Tracker</title>" in standalone
     listing = admin.get("/suppliers").get_data(as_text=True)
     assert "Edit<span" in listing and "Press Edit to change a supplier" in listing      # list buttons say Edit
-    assert ">Change</a>" in detail                                            # the per-material offer "Change" link is kept on purpose
+    assert ">Edit</a>" in detail and ">Change</a>" not in detail              # the per-material offer link also says Edit (changed 2026-11-27)
 
 
 def test_employee_pages_have_no_supplier_edit_wording_at_all(employee):
     for address in ["/suppliers", "/suppliers/S1", "/suppliers/S1?edit=1"]:
         page = employee.get(address).get_data(as_text=True)
         assert not OLD_WORDING.search(page) and "Edit supplier" not in page
+
+
+def test_every_material_row_on_the_supplier_page_has_an_edit_link_next_to_switch_off(admin, employee):
+    detail = admin.get("/suppliers/S1").get_data(as_text=True)
+    rows = [row for row in detail.split("<tr>") if "/edit" in row and "offers/" in row or "offers/" in row and "/switch" in row]
+    assert rows, "the supplier page should list at least one material row"
+    for row in rows:
+        assert ">Edit</a>" in row and ">Change</a>" not in row and "Switch" in row
+        assert row.index(">Edit</a>") < row.index("Switch")                       # Edit sits before Switch off / Switch on
+    assert ">Change</a>" not in detail
+    assert ">Edit</a>" not in employee.get("/suppliers/S1").get_data(as_text=True)  # Employees get no such link
