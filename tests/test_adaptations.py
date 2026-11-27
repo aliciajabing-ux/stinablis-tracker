@@ -87,22 +87,23 @@ def test_employee_sees_last_bought_supplier_and_price_on_list_and_record_pages(s
     employee = logged_in_as(sample_database_file, "EMPLOYEE")
     list_page = employee.get("/materials/").get_data(as_text=True)
     record_page = employee.get(f"/materials/{material_id(sample_database_file, 'M4 Socket')}/record/used").get_data(as_text=True)
-    assert "Last bought: 200 pieces from" in list_page and "SAMPLE Hardware Hub E" in list_page
+    assert "Last bought: 200 pieces from" in list_page and "Pending Industrial Hardware" in list_page
     assert "MYR 24.00" in list_page and "MYR 24.00" in record_page
-    assert "Last bought:" in record_page and "<strong>SAMPLE Hardware Hub E</strong>" in record_page
+    assert "Last bought:" in record_page and "<strong>Pending Industrial Hardware</strong>" in record_page
 
 
 def test_admin_sees_the_same_last_bought_line(sample_database_file):
     page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
-    assert "Last bought: 1000 g from" in page and "MYR 76.00" in page
+    assert "Last bought: 1000 g from" in page and "MYR 58.00" in page
 
 
-def test_material_never_bought_through_the_app_says_so(sample_database_file):
+def test_material_never_bought_through_the_app_shows_no_last_bought_and_no_old_fallback_message(sample_database_file):
     record = logged_in_as(sample_database_file, "EMPLOYEE").get(
         f"/materials/{material_id(sample_database_file, 'Standard Resin')}/record/used").get_data(as_text=True)
     assert "Last bought:" not in record
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
-    assert "Not bought through this app yet." in page
+    assert "Not bought through this app yet" not in page      # the old fallback sentence is gone for good
+    assert "Last bought: 500" not in page and "Standard Resin" in page
 
 
 def test_money_is_hidden_when_can_see_prices_says_no_but_supplier_name_stays(sample_database_file, monkeypatch):
@@ -175,3 +176,105 @@ def test_buttons_are_big_enough_to_tap(sample_database_file):
     assert "min-height: 44px" in employee.get("/materials/").get_data(as_text=True)
     page = employee.get(f"/materials/{material_id(sample_database_file, 'Springs')}/record/used").get_data(as_text=True)
     assert "min-height: 44px" in page
+
+
+# ---- one supplier per material on the Materials page ----
+
+def sample_rows(database_file, sql):
+    connection = sqlite3.connect(database_file)
+    rows = connection.execute(sql).fetchall()
+    connection.close()
+    return rows
+
+
+def test_seed_has_ten_suppliers_and_exactly_one_active_offer_per_material(sample_database_file):
+    assert len(sample_rows(sample_database_file, "SELECT id FROM suppliers")) == 10
+    assert sample_rows(sample_database_file, "SELECT id FROM suppliers ORDER BY id")[-1][0] == "S010"
+    per_material = sample_rows(sample_database_file,
+        "SELECT m.id, COUNT(o.id) FROM materials m LEFT JOIN supplier_offers o ON o.material_id = m.id AND o.is_active = 1 GROUP BY m.id")
+    assert len(per_material) == 39
+    assert all(count == 1 for _, count in per_material)
+
+
+def test_every_offer_unit_matches_its_material_unit(sample_database_file):
+    wrong = sample_rows(sample_database_file,
+        "SELECT m.id FROM materials m JOIN supplier_offers o ON o.material_id = m.id WHERE o.pack_unit <> m.unit")
+    assert wrong == []
+
+
+def test_materials_page_shows_one_supplier_line_per_material_and_never_a_list(sample_database_file):
+    import re
+    page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
+    lines = re.findall(r"Supplier: ([^<]+)</span>", page)
+    assert len(lines) == 39
+    assert all("," not in line for line in lines)                      # one name, never a comma list
+    assert "Supplier: Kuching 3D Filament Supply" in page and "Supplier: Pending Industrial Hardware" in page
+
+
+# Returns the HTML of the one table row whose data-name starts with the given lower-case text.
+def row_html(page, name_start):
+    start = page.index(f'<tr data-name="{name_start}')
+    return page[start:page.index("</tr>", start)]
+
+
+def test_a_named_last_purchase_wins_over_the_offer_supplier(sample_database_file):
+    page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
+    assert "Supplier: Kuching 3D Filament Supply" in row_html(page, "pla basic white")   # M001: bought from S001 and S001 sells it
+    connection = sqlite3.connect(sample_database_file)
+    connection.execute("INSERT INTO stock_movements (id, material_id, movement_type, quantity, note, user_id, created_at, supplier_id, total_cost_myr) "
+                       "VALUES ('TX1','M001','RECEIVED',500,'later purchase','U001','2026-11-25 02:00:00','S002',40)")
+    connection.commit()
+    connection.close()
+    page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
+    assert "Supplier: Sarawak Maker &amp; Print Hub" in row_html(page, "pla basic white")   # the newest purchase wins
+
+
+def test_with_two_active_offers_only_the_fastest_supplier_is_shown(sample_database_file):
+    connection = sqlite3.connect(sample_database_file)
+    connection.execute("INSERT INTO supplier_offers VALUES ('OX1','S006','M002',1000,'g',50,1,0,9,1)")
+    connection.execute("INSERT INTO supplier_offers VALUES ('OX2','S008','M002',1000,'g',90,1,0,0,1)")
+    connection.commit()
+    connection.close()
+    page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
+    row = row_html(page, "pla basic black")
+    assert row.count("Supplier: ") == 1 and "Supplier: Tabuan Jaya Fasteners &amp; Hardware" in row
+
+
+def test_switched_off_supplier_or_offer_is_not_shown_as_the_supplier(sample_database_file):
+    connection = sqlite3.connect(sample_database_file)
+    connection.execute("UPDATE supplier_offers SET is_active = 0 WHERE material_id = 'M002'")
+    connection.commit()
+    connection.close()
+    page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
+    row = row_html(page, "pla basic black")
+    assert "Supplier:" not in row and "Last bought" not in row
+
+
+def test_sync_suppliers_repairs_an_old_database_without_deleting_anything(sample_database_file):
+    connection = sqlite3.connect(sample_database_file)
+    connection.execute("UPDATE suppliers SET name = 'Old Name' WHERE id = 'S001'")
+    connection.execute("INSERT INTO supplier_offers VALUES ('OX1','S006','M002',1000,'g',50,1,0,9,1)")
+    before = connection.execute("SELECT COUNT(*) FROM supplier_offers").fetchone()[0]
+    connection.commit()
+    connection.close()
+    setup_database.sync_sample_suppliers(sample_database_file)
+    setup_database.sync_sample_suppliers(sample_database_file)          # safe to repeat
+    assert sample_rows(sample_database_file, "SELECT name FROM suppliers WHERE id = 'S001'")[0][0] == "Kuching 3D Filament Supply"
+    assert sample_rows(sample_database_file, "SELECT is_active FROM supplier_offers WHERE id = 'OX1'")[0][0] == 0
+    assert sample_rows(sample_database_file, "SELECT COUNT(*) FROM supplier_offers")[0][0] == before   # nothing deleted
+    per_material = sample_rows(sample_database_file,
+        "SELECT COUNT(*) FROM supplier_offers WHERE is_active = 1 GROUP BY material_id")
+    assert len(per_material) == 39 and all(count == 1 for (count,) in per_material)
+
+
+def test_every_sample_purchase_supplier_is_the_same_supplier_that_sells_that_material(sample_database_file):
+    mismatches = sample_rows(sample_database_file,
+        "SELECT t.id FROM stock_movements t JOIN supplier_offers o ON o.material_id = t.material_id AND o.is_active = 1 "
+        "WHERE t.supplier_id IS NOT NULL AND t.supplier_id <> o.supplier_id")
+    assert mismatches == []
+
+
+def test_materials_page_has_the_option_2_layout_pieces_and_no_old_text(sample_database_file):
+    page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
+    assert 'class="m-name"' in page and "OPTION 2 LAYOUT v2" in page and "table-layout: fixed" in page
+    assert "Not bought through this app yet" not in page

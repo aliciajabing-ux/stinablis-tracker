@@ -4,18 +4,24 @@
 {% block title %}Suppliers - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
+{% if can_manage %}<style>
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }   /* read out by screen readers: which supplier this Edit is for */
+  .row-edit .button { min-height: 44px; box-sizing: border-box; }                                                          /* easy to tap on a phone */
+  @media (min-width: 641px) { .row-edit { width: 1%; white-space: nowrap; } }
+</style>{% endif %}
 <h1>Suppliers</h1>
-<p>Shops and websites we buy from. Click a name to see contact details and what they sell.</p>
+<p>Shops and websites we buy from. Click a name to see contact details and what they sell.{% if can_manage %} Press Edit to change a supplier.{% endif %}</p>
 {% if can_manage %}<p><a class="button" href="{{ url_for('suppliers.supplier_new') }}">Add supplier</a></p>{% endif %}
 <div class="scroll cards"><table>
-  <tr class="head"><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th></tr>
+  <tr class="head"><th>Name</th><th>Type</th><th>Phone</th><th>Email</th><th>Status</th>{% if can_manage %}<th>Actions</th>{% endif %}</tr>
   {% for s in suppliers %}
   <tr>
     <td data-label="Name"><a href="{{ url_for('suppliers.supplier_detail', supplier_id=s['id']) }}">{{ s['name'] }}</a></td>
     <td data-label="Type">{{ s['supplier_type'] }}</td><td data-label="Phone">{{ s['phone'] or '' }}</td><td data-label="Email">{{ s['email'] or '' }}</td>
     <td data-label="Status">{{ 'Active' if s['is_active'] == 1 else 'Switched off' }}</td>
+    {% if can_manage %}<td class="row-edit"><a class="button" href="{{ url_for('suppliers.supplier_edit', supplier_id=s['id']) }}">Edit<span class="sr-only"> {{ s['name'] }}</span></a></td>{% endif %}
   </tr>
-  {% else %}<tr><td colspan="5">No suppliers yet.</td></tr>
+  {% else %}<tr><td colspan="{{ 6 if can_manage else 5 }}">No suppliers yet.</td></tr>
   {% endfor %}
 </table></div>
 {% endblock %}

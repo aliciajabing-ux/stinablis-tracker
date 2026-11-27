@@ -332,3 +332,91 @@ def test_very_long_text_is_refused(admin, database_file):
 def test_supplier_needs_a_name_and_a_valid_type(admin):
     assert admin.post("/suppliers/new", data={"name": "  ", "supplier_type": "LOCAL"}).status_code == 400
     assert admin.post("/suppliers/new", data={"name": "A", "supplier_type": "MOON"}).status_code == 400
+
+
+# ---------- Editing a supplier from the Suppliers list (team request 2026-11-26) ----------
+
+FULL_SUPPLIER_FORM = {"name": "Renamed Shop", "supplier_type": "ONLINE", "address": "1 New Road, Kuching",
+                      "phone": "082-999", "email": "new@shop.example", "website": "https://shop.example",
+                      "notes": "Changed note", "is_active": "1"}
+
+
+def test_admin_list_has_an_edit_button_on_every_row_that_opens_the_edit_form(admin):
+    page = admin.get("/suppliers").get_data(as_text=True)
+    for supplier_id in ["S1", "S2", "S3", "S4"]:                      # S4 is switched off: the Admin still sees and can edit it
+        assert f'href="/suppliers/{supplier_id}/edit"' in page
+    assert page.count('class="button"') >= 5 and "<th>Actions</th>" in page      # 4 Edit buttons + Add supplier
+    assert "Edit<span" in page and "min-height: 44px" in page          # plain word "Edit", tap-friendly, name for screen readers
+
+
+def test_employee_list_has_no_edit_button_and_no_actions_column(employee):
+    page = employee.get("/suppliers").get_data(as_text=True)
+    assert "/edit" not in page and "Edit" not in page and "<th>Actions</th>" not in page and "Add supplier" not in page
+
+
+def test_edit_form_shows_every_field_with_the_current_values_and_status(admin):
+    page = admin.get("/suppliers/S4/edit").get_data(as_text=True)
+    assert "Change supplier" in page and 'value="Closed Shop"' in page and "082-444" in page
+    for field in ["name", "supplier_type", "address", "phone", "email", "website", "notes", "is_active"]:
+        assert f'name="{field}"' in page
+    assert '<option value="0" selected>' in page                       # S4 is switched off, and the form says so
+    assert '<option value="1" selected>' in admin.get("/suppliers/S1/edit").get_data(as_text=True)
+
+
+def test_add_supplier_form_has_no_status_box_and_keeps_its_title(admin):
+    page = admin.get("/suppliers/new").get_data(as_text=True)
+    assert "Add supplier" in page and 'name="is_active"' not in page
+
+
+def test_admin_can_change_every_field_and_the_change_is_saved_and_logged(admin, database_file):
+    response = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "0"})
+    assert response.status_code == 302 and response.headers["Location"].endswith("/suppliers/S1")
+    row = read_rows(database_file, "SELECT * FROM suppliers WHERE id='S1'")[0]
+    assert (row["name"], row["supplier_type"], row["address"], row["phone"], row["email"], row["website"], row["notes"],
+            row["is_active"]) == ("Renamed Shop", "ONLINE", "1 New Road, Kuching", "082-999", "new@shop.example",
+                                  "https://shop.example", "Changed note", 0)
+    actions = [r["action"] for r in read_rows(database_file, "SELECT action FROM activity_log")]
+    assert "SUPPLIER_CHANGED" in actions and "SUPPLIER_SWITCHED_OFF" in actions
+    assert len(read_rows(database_file, "SELECT * FROM suppliers")) == 4          # nothing added, nothing deleted
+
+
+def test_admin_can_switch_a_supplier_back_on_from_the_edit_form_and_employees_then_see_it(admin, employee, database_file):
+    admin.post("/suppliers/S4/edit", data={**FULL_SUPPLIER_FORM, "name": "Closed Shop", "is_active": "1"})
+    assert read_rows(database_file, "SELECT is_active FROM suppliers WHERE id='S4'")[0]["is_active"] == 1
+    assert "SUPPLIER_SWITCHED_ON" in [r["action"] for r in read_rows(database_file, "SELECT action FROM activity_log")]
+    assert "Closed Shop" in employee.get("/suppliers").get_data(as_text=True)
+
+
+def test_saving_without_a_status_box_keeps_the_status_and_writes_no_switch_line(admin, database_file):
+    data = {key: value for key, value in FULL_SUPPLIER_FORM.items() if key != "is_active"}
+    admin.post("/suppliers/S4/edit", data=data)
+    assert read_rows(database_file, "SELECT is_active FROM suppliers WHERE id='S4'")[0]["is_active"] == 0
+    assert not [r for r in read_rows(database_file, "SELECT action FROM activity_log") if "SWITCHED" in r["action"]]
+
+
+def test_a_bad_status_or_empty_name_is_refused_in_plain_words_and_changes_nothing(admin, database_file):
+    before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")]
+    bad_status = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "maybe"})
+    assert bad_status.status_code == 400 and "Active or Switched off" in bad_status.get_data(as_text=True)
+    assert "Change supplier" in bad_status.get_data(as_text=True)      # still the Change form, not "Add supplier"
+    empty_name = admin.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "name": "  "})
+    assert empty_name.status_code == 400
+    assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")] == before
+    assert read_rows(database_file, "SELECT * FROM activity_log WHERE action LIKE 'SUPPLIER_%'") == []
+
+
+def test_employee_still_gets_403_on_the_edit_form_even_with_a_status_value(employee, database_file):
+    before = [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")]
+    assert employee.get("/suppliers/S1/edit").status_code == 403
+    assert employee.post("/suppliers/S1/edit", data={**FULL_SUPPLIER_FORM, "is_active": "0"}).status_code == 403
+    assert [tuple(r) for r in read_rows(database_file, "SELECT * FROM suppliers ORDER BY id")] == before
+
+
+def test_editing_a_supplier_that_does_not_exist_says_not_found(admin):
+    assert admin.get("/suppliers/S999/edit").status_code == 404
+    assert admin.post("/suppliers/S999/edit", data=FULL_SUPPLIER_FORM).status_code == 404
+
+
+def test_supplier_detail_page_still_has_change_supplier_and_switch_buttons_for_admin(admin):
+    page = admin.get("/suppliers/S1").get_data(as_text=True)
+    assert "Change supplier" in page and "Switch off" in page and "/suppliers/S1/edit" in page

@@ -254,9 +254,9 @@ def test_materials_list_is_sorted_by_urgency(admin, database_file):
     expected_order = {"Filament": ["PLA Basic", "PETG", "ABS", "ZZZ Resin"],   # OK, LOW, OUT, OUT (A-Z)
                       "Hardware": ["AAA Nuts"]}
     for section, names in expected_order.items():
-        positions = [sections[section].index('data-label="Name">' + name) for name in names]
+        positions = [sections[section].index('data-label="Name"><span class="m-name">' + name) for name in names]
         assert positions == sorted(positions), section
-    assert 'data-label="Name">AAA Nuts' not in sections["Filament"]       # pieces never appear in the filament section
+    assert 'data-label="Name"><span class="m-name">AAA Nuts' not in sections["Filament"]       # pieces never appear in the filament section
 
 
 def test_search_and_status_filter(employee):

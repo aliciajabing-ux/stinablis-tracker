@@ -6,7 +6,7 @@ WHAT THIS IS
 - Invented data used because the founder's answers are not yet available.
 - Not real Stinablis data. Do not show these numbers, names or prices
   to the founder or the judges as real facts.
-- Suppliers S001-S005 start with "SAMPLE"; all suppliers use example.com emails
+- All suppliers use example.com emails
   and placeholder addresses.
 - Currency: all prices and costs are in MYR (Malaysian Ringgit).
 - Usernames are sample_admin and sample_employee. Passwords are NOT in
@@ -18,14 +18,14 @@ FILES
                          magnets, fidget clicker kit, keychain rings) are DEMO items only:
                          the founder has not confirmed what hardware Stinablis tracks
                          (guide Section 2 and Section 16 Q1).
-- suppliers.csv        : 21 suppliers (12 local in Kuching/Sarawak, 9 online) with contact info.
-                         S001-S005 are the original SAMPLE suppliers. S006-S021 use the shop names
-                         from the team's list (9 Kuching, 7 West Malaysia/online). Their phones,
-                         emails, addresses and ALL prices are invented placeholders, not real quotes.
-                         S021 (BudgetFil) is a BAD BATCH demo: its offers are switched off.
-- supplier_offers.csv  : 163 offers. Every material has 2 or more active offers.
-                         Which supplier sells which material, with price,
-                         pack size, shipping, minimum order and lead time
+- suppliers.csv        : 10 suppliers, S001-S010 (5 local in Kuching/Sarawak, 5 online). Names are the
+                         shops from the team's list; phones, emails, addresses and ALL prices are
+                         invented placeholders, not real quotes.
+- supplier_offers.csv  : 39 offers. EVERY material has exactly ONE active supplier (one offer), so the
+                         Materials page shows one "Supplier:" line per item. Pack size, price,
+                         shipping, minimum order and lead time are stored on the offer.
+                         To make an existing database match these two files without losing data run:
+                         python app/setup_database.py sync-suppliers
 - stock_movements.csv  : sample history of used and received stock
 - users.csv            : 2 sample accounts (one Admin, one Employee)
 
