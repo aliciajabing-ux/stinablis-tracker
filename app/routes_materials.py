@@ -12,11 +12,17 @@ from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
-from app.spool_care import (DAY_FORMAT, FILAMENT_UNIT, add_spool_care, has_open_date, is_filament, is_resin, parse_day,
+from app.spool_care import (DAY_FORMAT, DRY_AFTER_HIGHEST, DRY_AFTER_LOWEST, DRYER_AFTER_DAYS, FILAMENT_UNIT, add_spool_care, has_open_date, is_filament, is_resin, parse_day,
                               today_malaysia)
 from app.routes_suppliers import FormProblem, insert_offer, insert_supplier, read_offer_numbers, read_supplier_form
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
+
+
+# Gives the material pages the default and the limits of "Dry after (days)" (the form shows the default when nothing is saved).
+@materials_blueprint.context_processor
+def dry_after_numbers():
+    return {"default_dry_days": DRYER_AFTER_DAYS, "dry_days_lowest": DRY_AFTER_LOWEST, "dry_days_highest": DRY_AFTER_HIGHEST}
 
 UNITS = ("g", "ml", "pcs")
 MAX_NUMBER = 1000000
@@ -124,13 +130,16 @@ def read_filament_extras(form, is_new):
     flow_text = (form.get("flow_rate") or "").strip()
     flow = float(flow_text) if FLOW_PATTERN.match(flow_text) and 0.5 <= float(flow_text) <= 1.5 else None
     note = read_text(form.get("drying_note"), MAX_TEXT_LENGTH)
-    for ok, message in ((nozzle_ok, "The nozzle temperature must be a whole number from 100 to 400, for example 235."),
+    dry_after, dry_after_ok = read_whole_number(form.get("dry_after_days"), DRY_AFTER_LOWEST, DRY_AFTER_HIGHEST)
+    for ok, message in ((dry_after_ok, f"\"Dry after (days)\" must be a whole number from {DRY_AFTER_LOWEST} to {DRY_AFTER_HIGHEST}, "
+                                       f"for example {DRYER_AFTER_DAYS}. Leave it empty to use {DRYER_AFTER_DAYS}."),
+                        (nozzle_ok, "The nozzle temperature must be a whole number from 100 to 400, for example 235."),
                         (bed_ok, "The bed temperature must be a whole number from 0 to 150, for example 75."),
                         (flow is not None or not flow_text, "The flow rate must be a number from 0.5 to 1.5, for example 0.96."),
                         (note is not None, f"The drying note must be {MAX_TEXT_LENGTH} letters or fewer.")):
         if not ok:
             problems.append(message)
-    extras = {"nozzle_temp": nozzle, "bed_temp": bed, "flow_rate": flow, "drying_note": note or None}
+    extras = {"nozzle_temp": nozzle, "bed_temp": bed, "flow_rate": flow, "drying_note": note or None, "dry_after_days": dry_after}
     if not is_new:
         date_values, date_problems = read_spool_dates(form)
         extras.update(date_values)
@@ -389,11 +398,11 @@ def save_new_material(database, values, user, commit=True):
     now_text = utc_now().strftime(TIME_FORMAT)
     database.execute(
         "INSERT INTO materials (id, name, material_type, colour, unit, quantity_on_hand, reorder_level, "
-        "is_active, created_at, updated_at, nozzle_temp, bed_temp, flow_rate, drying_note) "
-        "VALUES (?, ?, ?, ?, ?, 0, ?, 1, ?, ?, ?, ?, ?, ?)",
+        "is_active, created_at, updated_at, nozzle_temp, bed_temp, flow_rate, drying_note, dry_after_days) "
+        "VALUES (?, ?, ?, ?, ?, 0, ?, 1, ?, ?, ?, ?, ?, ?, ?)",
         (material_id, values["name"], values["material_type"], values["colour"], values["unit"],
          values["reorder_level"], now_text, now_text, values.get("nozzle_temp"), values.get("bed_temp"),
-         values.get("flow_rate"), values.get("drying_note")))
+         values.get("flow_rate"), values.get("drying_note"), values.get("dry_after_days")))
     write_material_log(database, user["id"], "MATERIAL_ADDED", material_id,
                        f"Added {values['name']} ({values['unit']}), reorder level {values['reorder_level']:g}.")
     if values["starting_quantity"] > 0:
@@ -442,9 +451,9 @@ def save_filament_extras(database, material, values):
         return save_bottle_date(database, material, values)
     if not is_filament(material):
         return []
-    fields = ("nozzle_temp", "bed_temp", "flow_rate", "drying_note", "opened_date", "last_dried_date")
+    fields = ("nozzle_temp", "bed_temp", "flow_rate", "drying_note", "dry_after_days", "opened_date", "last_dried_date")
     database.execute("UPDATE materials SET nozzle_temp = ?, bed_temp = ?, flow_rate = ?, drying_note = ?, "
-                     "opened_date = ?, last_dried_date = ? WHERE id = ?",
+                     "dry_after_days = ?, opened_date = ?, last_dried_date = ? WHERE id = ?",
                      (*(values[field] for field in fields), material["id"]))
     return [f"{field} from {material[field]} to {values[field]}" for field in fields if material[field] != values[field]]
 

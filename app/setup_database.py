@@ -100,6 +100,7 @@ SPOOL_CARE_COLUMNS = [
     ("bed_temp", "INTEGER CHECK (bed_temp IS NULL OR bed_temp BETWEEN 0 AND 150)"),
     ("flow_rate", "REAL CHECK (flow_rate IS NULL OR (flow_rate >= 0.5 AND flow_rate <= 1.5))"),
     ("drying_note", "TEXT"),
+    ("dry_after_days", "INTEGER CHECK (dry_after_days IS NULL OR dry_after_days BETWEEN 1 AND 365)"),   # 2026-11-27
 ]
 
 
