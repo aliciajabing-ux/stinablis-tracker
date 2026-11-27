@@ -9,8 +9,11 @@ WHAT THIS IS
 - All suppliers use example.com emails
   and placeholder addresses.
 - Currency: all prices and costs are in MYR (Malaysian Ringgit).
-- Usernames are sample_admin and sample_employee. Passwords are NOT in
-  these files. Set them during setup and never save them in Git.
+- Usernames are sample_admin and sample_employee. Their passwords are NOT in
+  this CSV. A FRESH database built by app/setup_database.py gives them the fixed
+  DEMO passwords sampleadmin and sampleemployee (team decision 2026-11-27, guide
+  rule C6). Use them for demo and test databases only, never with real data, and
+  change them with "python app/auth.py set-password <name>" before any real use.
 
 FILES
 - materials.csv        : 13 materials (g, ml and pcs items) with stock on hand and

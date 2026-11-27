@@ -978,12 +978,15 @@ def sample_database(tmp_path, monkeypatch):
     return str(tmp_path / "tracker.db")
 
 
-def test_known_issue_sample_users_cannot_log_in_until_a_password_is_set(sample_database):
+def test_fresh_sample_users_accept_only_their_two_demo_passwords_and_no_common_guess(sample_database):
+    # Changed 2026-11-27 (team decision, guide rule C6): a fresh database gives the sample accounts fixed DEMO passwords.
     website = create_app({"DATABASE": sample_database, "SECRET_KEY": "test-only-key", "TESTING": True, "CSRF_ENABLED": False})
     for username in ("sample_admin", "sample_employee"):
-        for guess in ("", "password", "admin", "changeme", "sample_admin"):
+        for guess in ("password", "admin", "changeme", username):           # 4 wrong guesses: below the 5-wrong-passwords lock
             assert log_in(website.test_client(), username, guess).status_code == 401, (username, guess)
-    assert read_rows(sample_database, "SELECT password_hash FROM users WHERE password_hash IS NOT NULL") == []
+    assert log_in(website.test_client(), "sample_admin", "sampleadmin").status_code == 302
+    assert log_in(website.test_client(), "sample_employee", "sampleemployee").status_code == 302
+    assert len(read_rows(sample_database, "SELECT password_hash FROM users WHERE password_hash IS NOT NULL")) == 2
 
 
 def test_sample_users_work_after_set_password_and_roles_are_right(sample_database):

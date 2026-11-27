@@ -74,19 +74,19 @@ with "SAMPLE"). It is not real Stinablis data. If the file already exists the sc
 touches nothing. To start again, delete `data/tracker.db` by hand first. The `data/` folder is
 ignored by Git on purpose; never commit it.
 
-### 4. Choose a password for each sample account
+### 4. The sample passwords (demo only)
 
-```powershell
-python app/auth.py set-password sample_admin
-```
+A **fresh** database already has fixed demo passwords, so there is nothing to type:
 
-```powershell
-python app/auth.py set-password sample_employee
-```
+| Username | Password |
+|---|---|
+| `sample_admin` | `sampleadmin` |
+| `sample_employee` | `sampleemployee` |
 
-You are asked to type the password twice (at least 8 characters; the letters are hidden while you
-type). Passwords are saved scrambled in your own `data/tracker.db`. Never write a password in a
-file, a chat message or Git.
+These are public demo passwords (team decision 2026-11-27). Use them only on demo or test databases,
+never with real company data. To choose your own password for any account, run
+`python app/auth.py set-password sample_admin` (at least 8 characters; the letters are hidden while you
+type). The `upgrade` and `sync-suppliers` commands never change a password.
 
 ### 5. Set the secret key
 
@@ -124,7 +124,7 @@ PowerShell window.
 | `sample_admin` | **Admin** | Everything: add / change / remove materials, suppliers and prices; record stock; see all statistics; download the statistics CSV; manage user accounts on the **Users** screen |
 | `sample_employee` | **Employee** | See materials, suppliers, prices and the "Find supplier" suggestions; record stock used and received; see low-stock warnings and the usage statistics. **Cannot** change anything else (including the Users screen), and is shown a "Forbidden" (403) page if they type an admin address |
 
-The password for each account is the one you chose in step 4. Employees may *see* prices and money
+The demo passwords are in step 4 (or the one you chose with `set-password`). Employees may *see* prices and money
 (team decision 2026-11-24) but only the Admin can *change* them.
 
 After 5 wrong passwords an account is locked for 15 minutes.

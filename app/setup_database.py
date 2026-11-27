@@ -14,6 +14,8 @@ import os
 import sqlite3
 import sys
 
+from werkzeug.security import generate_password_hash
+
 # Work out folder paths from where this file lives, so the script runs from any folder.
 APP_FOLDER = os.path.dirname(os.path.abspath(__file__))
 PROJECT_FOLDER = os.path.dirname(APP_FOLDER)
@@ -21,6 +23,10 @@ SCHEMA_FILE = os.path.join(APP_FOLDER, "schema.sql")
 DATA_FOLDER = os.path.join(PROJECT_FOLDER, "data")
 DATABASE_FILE = os.path.join(DATA_FOLDER, "tracker.db")
 SAMPLE_FOLDER = os.path.join(PROJECT_FOLDER, "sample_data")
+
+# DEMO ONLY (team decision 2026-11-27, guide rule C6): a FRESH database gives the two sample accounts these fixed,
+# publicly known passwords. "upgrade" and "sync-suppliers" never touch passwords. Never use such a database for real data.
+SAMPLE_PASSWORDS = {"sample_admin": "sampleadmin", "sample_employee": "sampleemployee"}
 
 # Load parents before children, so links (such as an offer pointing to a material) always exist.
 TABLES_TO_LOAD = ["users", "materials", "suppliers", "supplier_offers", "stock_movements"]
@@ -192,15 +198,22 @@ def sync_one_offer(connection, offer):
         (offer_id, offer["supplier_id"], offer["material_id"]) + values)
 
 
-# Builds all the tables from schema.sql, then loads the sample data.
-def build_database():
-    if os.path.exists(DATABASE_FILE):
+# Gives each sample account its demo password, stored scrambled like every other password (no commit here).
+def set_sample_passwords(connection):
+    for username, password in SAMPLE_PASSWORDS.items():
+        connection.execute("UPDATE users SET password_hash = ? WHERE username = ?", (generate_password_hash(password), username))
+
+
+# Builds all the tables from schema.sql, then loads the sample data and the demo passwords.
+def build_database(database_file=None):
+    database_file = database_file or DATABASE_FILE      # read when called, so a test can point DATABASE_FILE elsewhere
+    if os.path.exists(database_file):
         print("STOP: data/tracker.db already exists. Delete it by hand if you want a fresh start,")
         print("or run: python app/setup_database.py upgrade   (keeps all your data)")
         return
 
-    os.makedirs(DATA_FOLDER, exist_ok=True)
-    connection = sqlite3.connect(DATABASE_FILE)
+    os.makedirs(os.path.dirname(database_file), exist_ok=True)
+    connection = sqlite3.connect(database_file)
     connection.execute("PRAGMA foreign_keys = ON")   # make the database check that links are valid
 
     with open(SCHEMA_FILE, encoding="utf-8") as schema_file:
@@ -210,9 +223,11 @@ def build_database():
         count = load_table(connection, table_name)
         print(f"Loaded {count} rows into {table_name}")
 
+    set_sample_passwords(connection)
     connection.commit()
     connection.close()
     print("Done. Database saved at data/tracker.db")
+    print("DEMO ONLY: sample_admin / sampleadmin and sample_employee / sampleemployee. Never use this database for real data.")
 
 
 if __name__ == "__main__":
