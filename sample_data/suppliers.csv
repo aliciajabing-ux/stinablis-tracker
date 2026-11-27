@@ -1,6 +1,11 @@
 id,name,supplier_type,address,phone,email,website,notes,is_active
-S001,SAMPLE Kuching Filament Shop A,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-001,sales@example.com,,Fake supplier for testing,yes
-S002,SAMPLE Borneo Print Supplies B,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-002,orders@example.com,,Fake supplier for testing,yes
-S003,SAMPLE OnlineFil Store C,ONLINE,"Kuala Lumpur (placeholder address)",+60-3-0000-0003,shop@example.com,https://example.com/shop-c,Fake supplier for testing,yes
-S004,SAMPLE Resin and More Online D,ONLINE,"Selangor (placeholder address)",+60-3-0000-0004,resin@example.com,https://example.com/shop-d,Fake supplier for testing,yes
-S005,SAMPLE Hardware Hub E,LOCAL,"Kuching, Sarawak (placeholder address)",+60-82-000-005,hub@example.com,,Fake supplier for testing,yes
+S001,Kuching 3D Filament Supply,LOCAL,"Jalan Pending, Kuching, Sarawak",+60-82-331-201,sales@kuching3d.example,,Local Kuching filament pickup & urgent spools,yes
+S002,Sarawak Maker & Print Hub,LOCAL,"Batu Kawa, Kuching, Sarawak",+60-82-455-812,orders@sarawakmaker.example,,"Local backup filament, PEI plates & adhesives",yes
+S003,3D Gadgets Malaysia (Shopee),ONLINE,Kuala Lumpur,+60-3-7890-1120,shop@3dgadgets-my.example,https://shopee.com.my,"Primary online filament, nozzles & extruder parts",yes
+S004,MY Resin & Engineering Store,ONLINE,"Subang Jaya, Selangor",+60-3-5631-9044,resin@myengineering.example,https://shopee.com.my,"Online engineering resin, IPA & specialty polymers",yes
+S005,Pending Industrial Hardware,LOCAL,"Pending Industrial Estate, Kuching, Sarawak",+60-82-339-770,hub@pendinghardware.example,,"Local screws, magnets, bearings & workshop tools",yes
+S006,Bambu Lab Official MY (Shopee),ONLINE,"Shah Alam, Selangor",+60-3-5510-8821,my.store@bambulab-dist.example,https://shopee.com.my,"Official Bambu filaments, hotends & build plates",yes
+S007,Sunlu & eSUN Malaysia Hub,ONLINE,"Puchong, Selangor",+60-3-8062-4410,orders@filamenthub.example,https://lazada.com.my,"Bulk PLA+, PETG & Matte spools",yes
+S008,Tabuan Jaya Fasteners & Hardware,LOCAL,"Tabuan Jaya, Kuching, Sarawak",+60-82-364-910,sales@tjhardware.example,,"Same-day M3/M4 bolts, heat-set inserts & springs",yes
+S009,Kota Sentosa Electronics & Maker,LOCAL,"Kota Sentosa, Kuching, Sarawak",+60-82-618-204,info@ksmaker.example,,"Thermistors, heater cartridges, fans & PTFE tubes",yes
+S010,Cytron Technologies (Penang),ONLINE,"Bukit Mertajam, Penang",+60-4-548-0668,support@cytron.example,https://my.cytron.io,"Maker electronics, steppers & specialty parts",yes

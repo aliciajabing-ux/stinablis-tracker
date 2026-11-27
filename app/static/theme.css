@@ -183,3 +183,11 @@ body .box button:hover, body .content button[type=submit]:hover { background: va
 .table-wrap td:first-child { min-width: 200px; }
 .table-wrap td:last-child { min-width: 300px; }
 .table-wrap td:has(.row-more) { min-width: 380px; }
+
+/* ---- EXPERIMENT 2026-11-26: spool-care chips and saved printer settings (filament only; palette colours only) ---- */
+body .chip { font-family: var(--font-mono); background: transparent !important; border: 2px solid var(--line) !important; color: var(--text) !important; }
+body .chip-sealed { border-color: var(--moss) !important; color: var(--moss) !important; }
+body .chip-dry_box { border-color: var(--orange-wheel) !important; color: var(--orange-wheel) !important; }
+body .chip-dryer { background: var(--orange-wheel) !important; border-color: var(--orange-wheel) !important; color: var(--smoky-black) !important; }
+body .settings-line { color: var(--moss) !important; font-family: var(--font-mono); }
+body fieldset { border-color: var(--line); }

@@ -1,5 +1,5 @@
 id,material_id,movement_type,quantity,note,user_id,created_at,supplier_id,total_cost_myr
-T001,M001,RECEIVED,1000,Sample delivery from S003,U001,2026-11-10 02:00:00,S003,76.00
+T001,M001,RECEIVED,1000,Sample delivery from S001,U001,2026-11-10 02:00:00,S001,58.00
 T002,M001,USED,170,Sample printing job,U002,2026-11-18 06:30:00,,
 T003,M004,USED,500,Sample printing job - ABS now empty,U002,2026-11-20 08:15:00,,
 T004,M003,USED,260,Sample printing job,U002,2026-11-21 04:45:00,,
