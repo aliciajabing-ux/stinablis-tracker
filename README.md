@@ -69,8 +69,8 @@ We tested with Flask 3.1.3 and pytest 9.2.0.
 python app/setup_database.py
 ```
 
-This makes `data/tracker.db` and fills it with **invented sample data** (supplier names start
-with "SAMPLE"). It is not real Stinablis data. If the file already exists the script stops and
+This makes `data/tracker.db` and fills it with **invented sample data** (made-up suppliers,
+prices and stock). It is not real Stinablis data. If the file already exists the script stops and
 touches nothing. To start again, delete `data/tracker.db` by hand first. The `data/` folder is
 ignored by Git on purpose; never commit it.
 

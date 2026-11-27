@@ -7,11 +7,11 @@ M005,TPU 95A,TPU,Black,g,380,300,yes,2026-10-25,2026-11-22,225,50,1.00,55 °C / 
 M006,Standard Resin,Resin,Grey,ml,500,1000,yes,,,,,,
 M007,M3 Hex Nuts,Hardware,Steel,pcs,85,50,yes,,,,,,
 M008,Isopropyl Alcohol 99%,Cleaning,Clear,ml,900,1000,yes,,,,,,
-M009,SAMPLE M4 Socket Screws,Hardware,Steel,pcs,240,100,yes,,,,,,
-M010,SAMPLE Compression Springs 8mm,Hardware,Steel,pcs,40,50,yes,,,,,,
-M011,SAMPLE Magnets 6x3mm,Hardware,Silver,pcs,0,100,yes,,,,,,
-M012,SAMPLE Fidget Clicker Kit,Hardware,Black,pcs,25,20,yes,,,,,,
-M013,SAMPLE Keychain Rings 25mm,Hardware,Silver,pcs,300,100,yes,,,,,,
+M009,M4 Socket Head Screws,Hardware,Steel,pcs,240,100,yes,,,,,,
+M010,Compression Springs 8mm,Hardware,Steel,pcs,40,50,yes,,,,,,
+M011,Nickel Disc Magnets 6x3mm,Hardware,Silver,pcs,0,100,yes,,,,,,
+M012,Fidget Clicker Kit,Hardware,Black,pcs,25,20,yes,,,,,,
+M013,Keychain Rings 25mm,Hardware,Silver,pcs,300,100,yes,,,,,,
 M014,PLA+ 1.75mm,PLA+,Black,g,820,200,yes,2026-11-12,,215,60,0.97,50 °C / 4h
 M015,PLA 1.75mm,PLA,White,g,340,200,yes,,,210,60,0.98,45 °C / 4h
 M016,PETG 1.75mm,PETG,Grey,g,610,200,yes,2026-10-30,,235,75,0.96,65 °C / 6h

@@ -60,12 +60,12 @@ def test_materials_search_box_comes_first_and_is_ready_to_type(sample_database_f
 
 def test_materials_search_by_name_still_works_on_the_server(sample_database_file):
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/?q=magnets").get_data(as_text=True)
-    assert "SAMPLE Magnets" in page and "SAMPLE Fidget" not in page
+    assert "Nickel Disc Magnets" in page and "Fidget Clicker" not in page
 
 
 def test_materials_rows_carry_the_name_for_live_filtering(sample_database_file):
     page = logged_in_as(sample_database_file, "ADMIN").get("/materials/").get_data(as_text=True)
-    assert 'data-name="sample magnets' in page and "filterRows" in page
+    assert 'data-name="nickel disc magnets' in page and "filterRows" in page
 
 
 # ---- 2. "Stock" menu word and less clutter ----

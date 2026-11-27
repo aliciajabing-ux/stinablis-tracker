@@ -55,20 +55,21 @@ def material_id(database_file, name_part):
 
 # ---- (a) hardware pieces in the sample data ----
 
-def test_sample_data_has_g_ml_and_pcs_items_and_five_named_hardware_samples(sample_database_file):
+def test_sample_data_has_g_ml_and_pcs_items_and_five_demo_hardware_items(sample_database_file):
     connection = sqlite3.connect(sample_database_file)
     units = {row[0] for row in connection.execute("SELECT DISTINCT unit FROM materials")}
     names = [row[0] for row in connection.execute("SELECT name FROM materials WHERE unit = 'pcs'")]
+    demo_names = [row[0] for row in connection.execute("SELECT name FROM materials WHERE id IN ('M009', 'M010', 'M011', 'M012', 'M013')")]
     connection.close()
     assert units == {"g", "ml", "pcs"}
     for word in HARDWARE_NAMES:
-        assert any(word in name and name.startswith("SAMPLE") for name in names), word
+        assert any(word in name for name in demo_names), word
 
 
 def test_every_hardware_sample_has_a_supplier_offer_in_the_same_unit(sample_database_file):
     connection = sqlite3.connect(sample_database_file)
     missing = connection.execute(
-        "SELECT m.name FROM materials m WHERE m.name LIKE 'SAMPLE%' AND NOT EXISTS "
+        "SELECT m.name FROM materials m WHERE m.id IN ('M009', 'M010', 'M011', 'M012', 'M013') AND NOT EXISTS "
         "(SELECT 1 FROM supplier_offers o WHERE o.material_id = m.id AND o.pack_unit = m.unit)").fetchall()
     connection.close()
     assert missing == []
@@ -76,7 +77,7 @@ def test_every_hardware_sample_has_a_supplier_offer_in_the_same_unit(sample_data
 
 def test_hardware_items_show_ok_low_and_out_words_and_the_word_pieces(sample_database_file):
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
-    assert "SAMPLE Magnets" in page and "pieces" in page
+    assert "Nickel Disc Magnets" in page and "pieces" in page
     for word in ("OK", "LOW", "OUT"):
         assert f"tag-{word}" in page and f">{word}</span>" in page
 

@@ -17,8 +17,8 @@ WHAT THIS IS
 
 FILES
 - materials.csv        : 13 materials (g, ml and pcs items) with stock on hand and
-                         reorder level. The 5 hardware pieces (SAMPLE M4 screws, springs,
-                         magnets, fidget clicker kit, keychain rings) are DEMO items only:
+                         reorder level. The 5 hardware pieces (M4 socket head screws, springs,
+                         disc magnets, fidget clicker kit, keychain rings) are DEMO items only:
                          the founder has not confirmed what hardware Stinablis tracks
                          (guide Section 2 and Section 16 Q1).
 - suppliers.csv        : 10 suppliers, S001-S010 (5 local in Kuching/Sarawak, 5 online). Names are the

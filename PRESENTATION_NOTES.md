@@ -5,7 +5,7 @@ Goal (guide Section 13): **every member can explain these six things in plain wo
 words are in [`GLOSSARY.md`](GLOSSARY.md).
 
 Facts below were checked against the code and by running the app on 2026-11-24. The sample numbers
-are **invented sample data** (supplier names start with "SAMPLE"); never present them as real
+are **invented sample data** (suppliers, contact details, prices and stock are made up); never present them as real
 Stinablis facts or real prices (rule R7).
 
 Last re-checked against code: 2026-11-26, after the group's final merge into `main` (458 automatic
@@ -50,7 +50,7 @@ Facts:
     prototyping in Kuching. Because our system supports pieces (`pcs`) alongside grams (`g`) and
     millilitres (`ml`), it can track filaments, resins and liquids, and also small hardware items such as
     screws, springs, magnets, fidget clickers and keychain rings, in one simple web app. The hardware in
-    our demo is **sample data only** (names start with "SAMPLE"). Whether Stinablis really tracks such
+    our demo is **sample data only** (invented examples). Whether Stinablis really tracks such
     items is **to be confirmed with the founder** (guide Section 2 and Section 16 Q1, Rule R4).
   - *Buying in Kuching.* The Find supplier page compares a fast local shop (for example delivery in
     1 day) with an online shop that may have a cheaper pack price but a larger minimum order and

@@ -66,7 +66,7 @@ Contents: [The big picture](#the-big-picture) · [Database](#database) · [Web a
   (rule C9). We set `is_active = 0` ("switched off") so it disappears from the lists but its history
   stays. Programmers call this a *soft delete*.
 - **Sample data:** invented data in `sample_data/` used to try the app. It is **not** real
-  Stinablis data and every supplier name starts with "SAMPLE".
+  Stinablis data (names, phone numbers, emails and prices are all made up).
 - **CSV (comma-separated values):** a plain text file that a spreadsheet program such as Excel can
   open. The Admin's statistics download is a CSV.
 - **UUID:** a long random code used so every new row gets an id that no other row has.
@@ -198,8 +198,8 @@ Every answer from the server starts with a number that says how it went.
   (grams), `ml` (millilitres) or `pcs` (pieces).
 - **Pieces (`pcs`) and hardware items:** small things counted one by one, such as screws, springs,
   magnets, fidget clickers and keychain rings. The system handles them like any other material, next to
-  `g` and `ml` items. **The hardware in our demo data is SAMPLE data only** (names start with
-  "SAMPLE"); what hardware Stinablis really tracks is still [CONFIRM WITH FOUNDER] (guide Section 2 and
+  `g` and `ml` items. **The hardware in our demo data is demo data only** (the item names
+  are normal workshop names, but they are invented examples); what hardware Stinablis really tracks is still [CONFIRM WITH FOUNDER] (guide Section 2 and
   Section 16 Q1, Rule R4).
 - **Reorder level:** the quantity at which we should order more (for example 500 g).
 - **Status OK / LOW / OUT:** `OUT` = none left (quantity is zero). `LOW` = quantity is at or below the
