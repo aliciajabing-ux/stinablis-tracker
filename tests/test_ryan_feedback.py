@@ -80,7 +80,7 @@ def test_show_only_ok_button_is_gone_but_the_other_filters_stay(sample_database_
 
 def test_lists_show_ok_first_then_low_then_out_inside_each_section(sample_database_file):
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
-    hardware_start = page.index("<h2>Hardware")
+    hardware_start = page.index("<h2>Other materials")
     for section_text in (page[page.index("<h2>Filament"):hardware_start], page[hardware_start:]):
         ranks = [STATUS_RANK[word] for word in badge_order(section_text)]
         assert ranks == sorted(ranks) and set(ranks) == {0, 1, 2}

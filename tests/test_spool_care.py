@@ -399,3 +399,65 @@ def test_employee_cannot_open_the_add_or_edit_forms_so_settings_stay_admin_only(
     assert employee.post("/materials/new", data=GOOD_NEW_FILAMENT).status_code == 403
     assert employee.post(f"/materials/{FILAMENT_ID}/edit", data={"name": "X", "nozzle_temp": "300"}).status_code == 403
     assert read_material(database_file, FILAMENT_ID)["nozzle_temp"] == 210
+
+
+# ---------- Only real filament (grams) gets spool care; resin, alcohol and hardware never do (2026-11-27) ----------
+
+LIQUID_IDS = {"M006": "standard resin", "M008": "isopropyl alcohol 99%"}      # both counted in ml
+
+
+def test_only_grams_count_as_filament():
+    assert spool_care.is_filament(filament(unit="g"))
+    assert not spool_care.is_filament(filament(unit="ml")) and not spool_care.is_filament(filament(unit="pcs"))
+    liquid = filament(unit="ml", opened_date=days_ago(40), nozzle_temp=200)
+    assert spool_care.get_spool_care(liquid, TODAY) is None and spool_care.format_printer_settings(liquid) is None
+
+
+@pytest.mark.parametrize("who", ["employee", "admin"])
+def test_materials_page_headings_and_isopropyl_alcohol_has_no_spool_care(who, request):
+    page = request.getfixturevalue(who).get("/materials/").get_data(as_text=True)
+    assert "<h2>Filament <small>" in page and "<h2>Other materials <small>" in page
+    assert "Filament &amp; other materials" not in page and "<h2>Hardware" not in page
+    other = page[page.index("<h2>Other materials"):]
+    filament_part = page[page.index("<h2>Filament"):page.index("<h2>Other materials")]
+    for name in LIQUID_IDS.values():
+        assert f'<tr data-name="{name}' in other and f'<tr data-name="{name}' not in filament_part
+        row = row_html(page, name)
+        for word in ["chip", "Open Spool Today", "Mark Dried Today", "Nozzle", "settings-line"]:
+            assert word not in row
+
+
+def test_old_spool_dates_on_a_liquid_never_show_and_never_reach_home(admin, database_file):
+    seal_all_spools(database_file)
+    set_material(database_file, "M008", opened_date=days_ago(60), nozzle_temp=200)       # a leftover from before this rule
+    page = admin.get("/materials/").get_data(as_text=True)
+    row = row_html(page, "isopropyl alcohol 99%")
+    assert "Open Spool Today" not in row and "Mark Dried Today" not in row and "Open 60d" not in row and "Nozzle" not in row
+    assert "DRY" not in admin.get("/").get_data(as_text=True)
+    connection = sqlite3.connect(database_file)
+    connection.row_factory = sqlite3.Row
+    assert spool_care.get_dryer_alerts(connection, TODAY) == []
+    connection.close()
+
+
+@pytest.mark.parametrize("material_id", sorted(LIQUID_IDS))
+def test_liquids_refuse_the_spool_buttons_and_edit_page_has_no_printer_settings(admin, database_file, material_id):
+    assert admin.post(f"/materials/{material_id}/spool/open").status_code == 404
+    assert admin.post(f"/materials/{material_id}/spool/dried").status_code == 404
+    assert read_material(database_file, material_id)["opened_date"] is None
+    assert "Saved printer settings" not in admin.get(f"/materials/{material_id}/edit").get_data(as_text=True)
+
+
+def test_saving_a_liquid_ignores_typed_printer_settings(admin, database_file):
+    page = admin.get("/materials/M008/edit").get_data(as_text=True)
+    assert "filament-fields" not in page
+    response = admin.post("/materials/M008/edit", data={"name": "Isopropyl Alcohol 99%", "material_type": "Cleaning",
+                          "colour": "Clear", "reorder_level": "1000", "nozzle_temp": "230", "opened_date": "2026-11-01"})
+    assert response.status_code == 302
+    row = read_material(database_file, "M008")
+    assert row["nozzle_temp"] is None and row["opened_date"] is None
+
+
+def test_the_add_form_shows_printer_settings_only_for_grams(admin):
+    page = admin.get("/materials/new").get_data(as_text=True)
+    assert 'unit.value !== "g"' in page

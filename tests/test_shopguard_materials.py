@@ -1,5 +1,5 @@
 # WHAT THIS FILE DOES: Checks the ShopGuard sample materials (M014 to M039, including PLA+ Orange and PETG Grey for Test 2)
-#   and the two sections of the Materials list ("Filament & other materials" and "Hardware").
+#   and the two sections of the Materials list ("Filament" and "Other materials").
 # WHO CAN USE IT: Developers. Run from the project folder with: python -m pytest tests
 
 import csv
@@ -80,25 +80,27 @@ def test_every_sample_material_loads_into_the_database(sample_database_file):
 @pytest.mark.parametrize("role", ["ADMIN", "EMPLOYEE"])
 def test_materials_list_has_two_sections_with_the_right_items(sample_database_file, role):
     page = logged_in_as(sample_database_file, role).get("/materials/").get_data(as_text=True)
-    assert page.index("<h2>Filament &amp; other materials") < page.index("<h2>Hardware")
-    filament = section_text(page, "<h2>Filament &amp; other materials", "<h2>Hardware")
-    hardware = section_text(page, "<h2>Hardware")
-    assert "PLA+ 1.75mm" in filament and "PETG 1.75mm" in filament and "Standard Resin" in filament
+    assert page.index("<h2>Filament") < page.index("<h2>Other materials")
+    filament = section_text(page, "<h2>Filament", "<h2>Other materials")
+    hardware = section_text(page, "<h2>Other materials")
+    assert "PLA+ 1.75mm" in filament and "PETG 1.75mm" in filament and "Standard Resin" not in filament
+    assert "Standard Resin" in hardware and "Isopropyl Alcohol 99%" in hardware
     assert "608ZZ bearing" in hardware and "Stick-On Rubber Feet" in hardware
     assert "608ZZ bearing" not in filament and "PLA+ 1.75mm" not in hardware
 
 
 def test_section_headings_show_the_right_counts(sample_database_file):
     rows = read_sample_materials()
-    pieces = sum(1 for row in rows if row["unit"] == "pcs")
+    spools = sum(1 for row in rows if row["unit"] == "g")          # Filament = grams only
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/").get_data(as_text=True)
-    assert f"<small>({len(rows) - pieces})</small>" in page and f"<small>({pieces})</small>" in page
+    assert f"<h2>Filament <small>({spools})</small>" in page
+    assert f"<h2>Other materials <small>({len(rows) - spools})</small>" in page
 
 
 def test_searching_for_orange_finds_pla_orange_in_the_filament_section_only(sample_database_file):
     page = logged_in_as(sample_database_file, "EMPLOYEE").get("/materials/?q=orange").get_data(as_text=True)
     assert "PLA+ 1.75mm" in page and "<h2>Filament" in page
-    assert "<h2>Hardware" not in page            # a section with no matches is not drawn
+    assert "<h2>Other materials" not in page            # a section with no matches is not drawn
 
 
 def test_a_search_with_no_match_says_so_in_plain_words(sample_database_file):

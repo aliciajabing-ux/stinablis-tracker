@@ -19,7 +19,7 @@ he had three tasks: (1) find where we bought standard resin, (2) find which supp
 (3) add a new purchase. He got **stuck on Tasks 1 and 2**: the Materials list had no search bar, and going
 from stock information to supplier information was not direct. In his words: "Will use but need improvements. (Don't want confusing) As long can key in one data, its good."
 What we changed on `main`: a search box first on Materials, the list in OK, LOW, OUT order inside two
-sections ("Filament & other materials" and "Hardware"), 26 more sample materials so Test 2 can be run
+sections ("Filament" and "Other materials"), 26 more sample materials so Test 2 can be run
 (PLA+ Orange, PETG Grey), a Statistics page with a delivery ranking, a simple Home page with a
 **Notifications** list. **Test 2** (PLA Orange, PETG Gray, add a new purchase) has **not** been timed or
 completed, so do not claim it is faster than 7:16. One honest gap: the "Find supplier" ranking still only
@@ -302,7 +302,7 @@ Facts:
 - Find supplier: ranked by estimated total cost, then lead time, with estimated arrival dates.
 - Home with three boxes (total, LOW, OUT) and the Notifications list; a Statistics page with usage, purchases and a
   delivery ranking (Admin only: supplier price comparison and the CSV download); a Materials list with a
-  search box and two sections (Filament & other materials, Hardware).
+  search box and two sections (Filament, Other materials).
 - Roles (Admin and Employee), server-side permission checks, login lock, CSRF protection, the Admin
   Users screen, plain-English error pages, tap-friendly buttons.
 

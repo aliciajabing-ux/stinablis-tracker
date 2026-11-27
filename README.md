@@ -170,8 +170,8 @@ the numbers change whenever someone adds a test.)
   PLA, PETG and PLA Silk filament, screws, nuts, inserts, bearings, magnets, clicker switches, keychain
   parts and more) so that Test 2 can be run. These are **not** named "SAMPLE" and have **no supplier
   offers yet**. All of it is demo data: the founder has not confirmed what Stinablis really tracks (guide
-  Section 2 and Section 16 Q1). The Materials list shows two sections, "Filament & other materials" and
-  "Hardware", and inside each section it runs OK, then LOW, then OUT.
+  Section 2 and Section 16 Q1). The Materials list shows two sections, "Filament" (grams) and
+  "Other materials" (resin, alcohol, hardware), and inside each section it runs OK, then LOW, then OUT.
 * **OK / LOW / OUT in plain English.** The Materials page explains the words once: **OK** = enough in
   stock, **LOW** = at or below the reorder level (time to order), **OUT** = none left. The word is always
   shown together with the colour.
@@ -237,7 +237,7 @@ Ryan from Stinablis tested the app (Jacob was not available). He was timed.
 
 1. **A search box first on Materials** ("Search by item name", the list narrows as you type).
 2. **The list runs OK, then LOW, then OUT**, and the "Show only OK" button is hidden to reduce clutter.
-3. **Two sections on Materials:** "Filament & other materials" and "Hardware" (items counted in pieces).
+3. **Two sections on Materials:** "Filament" (spools, counted in grams) and "Other materials" (resin, isopropyl alcohol, hardware). Spool care applies to Filament only.
    The OK, LOW, OUT order applies inside each section. The group added 26 more sample materials (M014 to
    M039) so Test 2 can be run: they include PLA+ Orange and PETG Grey.
 4. **The Statistics page** (the menu word stays "Statistics") has a delivery ranking per chosen material

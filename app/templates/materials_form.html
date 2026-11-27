@@ -51,7 +51,7 @@
   <input id="reorder_level" name="reorder_level" type="text" inputmode="decimal" required value="{{ form.reorder_level if form.reorder_level is not none else '' }}">
 
   {# EXPERIMENT 2026-11-26: saved printer settings and spool dates, for filament only (never for pieces). #}
-  {% if not material or material.unit != 'pcs' %}
+  {% if not material or material.unit == 'g' %}
   <fieldset id="filament-fields">
     <legend>Saved printer settings (optional, filament only)</legend>
     <p class="help">Type what works best for this filament. It is shown as one line on the Materials page.</p>
@@ -73,10 +73,10 @@
   </fieldset>
   {% if not material %}
   <script>
-    // Hides the printer settings when the unit is pieces (hardware has none). Without JavaScript they stay visible and are ignored for pieces.
+    // Shows the printer settings only when the unit is grams (filament). Without JavaScript they stay visible and are ignored for other units.
     (function () {
       var unit = document.getElementById("unit");
-      function update() { document.getElementById("filament-fields").hidden = (unit.value === "pcs"); }
+      function update() { document.getElementById("filament-fields").hidden = (unit.value !== "g"); }
       unit.addEventListener("change", update);
       update();
     })();

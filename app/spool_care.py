@@ -1,5 +1,6 @@
 # WHAT THIS FILE DOES: Works out "spool care" for filament items (how long a spool has been open, and whether it should go
-#   in a dry box or a dryer) and writes the one-line "saved printer settings" summary. Filament = anything not counted in pieces.
+#   in a dry box or a dryer) and writes the one-line "saved printer settings" summary. Filament = only items counted in grams (spools).
+#   Resin, alcohol and other liquids (ml) and hardware (pieces) are never filament.
 # WHO CAN USE IT: Both (Admin and Employee see the chips; the numbers are plain days, no money).
 #
 # EXPERIMENT (branch exp-spool-care-preview, 2026-11-26). The two day limits are a team guess, to be confirmed with the founder:
@@ -15,6 +16,7 @@ from app.auth import utc_now
 
 DRY_BOX_AFTER_DAYS = 7
 DRYER_AFTER_DAYS = 21
+FILAMENT_UNIT = "g"
 DAY_FORMAT = "%Y-%m-%d"
 MALAYSIA_HOURS_AHEAD_OF_UTC = 8
 DEGREE_C = "°C"
@@ -34,12 +36,12 @@ def parse_day(text):
         return None
 
 
-# Returns True for filament items (everything not counted in pieces). Hardware is never touched by spool care.
+# Returns True only for filament spools (counted in grams). Resin and alcohol (ml) and hardware (pcs) are never touched by spool care.
 def is_filament(material):
-    return material["unit"] != "pcs"
+    return material["unit"] == FILAMENT_UNIT
 
 
-# Returns the spool-care facts for one filament item, or None for hardware. "today" can be given for tests.
+# Returns the spool-care facts for one filament item, or None for anything else. "today" can be given for tests.
 def get_spool_care(material, today=None):
     if not is_filament(material):
         return None
@@ -85,6 +87,6 @@ def add_spool_care(material_row, today=None):
 # Returns the active filament items that must go in a dryer before use (for the Home Notifications), longest open first.
 def get_dryer_alerts(database, today=None):
     rows = database.execute(
-        "SELECT * FROM materials WHERE is_active = 1 AND unit != 'pcs' AND opened_date IS NOT NULL").fetchall()
+        "SELECT * FROM materials WHERE is_active = 1 AND unit = 'g' AND opened_date IS NOT NULL").fetchall()
     cared = [add_spool_care(row, today) for row in rows]
     return sorted((m for m in cared if m["care"]["needs_dryer"]), key=lambda m: -m["care"]["days"])

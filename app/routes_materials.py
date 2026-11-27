@@ -12,7 +12,7 @@ from app.alerts import STATUS_LOW, STATUS_OK, STATUS_OUT, add_status, get_status
 from app.auth import TIME_FORMAT, get_current_user, get_db, utc_now
 from app.permissions import (admin_required, can_manage_materials, can_record_purchase_cost, can_record_stock,
                              can_see_prices, login_required)
-from app.spool_care import DAY_FORMAT, add_spool_care, is_filament, parse_day, today_malaysia
+from app.spool_care import DAY_FORMAT, FILAMENT_UNIT, add_spool_care, is_filament, parse_day, today_malaysia
 from app.routes_suppliers import FormProblem, insert_offer, insert_supplier, read_offer_numbers, read_supplier_form
 
 materials_blueprint = Blueprint("materials", __name__, url_prefix="/materials", template_folder="templates")
@@ -95,7 +95,7 @@ def read_material_form(form, is_new, unit=None):
         if values["starting_quantity"] is None:
             problems.append(NUMBER_HELP.format(label="starting quantity") + " (0 or more).")
         unit = values["unit"]
-    if unit in UNITS and unit != "pcs":
+    if unit == FILAMENT_UNIT:
         extras, extra_problems = read_filament_extras(form, is_new)
         values.update(extras)
         problems += extra_problems
@@ -283,9 +283,9 @@ def list_materials():
     for material in materials:
         material["last_bought"] = get_last_bought(get_db(), material, show_money)
         material["supplier_name"] = pick_material_supplier(material, offer_supplier_names)
-    # One Materials tab, two sections: things counted in pieces are Hardware; everything else is Filament & other.
-    sections = [("Filament & other materials", [m for m in materials if m["unit"] != "pcs"]),
-                ("Hardware", [m for m in materials if m["unit"] == "pcs"])]
+    # One Materials tab, two sections: only filament spools (grams) are "Filament"; resin, alcohol, hardware and the rest are "Other materials".
+    sections = [("Filament", [m for m in materials if is_filament(m)]),
+                ("Other materials", [m for m in materials if not is_filament(m)])]
     return render_template("materials_list.html", materials=materials, sections=sections, search_text=search_text,
                            status_filter=status_filter, can_manage=can_manage_materials(get_current_user()))
 
@@ -441,7 +441,7 @@ def remove_material(material_id):
 
 
 # EXPERIMENT 2026-11-26: one-tap "Open Spool Today" / "Mark Dried Today" on a filament item (Admin and Employee).
-# It only saves today's Malaysia date and writes a line to the activity log. Hardware (pieces) is refused.
+# It only saves today's Malaysia date and writes a line to the activity log. Anything that is not filament is refused.
 @materials_blueprint.route("/<material_id>/spool/<action>", methods=["POST"])
 @login_required
 def spool_action(material_id, action):
