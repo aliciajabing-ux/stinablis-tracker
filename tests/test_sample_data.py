@@ -68,3 +68,23 @@ def test_usage_data_and_csv_work_on_sample_database(sample_database_file):
     admin = logged_in_as(sample_database_file, "ADMIN")
     assert admin.get("/stats/data/usage").status_code == 200
     assert admin.get("/stats/export.csv").status_code == 200
+
+
+# The sample offers give the Delivery ranking the order shown in the live demo: Tabuan Jaya (local, 1 day) is first
+# and Bambu Lab Official MY (online, 7 days) is among the slowest. Both roles see it (no money in the ranking).
+def test_sample_delivery_ranking_has_tabuan_jaya_first_and_bambu_at_seven_days(sample_database_file):
+    connection = sqlite3.connect(sample_database_file)
+    connection.row_factory = sqlite3.Row
+    from app.routes_stats import get_delivery_ranking
+    rows = get_delivery_ranking(connection)["rows"]
+    connection.close()
+    names = [row["supplier"] for row in rows]
+    assert names[0] == "Tabuan Jaya Fasteners & Hardware"
+    assert rows[0]["rank"] == 1 and rows[0]["days_text"].startswith("1 day")
+    assert rows[1]["rank"] == 2 and rows[1]["days_text"] != rows[0]["days_text"]    # nobody ties for first
+    bambu = next(row for row in rows if row["supplier"] == "Bambu Lab Official MY (Shopee)")
+    assert bambu["days_text"].startswith("7 days") and bambu["type"] == "online"
+    assert names.index("Bambu Lab Official MY (Shopee)") > names.index("Kuching 3D Filament Supply")
+    for role in ("ADMIN", "EMPLOYEE"):
+        answer = logged_in_as(sample_database_file, role).get("/stats/data/delivery-ranking")
+        assert answer.status_code == 200 and "Tabuan Jaya" in answer.get_data(as_text=True)
