@@ -385,7 +385,7 @@ def test_sample_user_file_has_no_password_column():
 # (label, address, form data, log action the Admin action must write)
 ADMIN_LOGGED_ACTIONS = [
     ("add supplier", "/suppliers/new", GOOD_SUPPLIER, "SUPPLIER_ADDED"),
-    ("change supplier", "/suppliers/S1/edit", GOOD_SUPPLIER, "SUPPLIER_CHANGED"),
+    ("edit supplier", "/suppliers/S1/edit", GOOD_SUPPLIER, "SUPPLIER_CHANGED"),
     ("switch supplier off", "/suppliers/S1/switch", {}, "SUPPLIER_SWITCHED_OFF"),
     ("add offer", "/suppliers/S1/offers/new", GOOD_OFFER, "OFFER_ADDED"),
     ("change offer price", "/offers/O1/edit", {**GOOD_OFFER, "material_id": "M1", "price_per_pack_myr": "85"}, "OFFER_CHANGED"),

@@ -520,3 +520,42 @@ def test_employee_never_gets_the_inline_form_even_with_edit_in_the_address(emplo
 def test_offer_controls_below_the_card_still_work_while_the_card_is_in_edit_mode(admin):
     page = admin.get("/suppliers/S1?edit=1").get_data(as_text=True)
     assert "/offers/O1/edit" in page and "/offers/O1/switch" in page and "/suppliers/S1/switch" in page
+
+
+# ---------- Sweep: no "Change supplier(s)" wording anywhere a supplier is edited (2026-11-27) ----------
+
+import re as _re
+from pathlib import Path as _Path
+
+OLD_WORDING = _re.compile(r"change\s+suppliers?\b", _re.IGNORECASE)      # "Change supplier" / "Change suppliers", any case
+
+
+def test_no_app_source_file_says_change_supplier():
+    app_folder = _Path(__file__).resolve().parent.parent / "app"
+    offenders = [str(path.relative_to(app_folder)) for path in app_folder.rglob("*")
+                 if path.suffix in {".py", ".html", ".js", ".css", ".sql", ".txt"} and OLD_WORDING.search(path.read_text(encoding="utf-8"))]
+    assert offenders == []
+
+
+@pytest.mark.parametrize("address", ["/suppliers", "/suppliers/S1", "/suppliers/S1?edit=1", "/suppliers/S1/edit",
+                                     "/suppliers/new", "/suppliers/S4", "/suppliers/S4/edit"])
+def test_admin_supplier_pages_never_say_change_supplier(admin, address):
+    page = admin.get(address).get_data(as_text=True)
+    assert not OLD_WORDING.search(page)
+
+
+def test_every_supplier_edit_control_says_edit_supplier(admin):
+    detail = admin.get("/suppliers/S1").get_data(as_text=True)
+    assert ">Edit supplier</a>" in detail                                     # the button in the details card
+    assert "<h2>Edit supplier</h2>" in admin.get("/suppliers/S1?edit=1").get_data(as_text=True)      # the in-card form heading
+    standalone = admin.get("/suppliers/S1/edit").get_data(as_text=True)
+    assert "<h1>Edit supplier</h1>" in standalone and "<title>Edit supplier - Stinablis Tracker</title>" in standalone
+    listing = admin.get("/suppliers").get_data(as_text=True)
+    assert "Edit<span" in listing and "Press Edit to change a supplier" in listing      # list buttons say Edit
+    assert ">Change</a>" in detail                                            # the per-material offer "Change" link is kept on purpose
+
+
+def test_employee_pages_have_no_supplier_edit_wording_at_all(employee):
+    for address in ["/suppliers", "/suppliers/S1", "/suppliers/S1?edit=1"]:
+        page = employee.get(address).get_data(as_text=True)
+        assert not OLD_WORDING.search(page) and "Edit supplier" not in page
