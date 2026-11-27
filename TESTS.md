@@ -116,11 +116,12 @@ Tests use a temporary database, never the real `data/tracker.db`.
 |---|---|---|
 | Home boxes show total, LOW and OUT counts, with the words LOW and OUT | F2, Section 8 | Pass |
 | "Notifications" (was "Needs attention") lists LOW and OUT materials (OUT first), each with a Find supplier link | F2 | Pass |
-| Purchases per material: RECEIVED lines per month with the unit; no money in the data (both roles) | F7 | Pass |
+| Usage per material: a Unit choice (g default, ml, pcs) so one chart has one unit; a wrong unit falls back to g; the CSV still includes every unit (removed 2026-11-27: Purchases per material, its address answers 404) | F7 | Pass |
 | Removed 2026-11-26: low-stock events, spending per supplier and spending per material charts; their addresses answer 404 and the page has none of them | F7 | Pass |
-| Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or price comparison | F7, Sec 4 | Pass |
+| Every chart names its unit or MYR in the axis title; Employee page has no "MYR", "Spending" or "stock value" | F7, Sec 4 | Pass |
 | CSV lists purchases and spending per material (Admin only) | F7 | Pass |
-| Price comparison charts: numbers per kg / litre and per piece, the newest purchase is the price last paid, offer with no purchase kept, nothing for materials with neither; Admin only (Employee 403, no chart on the Employee page). The table with the same numbers was removed 2026-11-26 | F7 | Pass |
+| Days of stock left: stock divided by the average daily use of the last 30 days (Malaysia time), fewest days first, Order now / Low / OK pills, whole days, lead time from the fastest active supplier, empty state; no money for either role | F7 | Pass |
+| Spending & stock value (Admin only): this month's total with a supplier breakdown, stock value = stock x cheapest offer per unit, materials with no price counted; two KPI cards and a table that fits a phone; not on the Employee page. The price comparison charts and their address were removed 2026-11-27 (404) | F7 | Pass |
 | Admin versus Employee table (ROLE_DIFFERENCES.md): 24 rows proven against the real website, and the page says the same as the proof | Sec 4, 13 | Pass |
 | Home has three boxes and no money box or "MYR" for either role (the money box was removed 2026-11-26) | F2 | Pass |
 | Employee gets 403 on the CSV download and the spending data address | Section 4, 14 | Pass |
@@ -130,8 +131,8 @@ Tests use a temporary database, never the real `data/tracker.db`.
 | Usage chart adds USED rows only, by month and by week (week starts Monday) | F7 | Pass |
 | A movement at 17:00 UTC on 31 Oct counts in November (Malaysia time, UTC+8) | Section 15 | Pass |
 | Average delivery time per supplier (used by the CSV) ignores switched-off offers | F7 | Pass |
-| Statistics sidebar: Employee sees 3 items and no price, no download, no "MYR"; Admin sees 5 (price comparison and CSV too); only the first statistic is shown at the start; the script switches between them | F7, Sec 4 | Pass |
-| Delivery ranking: fastest first, ties share a rank (1, 1, 3), switched-off offers and suppliers left out, fastest offer counts, all-materials average, unknown material empty; material list; both roles, no money; the old chart and address are gone | F7 | Pass |
+| Statistics sidebar: Employee sees 3 items (usage, days of stock left, delivery ranking) and no money, no download, no "MYR"; Admin sees 5 (spending & stock value and CSV too); only the first statistic is shown at the start; the script switches between them | F7, Sec 4 | Pass |
+| Delivery ranking: fastest first, ties share a rank (1, 1, 3), switched-off offers and suppliers left out, fastest offer counts, all-materials average, unknown material empty; the material choice lists only materials with two or more suppliers and is hidden when there are none; both roles, no money; the old chart and address are gone | F7 | Pass |
 | Low-stock events: saved when Record used drops a material OK to LOW or OUT (once per drop). The chart that counted them was removed on 2026-11-26; the events are still saved | F5 | Pass |
 | Money spent = real "Total paid" from Record received, per supplier, Malaysia-time month | F2, F7 | Pass |
 | PROPOSED spending method (received stock x cheapest offer) and PROPOSED low-event method (drop from OK) calculate as written | R4 (switched off) | Pass |

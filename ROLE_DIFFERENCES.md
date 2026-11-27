@@ -53,10 +53,10 @@ also spending & stock value and the spreadsheet download. Clicking one shows it 
 
 | What | Admin | Employee | Notes |
 |---|---|---|---|
-| See the usage per material chart | Yes | Yes | Each bar shows its own unit (g, ml or pcs). |
-| See days of stock left (no money) | Yes | Yes | A plain table: stock, estimated days left and supplier lead time, with an "Order now" or "Low" word. No money, so it is safe for Employees. |
-| See the delivery ranking of suppliers for a chosen material | Yes | Yes | Fastest supplier first, with the days and an estimated arrival date. No money in it. |
-| See spending and stock value (MYR) | Yes | No | Admin only: total spent this month by supplier and the estimated value of the stock on hand. The Employee page does not even contain the word "MYR". |
+| See the usage per material chart | Yes | Yes | A Unit choice (Filament (g), Resin (ml) or Hardware (pcs)) keeps every bar on one scale. |
+| See days of stock left (no money) | Yes | Yes | A plain table: In stock, Days left, Lead time and a Status pill ("Order now", "Low" or "OK"). No money, so it is safe for Employees. |
+| See the delivery ranking of suppliers for a chosen material | Yes | Yes | Fastest supplier first, with the days and an estimated arrival date; the material choice appears only when some material has two or more suppliers. No money in it. |
+| See spending and stock value (MYR) | Yes | No | Admin only: the total spent this month with a breakdown by supplier, and the estimated value of the stock on hand. The Employee page does not even contain the word "MYR". |
 | Download the statistics spreadsheet (CSV) | Yes | No | Admin only. |
 
 ### Users
