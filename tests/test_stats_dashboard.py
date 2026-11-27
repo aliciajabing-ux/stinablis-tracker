@@ -723,3 +723,15 @@ def test_spending_panel_intro_is_short(admin):
     panel = admin.get("/stats/").get_data(as_text=True).split('id="panel-spending"')[1]
     intro = panel.split("<p>")[1].split("</p>")[0]
     assert len(intro) < 160 and "Estimates in MYR" in intro
+
+
+def test_days_table_layout_rules_fit_a_half_width_window(employee):
+    # The menu stacks above the panel at 960 px, the panel and the table may shrink (min-width 0), and the table
+    # overrides the theme's table minimum width so the Status column is never clipped.
+    page = employee.get("/stats/").get_data(as_text=True)
+    assert "@media (max-width: 960px)" in page and ".stats-layout { display:block; }" in page
+    assert ".stats-main { min-width:0; width:100%; }" in page and ".stats-layout > * { min-width:0; }" in page
+    assert "body .days-table { width:100%; min-width:0; max-width:100%; table-layout:auto; border-collapse:collapse; }" in page
+    assert ".days-table td:first-child { overflow-wrap:anywhere; }" in page
+    assert ".days-table td.num, .days-table th.num { text-align:right; white-space:nowrap; }" in page
+    assert "white-space:nowrap; }" in page.split(".days-table td.status-cell")[1].split("\n")[0]
