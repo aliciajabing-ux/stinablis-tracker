@@ -51,7 +51,7 @@
     {% endif %}
     {% if can_manage %}
     <td data-label="Status">{{ 'Active' if o['is_active'] == 1 else 'Switched off' }}</td>
-    <td><a href="{{ url_for('suppliers.offer_edit', offer_id=o['id']) }}">Change</a>
+    <td><a href="{{ url_for('suppliers.offer_edit', offer_id=o['id']) }}">Edit</a>
       <form method="post" action="{{ url_for('suppliers.offer_switch', offer_id=o['id']) }}" style="display:inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit">{{ 'Switch off' if o['is_active'] == 1 else 'Switch on' }}</button></form></td>
