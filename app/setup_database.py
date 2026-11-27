@@ -8,11 +8,14 @@
 # To make an existing database use the sample suppliers (one supplier per material) from sample_data, run:
 #     python app/setup_database.py sync-suppliers
 # (safe to repeat; it switches old offers off instead of deleting them).
+# For the live presentation, add the demo accounts admin and employee to an existing database with:
+#     python app/setup_database.py demo-users        (and later: demo-users-off)
 
 import csv
 import os
 import sqlite3
 import sys
+import uuid
 
 from werkzeug.security import generate_password_hash
 
@@ -27,6 +30,10 @@ SAMPLE_FOLDER = os.path.join(PROJECT_FOLDER, "sample_data")
 # DEMO ONLY (team decision 2026-11-27, guide rule C6): a FRESH database gives the two sample accounts these fixed,
 # publicly known passwords. "upgrade" and "sync-suppliers" never touch passwords. Never use such a database for real data.
 SAMPLE_PASSWORDS = {"sample_admin": "sampleadmin", "sample_employee": "sampleemployee"}
+
+# DEMO ONLY (guide rule C6, second exception): presentation accounts added by "demo-users" to an existing database.
+DEMO_USERS = {"admin": "ADMIN", "employee": "EMPLOYEE"}
+DEMO_PASSWORD = "stinablis2026"
 
 # Load parents before children, so links (such as an offer pointing to a material) always exist.
 TABLES_TO_LOAD = ["users", "materials", "suppliers", "supplier_offers", "stock_movements"]
@@ -231,8 +238,53 @@ def build_database(database_file=None):
     print("DEMO ONLY: sample_admin / sampleadmin and sample_employee / sampleemployee. Never use this database for real data.")
 
 
+# Adds or updates the two presentation demo accounts in an EXISTING database (guide rule C6, second exception).
+# Touches only these two users. Safe to repeat. Never changes materials, suppliers, stock or other users.
+def add_demo_users(database_file=None):
+    database_file = database_file or DATABASE_FILE
+    if not os.path.exists(database_file):
+        print("STOP: there is no database. Build one first with: python app/setup_database.py")
+        return
+    connection = sqlite3.connect(database_file)
+    for username, role in DEMO_USERS.items():
+        row = connection.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        password_hash = generate_password_hash(DEMO_PASSWORD)
+        if row is None:
+            user_id = "U" + uuid.uuid4().hex[:8]
+            connection.execute(
+                "INSERT INTO users (id, username, password_hash, role, is_active) VALUES (?, ?, ?, ?, 1)",
+                (user_id, username, password_hash, role))
+            print(f"Added demo user {username} ({role})")
+        else:
+            connection.execute(
+                "UPDATE users SET password_hash = ?, role = ?, is_active = 1, failed_login_count = 0, locked_until = NULL "
+                "WHERE id = ?", (password_hash, role, row[0]))
+            print(f"Updated demo user {username} ({role})")
+    connection.commit()
+    connection.close()
+    print("DEMO ONLY: password is " + DEMO_PASSWORD + ". Run 'demo-users-off' after the presentation.")
+
+
+# Switches the two presentation demo accounts off (nothing is deleted). Safe to repeat.
+def switch_demo_users_off(database_file=None):
+    database_file = database_file or DATABASE_FILE
+    if not os.path.exists(database_file):
+        print("STOP: there is no database.")
+        return
+    connection = sqlite3.connect(database_file)
+    for username in DEMO_USERS:
+        connection.execute("UPDATE users SET is_active = 0 WHERE username = ?", (username,))
+    connection.commit()
+    connection.close()
+    print("Demo users admin and employee are switched off.")
+
+
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "upgrade":
+    if len(sys.argv) > 1 and sys.argv[1] == "demo-users":
+        add_demo_users()
+    elif len(sys.argv) > 1 and sys.argv[1] == "demo-users-off":
+        switch_demo_users_off()
+    elif len(sys.argv) > 1 and sys.argv[1] == "upgrade":
         upgrade_database()
     elif len(sys.argv) > 1 and sys.argv[1] == "sync-suppliers":
         sync_sample_suppliers()
