@@ -1,4 +1,4 @@
-# WHAT THIS FILE DOES: The Suppliers screens (list, details, add/change supplier, add/change offer) and the "Find supplier" suggestion screen.
+# WHAT THIS FILE DOES: The Suppliers screens (list, details, add/edit supplier, add/change offer) and the "Find supplier" suggestion screen.
 # WHO CAN USE IT: Both can look and get suggestions; only Admin can add, change or switch off (checked in permissions.py).
 
 import uuid

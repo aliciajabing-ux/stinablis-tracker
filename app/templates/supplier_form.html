@@ -1,7 +1,7 @@
 {# WHAT THIS FILE DOES: The form to add or change a supplier.
    WHO CAN USE IT: Admin only. #}
 {% extends "base.html" %}
-{% block title %}Supplier form - Stinablis Tracker{% endblock %}
+{% block title %}{{ 'Edit supplier' if editing else 'Add supplier' }} - Stinablis Tracker{% endblock %}
 {% block content %}
 {% include "supplier_style.html" %}
 <h1>{{ 'Edit supplier' if editing else 'Add supplier' }}</h1>

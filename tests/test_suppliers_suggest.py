@@ -356,6 +356,7 @@ def test_employee_list_has_no_edit_button_and_no_actions_column(employee):
 
 def test_edit_form_shows_every_field_with_the_current_values_and_status(admin):
     page = admin.get("/suppliers/S4/edit").get_data(as_text=True)
+    assert "<h1>Edit supplier</h1>" in page and "<title>Edit supplier - Stinablis Tracker</title>" in page and "Change supplier" not in page
     assert "Edit supplier" in page and 'value="Closed Shop"' in page and "082-444" in page
     for field in ["name", "supplier_type", "address", "phone", "email", "website", "notes", "is_active"]:
         assert f'name="{field}"' in page
