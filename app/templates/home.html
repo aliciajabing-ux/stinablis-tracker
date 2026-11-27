@@ -9,11 +9,18 @@
   .tile .number { font-size:2rem; overflow-wrap:anywhere; }
   .attention { padding:20px 24px; margin-bottom:8px; }
   .attention ul { list-style:none; margin:0; padding:0; }
-  .attention li { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+  /* Notification rows: text on the left, status pill and button locked to the right edge. Above 640 px the row never wraps, so
+     no row jumps below its neighbours; a long material name wraps inside the left column instead. */
+  .attention li { display:flex; flex-wrap:nowrap; align-items:center; justify-content:space-between; gap:16px;
                   padding:12px 0; border-bottom:1px solid; }
+  .attention li > span:first-child { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .attention li > .row-end, .attention li > form { flex-shrink:0; white-space:nowrap; }
   .row-end { display:flex; align-items:center; gap:12px; }
   .button { display:inline-block; padding:12px 18px; font-size:1rem; text-decoration:none; }
-  @media (max-width: 640px) { .tiles { grid-template-columns:minmax(0, 1fr); } }
+  @media (max-width: 640px) {
+    .tiles { grid-template-columns:minmax(0, 1fr); }
+    .attention li { flex-direction:column; align-items:flex-start; }   /* every row stacks the same way on a phone */
+  }
 </style>
 <section class="hero">
   <div class="hero-text">
